@@ -105,6 +105,11 @@ window.TakeoutPersonalization = (() => {
   function weightedPick(candidates, lastChannel) {
     if (!candidates.length) return null;
     const recentIds = new Set(recent.map(x => x.id));
+    const recentChannelCounts = new Map();
+    for (const entry of recent.slice(0, 8)) {
+      const key = String(entry.channel || '').trim().toLowerCase();
+      if (key) recentChannelCounts.set(key, (recentChannelCounts.get(key) || 0) + 1);
+    }
 
     // Current taste should dominate. Takeout watch history is newest-first, so
     // lower recentRank means the user watched that video more recently.
@@ -119,6 +124,17 @@ window.TakeoutPersonalization = (() => {
       pool = candidates.filter(item => item.recentRank != null && item.recentRank < 3500);
     }
     if (pool.length < 20) pool = candidates;
+
+    // Diversity guard: if a channel has already appeared twice in the last
+    // eight Super Lite plays, avoid using that channel as the next seed when
+    // there are enough alternatives.
+    const variedPool = pool.filter(item => {
+      const key = String(item.channel || '').trim().toLowerCase();
+      return !key || (recentChannelCounts.get(key) || 0) < 2;
+    });
+    if (variedPool.length >= Math.min(40, Math.max(12, Math.floor(pool.length * 0.08)))) {
+      pool = variedPool;
+    }
 
     const sampleCount = Math.min(220, pool.length);
     let best = null;
@@ -138,7 +154,11 @@ window.TakeoutPersonalization = (() => {
       // Avoid immediate repeats from Super Lite while still allowing recent
       // interests/channels to remain dominant.
       if (recentIds.has(item.id)) score -= 7.5;
-      if (lastChannel && item.channel === lastChannel) score -= 0.8;
+      if (lastChannel && item.channel === lastChannel) score -= 0.9;
+
+      const channelKey = String(item.channel || '').trim().toLowerCase();
+      const recentChannelCount = channelKey ? (recentChannelCounts.get(channelKey) || 0) : 0;
+      score -= recentChannelCount * 2.0;
 
       // These are useful but can be stale, so keep the bonuses deliberately mild.
       if (item.subscribed) score += 0.14;
