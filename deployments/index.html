@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#090b0e">
+  <title>Deployment Tracker</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <a class="back" href="../">← YouTube Super Lite</a>
+        <h1>Deployment Tracker</h1>
+        <p>Live GitHub Actions status for the projects you care about.</p>
+      </div>
+      <div class="live-block">
+        <span id="liveDot" class="live-dot"></span>
+        <div>
+          <strong id="liveLabel">Public mode</strong>
+          <span id="nextRefresh">Loading…</span>
+        </div>
+      </div>
+    </header>
+
+    <section class="toolbar panel">
+      <div class="toolbar-left">
+        <button id="refreshBtn" class="primary">↻ Refresh now</button>
+        <label class="switch-row">
+          <input id="autoRefresh" type="checkbox" checked>
+          <span>Auto refresh</span>
+        </label>
+      </div>
+      <div class="toolbar-right">
+        <span id="lastUpdated">Not updated yet</span>
+        <span id="rateInfo">GitHub API</span>
+      </div>
+    </section>
+
+    <section id="cards" class="cards" aria-live="polite"></section>
+
+    <section class="panel settings">
+      <details>
+        <summary>
+          <div>
+            <strong>Real-time mode & tracked repos</strong>
+            <span>Optional GitHub token enables 15-second updates. Without one, public mode refreshes every 4 minutes.</span>
+          </div>
+          <span class="chev">⌄</span>
+        </summary>
+
+        <div class="settings-body">
+          <div class="token-box">
+            <label for="tokenInput">Fine-grained GitHub token <span>(optional)</span></label>
+            <div class="token-row">
+              <input id="tokenInput" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…">
+              <button id="saveTokenBtn">Use for this tab</button>
+              <button id="clearTokenBtn" class="ghost danger">Clear</button>
+            </div>
+            <p>The token is stored only in <code>sessionStorage</code> for this browser tab and is sent directly to <code>api.github.com</code>. Use read-only Actions access.</p>
+          </div>
+
+          <div class="repo-manager">
+            <div class="repo-manager-head">
+              <div>
+                <strong>Tracked pipelines</strong>
+                <span>Defaults are saved in the site; additions are stored only in this browser.</span>
+              </div>
+            </div>
+            <div id="trackedList" class="tracked-list"></div>
+            <form id="addForm" class="add-form">
+              <input id="repoInput" required placeholder="acchtt/repository">
+              <input id="workflowInput" required placeholder="workflow.yml">
+              <input id="labelInput" placeholder="Display name (optional)">
+              <input id="siteInput" placeholder="Live site URL (optional)">
+              <button class="primary" type="submit">Add tracker</button>
+            </form>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <footer>
+      <span>Green means the latest tracked deployment workflow completed successfully.</span>
+      <span>Dashboard pauses polling while this tab is hidden.</span>
+    </footer>
+  </main>
+
+  <template id="cardTemplate">
+    <article class="repo-card panel">
+      <div class="card-head">
+        <div class="repo-name-wrap">
+          <span class="status-dot"></span>
+          <div>
+            <a class="repo-name" target="_blank" rel="noreferrer"></a>
+            <span class="workflow-name"></span>
+          </div>
+        </div>
+        <span class="status-pill">LOADING</span>
+      </div>
+
+      <div class="main-status">
+        <strong class="status-title">Checking GitHub…</strong>
+        <span class="status-detail">Waiting for API response</span>
+      </div>
+
+      <dl class="meta-grid">
+        <div><dt>Branch</dt><dd class="branch">—</dd></div>
+        <div><dt>Commit</dt><dd><a class="commit" target="_blank" rel="noreferrer">—</a></dd></div>
+        <div><dt>Started</dt><dd class="started">—</dd></div>
+        <div><dt>Duration</dt><dd class="duration">—</dd></div>
+      </dl>
+
+      <div class="commit-message">—</div>
+
+      <div class="card-actions">
+        <a class="run-link button" target="_blank" rel="noreferrer">View Actions</a>
+        <a class="site-link button primary" target="_blank" rel="noreferrer">Open live site</a>
+      </div>
+
+      <div class="history"></div>
+    </article>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
