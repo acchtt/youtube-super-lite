@@ -22,6 +22,7 @@ let playerReady = false;
 let pending = [];
 let draggedIndex = null;
 let profile = null;
+let manualContinuation = null;
 
 const $ = id => document.getElementById(id);
 const els = {
@@ -253,7 +254,63 @@ function loadVideoInto(target, item) {
   renderQueue();
 }
 
+function playExactManual(item) {
+  if (!item || !item.id) return;
+  manualContinuation = {
+    seed: item,
+    personalized: state.autoplayMode === 'personalized' && !!profile
+  };
+  state.playlistMode = null;
+  state.index = -1;
+  els.nowTitle.textContent = 'Loading requested video…';
+  els.nowMeta.textContent = item.id;
+  renderQueue();
+  whenReady(() => {
+    player.loadVideoById(item.id);
+    try { player.setPlaybackRate(state.speed); } catch (_) {}
+  });
+}
+
+function continueAfterManualVideo() {
+  if (!manualContinuation) return false;
+  const next = manualContinuation;
+  manualContinuation = null;
+
+  const listId = 'RD' + next.seed.id;
+  state.playlistMode = {
+    id: listId,
+    seedId: next.seed.id,
+    personalized: !!next.personalized,
+    mix: !next.personalized
+  };
+  state.index = -1;
+  renderQueue();
+
+  const action = target => {
+    target.loadPlaylist({ listType: 'playlist', list: listId, index: 0, startSeconds: 0 });
+    setTimeout(() => {
+      try {
+        const ids = target.getPlaylist ? target.getPlaylist() : [];
+        const seedIndex = ids ? ids.indexOf(next.seed.id) : -1;
+        if (seedIndex >= 0 && ids.length > 1) {
+          target.playVideoAt((seedIndex + 1) % ids.length);
+        }
+      } catch (_) {}
+    }, 900);
+    try { target.setLoop(state.repeat === 'queue'); } catch (_) {}
+    try { target.setShuffle(state.shuffle); } catch (_) {}
+  };
+
+  const fresh = state.lowMemory && state.playsSinceRefresh >= state.refreshEvery;
+  if (fresh) rebuildPlayer(action);
+  else whenReady(() => action(player));
+
+  setMessage('Requested video finished. Continuing with related autoplay.', 'ok');
+  return true;
+}
+
 function playQueueIndex(i, useFreshPlayer) {
+  manualContinuation = null;
   if (!state.queue[i]) return;
   state.index = i;
   state.playlistMode = null;
@@ -282,6 +339,7 @@ function loadPlaylistInto(target, listId, videoId) {
 }
 
 function playPlaylist(listId, videoId) {
+  manualContinuation = null;
   state.playlistMode = { id: listId };
   state.index = -1;
   renderQueue();
@@ -291,6 +349,7 @@ function playPlaylist(listId, videoId) {
 }
 
 function playMixFromSeed(item, personalized, fresh) {
+  manualContinuation = null;
   if (!item || !item.id) return;
   const listId = 'RD' + item.id;
   state.playlistMode = { id: listId, seedId: item.id, personalized: !!personalized, mix: !personalized };
@@ -437,6 +496,8 @@ function onPlayerStateChange(event) {
       return;
     }
 
+    if (continueAfterManualVideo()) return;
+
     if (state.autoplayMode === 'personalized' && profile) {
       startPersonalized(state.lowMemory && state.playsSinceRefresh >= state.refreshEvery);
       return;
@@ -488,9 +549,8 @@ function playFromInput() {
     return;
   }
   if (parsed.videos.length === 1 && state.autoplayMode !== 'queue') {
-    playMixFromSeed(parsed.videos[0], state.autoplayMode === 'personalized' && !!profile, false);
-    setMessage(state.autoplayMode === 'personalized' && profile ?
-      'Using this video as the first personalized seed.' : 'YouTube Mix started from this video.', 'ok');
+    playExactManual(parsed.videos[0]);
+    setMessage('Playing the exact video you pasted. Related autoplay starts only after it ends.', 'ok');
     return;
   }
   addVideos(parsed.videos, true);
@@ -548,6 +608,7 @@ els.clear.addEventListener('click', () => {
   state.queue = [];
   state.index = -1;
   state.playlistMode = null;
+  manualContinuation = null;
   saveState();
   renderQueue();
   setMessage('Queue cleared.');
