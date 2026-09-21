@@ -102,3 +102,8 @@ body.cinema #queueList{
     min-height:64px;
   }
 }
+
+.top-links{display:flex;align-items:center;gap:8px}
+.deploy-link{color:#aeb7c2;text-decoration:none;background:#11151a;border:1px solid #252b33;border-radius:999px;padding:.48rem .7rem;font-size:.82rem;font-weight:700;white-space:nowrap}
+.deploy-link:hover{color:#fff;background:#171c22}
+@media(max-width:600px){.top-links{gap:5px}.deploy-link{font-size:.72rem;padding:.45rem .58rem}}
