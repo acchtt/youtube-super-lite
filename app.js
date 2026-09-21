@@ -8,6 +8,7 @@ const state = {
   autoplayMode: 'personalized',
   autoplay: true,
   lowMemory: true,
+  cinema: true,
   shuffle: false,
   repeat: 'off',
   speed: 1,
@@ -29,7 +30,7 @@ const els = {
   queueCount: $('queueCount'), emptyQueue: $('emptyQueue'), clear: $('clearBtn'),
   prev: $('prevBtn'), toggle: $('toggleBtn'), next: $('nextBtn'),
   autoplayMode: $('autoplayModeSelect'), autoplay: $('autoplayToggle'),
-  lowMemory: $('lowMemoryToggle'), shuffle: $('shuffleToggle'),
+  lowMemory: $('lowMemoryToggle'), cinema: $('cinemaToggle'), shuffle: $('shuffleToggle'),
   repeat: $('repeatSelect'), speed: $('speedSelect'), refresh: $('refreshSelect'),
   memoryLabel: $('memoryLabel'), playlistMode: $('playlistMode'),
   takeoutInput: $('takeoutInput'), importTakeout: $('importTakeoutBtn'),
@@ -41,7 +42,7 @@ function loadState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
     if (Array.isArray(saved.queue)) state.queue = saved.queue.filter(x => x && x.id);
-    ['autoplay','lowMemory','shuffle'].forEach(k => {
+    ['autoplay','lowMemory','cinema','shuffle'].forEach(k => {
       if (typeof saved[k] === 'boolean') state[k] = saved[k];
     });
     if (['personalized','mix','queue'].includes(saved.autoplayMode)) state.autoplayMode = saved.autoplayMode;
@@ -57,6 +58,7 @@ function saveState() {
     autoplayMode: state.autoplayMode,
     autoplay: state.autoplay,
     lowMemory: state.lowMemory,
+    cinema: state.cinema,
     shuffle: state.shuffle,
     repeat: state.repeat,
     speed: state.speed,
@@ -68,6 +70,8 @@ function syncSettings() {
   els.autoplayMode.value = state.autoplayMode;
   els.autoplay.checked = state.autoplay;
   els.lowMemory.checked = state.lowMemory;
+  els.cinema.checked = state.cinema;
+  document.body.classList.toggle('cinema', state.cinema);
   els.shuffle.checked = state.shuffle;
   els.repeat.value = state.repeat;
   els.speed.value = String(state.speed);
@@ -553,6 +557,11 @@ els.autoplay.addEventListener('change', e => { state.autoplay = e.target.checked
 els.lowMemory.addEventListener('change', e => {
   state.lowMemory = e.target.checked;
   els.memoryLabel.textContent = state.lowMemory ? 'Low-memory mode on' : 'Low-memory mode off';
+  saveState();
+});
+els.cinema.addEventListener('change', e => {
+  state.cinema = e.target.checked;
+  document.body.classList.toggle('cinema', state.cinema);
   saveState();
 });
 els.shuffle.addEventListener('change', e => { state.shuffle = e.target.checked; applyPlaylistOptions(); saveState(); });
