@@ -23,6 +23,8 @@ let pending = [];
 let draggedIndex = null;
 let profile = null;
 let manualContinuation = null;
+let personalizedMixPlays = 0;
+let lastObservedVideoId = '';
 
 const $ = id => document.getElementById(id);
 const els = {
@@ -275,6 +277,7 @@ function continueAfterManualVideo() {
   if (!manualContinuation) return false;
   const next = manualContinuation;
   manualContinuation = null;
+  personalizedMixPlays = 0;
 
   const listId = 'RD' + next.seed.id;
   state.playlistMode = {
@@ -350,6 +353,7 @@ function playPlaylist(listId, videoId) {
 
 function playMixFromSeed(item, personalized, fresh) {
   manualContinuation = null;
+  personalizedMixPlays = 0;
   if (!item || !item.id) return;
   const listId = 'RD' + item.id;
   state.playlistMode = { id: listId, seedId: item.id, personalized: !!personalized, mix: !personalized };
@@ -491,6 +495,13 @@ function onPlayerStateChange(event) {
     }
     if (!state.autoplay) return;
 
+    if (state.playlistMode && state.playlistMode.personalized && personalizedMixPlays >= 2) {
+      const fresh = state.lowMemory && state.playsSinceRefresh >= state.refreshEvery;
+      startPersonalized(fresh);
+      setMessage('Personalized mix reseeded to keep artist/channel variety.', 'ok');
+      return;
+    }
+
     if (state.playlistMode) {
       if (refreshCurrentPlaylist()) return;
       return;
@@ -517,7 +528,11 @@ function updateVideoData() {
   els.nowMeta.textContent = [data.author, id].filter(Boolean).join(' · ') ||
     (state.playlistMode ? state.playlistMode.id : '');
 
-  if (id) TakeoutPersonalization.markPlayed(id, data.author || '');
+  if (id && id !== lastObservedVideoId) {
+    lastObservedVideoId = id;
+    if (state.playlistMode && state.playlistMode.personalized) personalizedMixPlays++;
+    TakeoutPersonalization.markPlayed(id, data.author || '');
+  }
   if (!state.playlistMode && state.index >= 0 && state.queue[state.index] && data.title) {
     state.queue[state.index].title = data.title;
     saveState();
