@@ -13,12 +13,26 @@
     <header class="topbar">
       <div>
         <h1>YouTube Super Lite</h1>
-        <p class="muted">YouTube-like autoplay without the heavy feed, comments, Shorts, or infinite-scroll page.</p>
+        <p class="muted">Personalized autoplay without the heavy YouTube homepage, comments, Shorts, or infinite scroll.</p>
       </div>
       <div class="memory-pill" title="Player is periodically rebuilt in Low-memory mode">
         <span class="dot"></span><span id="memoryLabel">Low-memory mode on</span>
       </div>
     </header>
+
+    <section class="profile-card card">
+      <div class="profile-copy">
+        <span class="eyebrow">LOCAL PERSONALIZATION</span>
+        <strong id="profileStatus">No YouTube Takeout profile imported</strong>
+        <span id="profileStats" class="muted">Import your YouTube Takeout ZIP. The archive is processed in your browser and is never uploaded to this site.</span>
+      </div>
+      <div class="profile-actions">
+        <input id="takeoutInput" class="hidden" type="file" accept=".zip,application/zip">
+        <button id="importTakeoutBtn">Import Takeout ZIP</button>
+        <button id="startPersonalizedBtn" class="primary" disabled>Start personalized</button>
+        <button id="forgetProfileBtn" class="ghost danger hidden">Forget profile</button>
+      </div>
+    </section>
 
     <section class="input-card card">
       <label for="urlInput">YouTube video URL, video ID, or playlist URL</label>
@@ -35,14 +49,12 @@
     <section class="layout">
       <div class="player-column">
         <div class="player-shell card">
-          <div class="aspect">
-            <div id="player"></div>
-          </div>
+          <div class="aspect"><div id="player"></div></div>
           <div class="now-playing">
             <div class="now-text">
               <span class="eyebrow">NOW PLAYING</span>
               <strong id="nowTitle">Nothing loaded</strong>
-              <span id="nowMeta" class="muted">Paste a YouTube link above.</span>
+              <span id="nowMeta" class="muted">Paste a YouTube link or start personalized mode.</span>
             </div>
           </div>
         </div>
@@ -55,8 +67,12 @@
           </div>
 
           <div class="settings-grid">
-            <label class="setting" title="For a single video, start YouTube's generated Mix/Radio so the next videos are chosen by YouTube rather than only by your manual queue.">
-              <span>YouTube-like</span><input id="smartAutoplayToggle" type="checkbox" checked>
+            <label class="setting"><span>Autoplay mode</span>
+              <select id="autoplayModeSelect">
+                <option value="personalized">Personalized</option>
+                <option value="mix">YouTube Mix</option>
+                <option value="queue">Queue only</option>
+              </select>
             </label>
             <label class="setting"><span>Autoplay</span><input id="autoplayToggle" type="checkbox" checked></label>
             <label class="setting"><span>Low-memory</span><input id="lowMemoryToggle" type="checkbox" checked></label>
@@ -70,40 +86,29 @@
             </label>
             <label class="setting"><span>Speed</span>
               <select id="speedSelect">
-                <option value="0.5">0.5×</option>
-                <option value="0.75">0.75×</option>
-                <option value="1" selected>1×</option>
-                <option value="1.25">1.25×</option>
-                <option value="1.5">1.5×</option>
-                <option value="1.75">1.75×</option>
-                <option value="2">2×</option>
+                <option value="0.5">0.5×</option><option value="0.75">0.75×</option>
+                <option value="1" selected>1×</option><option value="1.25">1.25×</option>
+                <option value="1.5">1.5×</option><option value="1.75">1.75×</option><option value="2">2×</option>
               </select>
             </label>
-            <label class="setting"><span>Refresh every</span>
+            <label class="setting"><span>Reseed/refresh</span>
               <select id="refreshSelect">
-                <option value="5">5 videos</option>
-                <option value="8" selected>8 videos</option>
-                <option value="12">12 videos</option>
-                <option value="20">20 videos</option>
+                <option value="5">5 videos</option><option value="8" selected>8 videos</option>
+                <option value="12">12 videos</option><option value="20">20 videos</option>
               </select>
             </label>
           </div>
         </div>
 
         <div class="tips card">
-          <span><kbd>Space</kbd> play/pause</span>
-          <span><kbd>N</kbd> next</span>
-          <span><kbd>P</kbd> previous</span>
-          <span><kbd>←</kbd>/<kbd>→</kbd> seek 5s</span>
+          <span><kbd>Space</kbd> play/pause</span><span><kbd>N</kbd> next</span>
+          <span><kbd>P</kbd> previous</span><span><kbd>←</kbd>/<kbd>→</kbd> seek 5s</span>
         </div>
       </div>
 
       <aside class="queue card">
         <div class="queue-head">
-          <div>
-            <span class="eyebrow">QUEUE</span>
-            <strong id="queueCount">0 videos</strong>
-          </div>
+          <div><span class="eyebrow">QUEUE</span><strong id="queueCount">0 videos</strong></div>
           <button id="clearBtn" class="ghost danger">Clear</button>
         </div>
         <div id="playlistMode" class="playlist-mode hidden"></div>
@@ -113,11 +118,12 @@
     </section>
 
     <footer>
-      <span>Single-video Play now uses YouTube Mix when YouTube-like mode is enabled.</span>
-      <span>No analytics. Video playback/recommendation sequencing is provided by YouTube's embedded player.</span>
+      <span>Personalized mode uses your local Takeout profile to choose seeds, then YouTube Mix supplies related playback.</span>
+      <span>No analytics. Your Takeout data stays in IndexedDB on this device.</span>
     </footer>
   </main>
 
+  <script src="personalization.js"></script>
   <script src="app.js"></script>
   <script src="https://www.youtube.com/iframe_api"></script>
 </body>
