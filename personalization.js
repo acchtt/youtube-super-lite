@@ -105,28 +105,55 @@ window.TakeoutPersonalization = (() => {
   function weightedPick(candidates, lastChannel) {
     if (!candidates.length) return null;
     const recentIds = new Set(recent.map(x => x.id));
-    const windowSize = Math.min(candidates.length, Math.random() < 0.78 ? 1800 : 6500);
-    const sampleCount = Math.min(180, windowSize);
+
+    // Current taste should dominate. Takeout watch history is newest-first, so
+    // lower recentRank means the user watched that video more recently.
+    const r = Math.random();
+    let horizon = r < 0.82 ? 1200 : (r < 0.97 ? 3500 : Infinity);
+    let pool = horizon === Infinity
+      ? candidates
+      : candidates.filter(item => item.recentRank != null && item.recentRank < horizon);
+
+    // Graceful fallback for small/new profiles.
+    if (pool.length < 40 && horizon === 1200) {
+      pool = candidates.filter(item => item.recentRank != null && item.recentRank < 3500);
+    }
+    if (pool.length < 20) pool = candidates;
+
+    const sampleCount = Math.min(220, pool.length);
     let best = null;
     let bestScore = -Infinity;
 
     for (let i = 0; i < sampleCount; i++) {
-      const item = candidates[Math.floor(Math.random() * windowSize)];
+      const item = pool[Math.floor(Math.random() * pool.length)];
       if (!item) continue;
-      let score = Math.log1p(Math.max(0.01, item.score || 0));
-      if (recentIds.has(item.id)) score -= 5;
-      if (item.recentRank != null && item.recentRank < 120) score -= 1.6;
-      else if (item.recentRank != null && item.recentRank < 500) score -= 0.7;
-      if (lastChannel && item.channel === lastChannel) score -= 1.0;
-      if (item.subscribed) score += 0.32;
-      if (item.playlist) score += 0.4;
-      score += Math.random() * 1.35;
+
+      const rank = Number.isFinite(item.recentRank) ? item.recentRank : 100000;
+      const recency = 6.2 * Math.exp(-rank / 520);
+
+      // Keep historical affinity as a supporting signal, not the main one.
+      let score = Math.min(4.2, Math.log1p(Math.max(0.01, item.score || 0))) * 0.72;
+      score += recency;
+
+      // Avoid immediate repeats from Super Lite while still allowing recent
+      // interests/channels to remain dominant.
+      if (recentIds.has(item.id)) score -= 7.5;
+      if (lastChannel && item.channel === lastChannel) score -= 0.8;
+
+      // These are useful but can be stale, so keep the bonuses deliberately mild.
+      if (item.subscribed) score += 0.14;
+      if (item.playlist) score += 0.18;
+
+      // Small exploration noise keeps the radio from becoming deterministic.
+      score += Math.random() * 1.15;
+
       if (score > bestScore) {
         best = item;
         bestScore = score;
       }
     }
-    return best || candidates[Math.floor(Math.random() * windowSize)];
+
+    return best || pool[Math.floor(Math.random() * pool.length)];
   }
 
   function pickSeed(lastChannel) {
