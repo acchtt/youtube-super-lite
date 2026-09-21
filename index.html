@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0b0d10">
+  <title>YouTube Super Lite</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div>
+        <h1>YouTube Super Lite</h1>
+        <p class="muted">One player. No feed, comments, Shorts, or infinite-scroll overhead.</p>
+      </div>
+      <div class="memory-pill" title="Player is periodically rebuilt in Low-memory mode">
+        <span class="dot"></span><span id="memoryLabel">Low-memory mode on</span>
+      </div>
+    </header>
+
+    <section class="input-card card">
+      <label for="urlInput">YouTube video URL, video ID, or playlist URL</label>
+      <div class="input-row">
+        <textarea id="urlInput" rows="2" spellcheck="false" placeholder="Paste one or multiple YouTube links (one per line)"></textarea>
+        <div class="input-actions">
+          <button id="playNowBtn" class="primary">Play now</button>
+          <button id="addBtn">Add to queue</button>
+        </div>
+      </div>
+      <p id="message" class="message" aria-live="polite"></p>
+    </section>
+
+    <section class="layout">
+      <div class="player-column">
+        <div class="player-shell card">
+          <div class="aspect">
+            <div id="player"></div>
+          </div>
+          <div class="now-playing">
+            <div class="now-text">
+              <span class="eyebrow">NOW PLAYING</span>
+              <strong id="nowTitle">Nothing loaded</strong>
+              <span id="nowMeta" class="muted">Paste a YouTube link above.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="controls card">
+          <div class="transport">
+            <button id="prevBtn" aria-label="Previous">⏮</button>
+            <button id="toggleBtn" class="primary round" aria-label="Play or pause">▶</button>
+            <button id="nextBtn" aria-label="Next">⏭</button>
+          </div>
+
+          <div class="settings-grid">
+            <label class="setting"><span>Autoplay</span><input id="autoplayToggle" type="checkbox" checked></label>
+            <label class="setting"><span>Low-memory</span><input id="lowMemoryToggle" type="checkbox" checked></label>
+            <label class="setting"><span>Shuffle</span><input id="shuffleToggle" type="checkbox"></label>
+            <label class="setting"><span>Repeat</span>
+              <select id="repeatSelect">
+                <option value="off">Off</option>
+                <option value="one">One</option>
+                <option value="queue">Queue</option>
+              </select>
+            </label>
+            <label class="setting"><span>Speed</span>
+              <select id="speedSelect">
+                <option value="0.5">0.5×</option>
+                <option value="0.75">0.75×</option>
+                <option value="1" selected>1×</option>
+                <option value="1.25">1.25×</option>
+                <option value="1.5">1.5×</option>
+                <option value="1.75">1.75×</option>
+                <option value="2">2×</option>
+              </select>
+            </label>
+            <label class="setting"><span>Refresh every</span>
+              <select id="refreshSelect">
+                <option value="5">5 videos</option>
+                <option value="8" selected>8 videos</option>
+                <option value="12">12 videos</option>
+                <option value="20">20 videos</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <div class="tips card">
+          <span><kbd>Space</kbd> play/pause</span>
+          <span><kbd>N</kbd> next</span>
+          <span><kbd>P</kbd> previous</span>
+          <span><kbd>←</kbd>/<kbd>→</kbd> seek 5s</span>
+        </div>
+      </div>
+
+      <aside class="queue card">
+        <div class="queue-head">
+          <div>
+            <span class="eyebrow">QUEUE</span>
+            <strong id="queueCount">0 videos</strong>
+          </div>
+          <button id="clearBtn" class="ghost danger">Clear</button>
+        </div>
+        <div id="playlistMode" class="playlist-mode hidden"></div>
+        <ol id="queueList"></ol>
+        <div id="emptyQueue" class="empty">Your queue is empty.</div>
+      </aside>
+    </section>
+
+    <footer>
+      <span>Queue and settings stay in this browser via localStorage.</span>
+      <span>No analytics. Video playback is provided by YouTube's embedded player.</span>
+    </footer>
+  </main>
+
+  <script src="app.js"></script>
+  <script src="https://www.youtube.com/iframe_api"></script>
+</body>
+</html>
