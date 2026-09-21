@@ -13,7 +13,7 @@
     <header class="topbar">
       <div>
         <h1>YouTube Super Lite</h1>
-        <p class="muted">One player. No feed, comments, Shorts, or infinite-scroll overhead.</p>
+        <p class="muted">YouTube-like autoplay without the heavy feed, comments, Shorts, or infinite-scroll page.</p>
       </div>
       <div class="memory-pill" title="Player is periodically rebuilt in Low-memory mode">
         <span class="dot"></span><span id="memoryLabel">Low-memory mode on</span>
@@ -55,6 +55,9 @@
           </div>
 
           <div class="settings-grid">
+            <label class="setting" title="For a single video, start YouTube's generated Mix/Radio so the next videos are chosen by YouTube rather than only by your manual queue.">
+              <span>YouTube-like</span><input id="smartAutoplayToggle" type="checkbox" checked>
+            </label>
             <label class="setting"><span>Autoplay</span><input id="autoplayToggle" type="checkbox" checked></label>
             <label class="setting"><span>Low-memory</span><input id="lowMemoryToggle" type="checkbox" checked></label>
             <label class="setting"><span>Shuffle</span><input id="shuffleToggle" type="checkbox"></label>
@@ -110,8 +113,8 @@
     </section>
 
     <footer>
-      <span>Queue and settings stay in this browser via localStorage.</span>
-      <span>No analytics. Video playback is provided by YouTube's embedded player.</span>
+      <span>Single-video Play now uses YouTube Mix when YouTube-like mode is enabled.</span>
+      <span>No analytics. Video playback/recommendation sequencing is provided by YouTube's embedded player.</span>
     </footer>
   </main>
 
