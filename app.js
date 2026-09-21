@@ -1,33 +1,40 @@
 'use strict';
 
-const STORAGE_KEY = 'yt-super-lite-v1';
+const STORAGE_KEY = 'yt-super-lite-v2';
 const state = {
   queue: [],
   index: -1,
   playlistMode: null,
+  autoplayMode: 'personalized',
   autoplay: true,
   lowMemory: true,
   shuffle: false,
   repeat: 'off',
   speed: 1,
   refreshEvery: 8,
-  playsSinceRefresh: 0
+  playsSinceRefresh: 0,
+  lastChannel: ''
 };
 
 let player = null;
 let playerReady = false;
 let pending = [];
 let draggedIndex = null;
+let profile = null;
 
-const $ = (id) => document.getElementById(id);
+const $ = id => document.getElementById(id);
 const els = {
   input: $('urlInput'), playNow: $('playNowBtn'), add: $('addBtn'), message: $('message'),
   nowTitle: $('nowTitle'), nowMeta: $('nowMeta'), queueList: $('queueList'),
   queueCount: $('queueCount'), emptyQueue: $('emptyQueue'), clear: $('clearBtn'),
   prev: $('prevBtn'), toggle: $('toggleBtn'), next: $('nextBtn'),
-  autoplay: $('autoplayToggle'), lowMemory: $('lowMemoryToggle'), shuffle: $('shuffleToggle'),
+  autoplayMode: $('autoplayModeSelect'), autoplay: $('autoplayToggle'),
+  lowMemory: $('lowMemoryToggle'), shuffle: $('shuffleToggle'),
   repeat: $('repeatSelect'), speed: $('speedSelect'), refresh: $('refreshSelect'),
-  memoryLabel: $('memoryLabel'), playlistMode: $('playlistMode')
+  memoryLabel: $('memoryLabel'), playlistMode: $('playlistMode'),
+  takeoutInput: $('takeoutInput'), importTakeout: $('importTakeoutBtn'),
+  startPersonalized: $('startPersonalizedBtn'), forgetProfile: $('forgetProfileBtn'),
+  profileStatus: $('profileStatus'), profileStats: $('profileStats')
 };
 
 function loadState() {
@@ -37,6 +44,7 @@ function loadState() {
     ['autoplay','lowMemory','shuffle'].forEach(k => {
       if (typeof saved[k] === 'boolean') state[k] = saved[k];
     });
+    if (['personalized','mix','queue'].includes(saved.autoplayMode)) state.autoplayMode = saved.autoplayMode;
     if (['off','one','queue'].includes(saved.repeat)) state.repeat = saved.repeat;
     if ([0.5,0.75,1,1.25,1.5,1.75,2].includes(Number(saved.speed))) state.speed = Number(saved.speed);
     if ([5,8,12,20].includes(Number(saved.refreshEvery))) state.refreshEvery = Number(saved.refreshEvery);
@@ -46,6 +54,7 @@ function loadState() {
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({
     queue: state.queue,
+    autoplayMode: state.autoplayMode,
     autoplay: state.autoplay,
     lowMemory: state.lowMemory,
     shuffle: state.shuffle,
@@ -56,6 +65,7 @@ function saveState() {
 }
 
 function syncSettings() {
+  els.autoplayMode.value = state.autoplayMode;
   els.autoplay.checked = state.autoplay;
   els.lowMemory.checked = state.lowMemory;
   els.shuffle.checked = state.shuffle;
@@ -68,6 +78,30 @@ function syncSettings() {
 function setMessage(text, kind) {
   els.message.textContent = text || '';
   els.message.className = 'message' + (kind ? ' ' + kind : '');
+}
+
+function renderProfile() {
+  if (!profile) {
+    els.profileStatus.textContent = 'No YouTube Takeout profile imported';
+    els.profileStats.textContent = 'Import your YouTube Takeout ZIP. It is parsed locally and never uploaded.';
+    els.startPersonalized.disabled = true;
+    els.forgetProfile.classList.add('hidden');
+    return;
+  }
+  const s = profile.stats || {};
+  els.profileStatus.textContent = 'Personalization profile ready';
+  els.profileStats.textContent =
+    (s.watchEvents || 0).toLocaleString() + ' watches · ' +
+    (s.uniqueVideos || 0).toLocaleString() + ' unique videos · ' +
+    (s.subscriptions || 0).toLocaleString() + ' subscriptions · ' +
+    (s.playlistItems || 0).toLocaleString() + ' playlist items';
+  els.startPersonalized.disabled = false;
+  els.forgetProfile.classList.remove('hidden');
+}
+
+async function loadProfile() {
+  try { profile = await TakeoutPersonalization.load(); } catch (_) { profile = null; }
+  renderProfile();
 }
 
 function videoIdFrom(value) {
@@ -89,9 +123,7 @@ function videoIdFrom(value) {
 function playlistIdFrom(value) {
   try {
     const u = new URL(String(value || '').trim());
-    if (u.hostname.includes('youtube.com') || u.hostname.includes('youtu.be')) {
-      return u.searchParams.get('list');
-    }
+    if (u.hostname.includes('youtube.com') || u.hostname.includes('youtu.be')) return u.searchParams.get('list');
   } catch (_) {}
   return null;
 }
@@ -114,7 +146,11 @@ function renderQueue() {
   els.queueCount.textContent = state.queue.length + (state.queue.length === 1 ? ' video' : ' videos');
   els.emptyQueue.classList.toggle('hidden', state.queue.length > 0 || !!state.playlistMode);
   els.playlistMode.classList.toggle('hidden', !state.playlistMode);
-  els.playlistMode.textContent = state.playlistMode ? 'Playlist mode · ' + state.playlistMode.id : '';
+  if (state.playlistMode) {
+    const label = state.playlistMode.personalized ? 'Personalized Mix' :
+      state.playlistMode.mix ? 'YouTube Mix' : 'Playlist mode';
+    els.playlistMode.textContent = label + ' · ' + state.playlistMode.id;
+  }
 
   state.queue.forEach((item, i) => {
     const li = document.createElement('li');
@@ -147,14 +183,8 @@ function renderQueue() {
     actions.append(play, remove);
 
     li.append(num, title, actions);
-    li.addEventListener('dragstart', () => {
-      draggedIndex = i;
-      li.classList.add('dragging');
-    });
-    li.addEventListener('dragend', () => {
-      draggedIndex = null;
-      li.classList.remove('dragging');
-    });
+    li.addEventListener('dragstart', () => { draggedIndex = i; li.classList.add('dragging'); });
+    li.addEventListener('dragend', () => { draggedIndex = null; li.classList.remove('dragging'); });
     li.addEventListener('dragover', e => e.preventDefault());
     li.addEventListener('drop', e => {
       e.preventDefault();
@@ -176,13 +206,7 @@ function createPlayer(onReadyAction) {
   player = new YT.Player('player', {
     width: '100%',
     height: '100%',
-    playerVars: {
-      autoplay: 0,
-      controls: 1,
-      rel: 0,
-      playsinline: 1,
-      iv_load_policy: 3
-    },
+    playerVars: { autoplay: 0, controls: 1, rel: 1, playsinline: 1, iv_load_policy: 3 },
     events: {
       onReady: event => {
         playerReady = true;
@@ -192,7 +216,7 @@ function createPlayer(onReadyAction) {
         if (onReadyAction) onReadyAction(event.target);
       },
       onStateChange: onPlayerStateChange,
-      onError: e => setMessage('YouTube player error ' + e.data + '. The video may be unavailable or blocked from embeds.', 'error')
+      onError: handlePlayerError
     }
   });
 }
@@ -210,9 +234,11 @@ function rebuildPlayer(action) {
   try { if (player) player.destroy(); } catch (_) {}
   player = null;
   state.playsSinceRefresh = 0;
+  const aspect = document.querySelector('.aspect');
+  aspect.textContent = '';
   const container = document.createElement('div');
   container.id = 'player';
-  document.querySelector('.aspect').appendChild(container);
+  aspect.appendChild(container);
   createPlayer(action);
 }
 
@@ -236,28 +262,68 @@ function playQueueIndex(i, useFreshPlayer) {
   else whenReady(() => loadVideoInto(player, item));
 }
 
+function loadPlaylistInto(target, listId, videoId) {
+  target.loadPlaylist({ listType: 'playlist', list: listId, index: 0, startSeconds: 0 });
+  if (videoId) {
+    setTimeout(() => {
+      try {
+        const ids = target.getPlaylist ? target.getPlaylist() : null;
+        const idx = ids ? ids.indexOf(videoId) : -1;
+        if (idx >= 0) target.playVideoAt(idx);
+      } catch (_) {}
+    }, 900);
+  }
+  try { target.setLoop(state.repeat === 'queue'); } catch (_) {}
+  try { target.setShuffle(state.shuffle); } catch (_) {}
+}
+
 function playPlaylist(listId, videoId) {
   state.playlistMode = { id: listId };
   state.index = -1;
   renderQueue();
   els.nowTitle.textContent = 'YouTube playlist';
   els.nowMeta.textContent = listId;
-  whenReady(() => {
-    player.loadPlaylist({
-      listType: 'playlist',
-      list: listId,
-      index: 0,
-      startSeconds: 0
-    });
-    if (videoId) {
-      setTimeout(() => {
-        const ids = player.getPlaylist ? player.getPlaylist() : null;
-        const idx = ids ? ids.indexOf(videoId) : -1;
-        if (idx >= 0) player.playVideoAt(idx);
-      }, 900);
-    }
-    applyPlaylistOptions();
-  });
+  whenReady(() => loadPlaylistInto(player, listId, videoId));
+}
+
+function playMixFromSeed(item, personalized, fresh) {
+  if (!item || !item.id) return;
+  const listId = 'RD' + item.id;
+  state.playlistMode = { id: listId, seedId: item.id, personalized: !!personalized, mix: !personalized };
+  state.index = -1;
+  if (item.channel) state.lastChannel = item.channel;
+  els.nowTitle.textContent = item.title || (personalized ? 'Personalized Mix' : 'YouTube Mix');
+  els.nowMeta.textContent = personalized ? 'Taste-profile seed · ' + item.id : 'YouTube Mix seed · ' + item.id;
+  renderQueue();
+
+  const action = target => {
+    loadPlaylistInto(target, listId, item.id);
+    setTimeout(() => {
+      try {
+        const ids = target.getPlaylist ? target.getPlaylist() : [];
+        if (!ids || !ids.length) target.loadVideoById(item.id);
+      } catch (_) { target.loadVideoById(item.id); }
+    }, 1400);
+  };
+  if (fresh) rebuildPlayer(action);
+  else whenReady(() => action(player));
+}
+
+function startPersonalized(fresh) {
+  if (!profile) {
+    setMessage('Import your YouTube Takeout ZIP first.', 'error');
+    return;
+  }
+  const seed = TakeoutPersonalization.pickSeed(state.lastChannel);
+  if (!seed) {
+    setMessage('The imported profile has no playable seed videos.', 'error');
+    return;
+  }
+  state.autoplayMode = 'personalized';
+  els.autoplayMode.value = 'personalized';
+  saveState();
+  playMixFromSeed(seed, true, !!fresh);
+  setMessage('Personalized radio started from your local viewing profile.', 'ok');
 }
 
 function applyPlaylistOptions() {
@@ -306,6 +372,7 @@ function next() {
   }
   const n = nextQueueIndex();
   if (n >= 0) playQueueIndex(n);
+  else if (state.autoplay && state.autoplayMode === 'personalized') startPersonalized(false);
 }
 
 function previous() {
@@ -318,22 +385,19 @@ function previous() {
   playQueueIndex(p);
 }
 
-function maybeRefreshThenPlay(i) {
-  const shouldRefresh = state.lowMemory && state.playsSinceRefresh >= state.refreshEvery;
-  playQueueIndex(i, shouldRefresh);
-  if (!shouldRefresh) return;
-  setMessage('Player refreshed to release accumulated playback state.', 'ok');
-}
-
-function refreshPlaylistAfterEnd() {
-  if (!playerReady || !player) return false;
+function refreshCurrentPlaylist() {
+  if (!playerReady || !player || !state.playlistMode) return false;
   if (!(state.lowMemory && state.playsSinceRefresh >= state.refreshEvery)) return false;
+
+  if (state.playlistMode.personalized && profile) {
+    startPersonalized(true);
+    setMessage('Player rebuilt and personalized seed refreshed.', 'ok');
+    return true;
+  }
+
   let ids = [];
   let current = 0;
-  try {
-    ids = player.getPlaylist() || [];
-    current = player.getPlaylistIndex();
-  } catch (_) {}
+  try { ids = player.getPlaylist() || []; current = player.getPlaylistIndex(); } catch (_) {}
   if (!ids.length) return false;
   let nextIndex = current + 1;
   if (nextIndex >= ids.length) nextIndex = state.repeat === 'queue' ? 0 : -1;
@@ -343,7 +407,7 @@ function refreshPlaylistAfterEnd() {
     try { target.setLoop(state.repeat === 'queue'); } catch (_) {}
     try { target.setShuffle(state.shuffle); } catch (_) {}
   });
-  setMessage('Playlist player refreshed to keep memory use down.', 'ok');
+  setMessage('Player rebuilt to release accumulated playback state.', 'ok');
   return true;
 }
 
@@ -356,18 +420,25 @@ function onPlayerStateChange(event) {
   } else if (event.data === YT.PlayerState.ENDED) {
     els.toggle.textContent = '▶';
     state.playsSinceRefresh++;
+
     if (state.repeat === 'one') {
       player.seekTo(0);
       player.playVideo();
       return;
     }
     if (!state.autoplay) return;
+
     if (state.playlistMode) {
-      if (refreshPlaylistAfterEnd()) return;
+      if (refreshCurrentPlaylist()) return;
+      return;
+    }
+
+    if (state.autoplayMode === 'personalized' && profile) {
+      startPersonalized(state.lowMemory && state.playsSinceRefresh >= state.refreshEvery);
       return;
     }
     const n = nextQueueIndex();
-    if (n >= 0) maybeRefreshThenPlay(n);
+    if (n >= 0) playQueueIndex(n);
   }
 }
 
@@ -377,7 +448,11 @@ function updateVideoData() {
   try { data = player.getVideoData() || {}; } catch (_) {}
   if (data.title) els.nowTitle.textContent = data.title;
   const id = data.video_id || '';
-  els.nowMeta.textContent = id || (state.playlistMode ? state.playlistMode.id : '');
+  if (data.author) state.lastChannel = data.author;
+  els.nowMeta.textContent = [data.author, id].filter(Boolean).join(' · ') ||
+    (state.playlistMode ? state.playlistMode.id : '');
+
+  if (id) TakeoutPersonalization.markPlayed(id, data.author || '');
   if (!state.playlistMode && state.index >= 0 && state.queue[state.index] && data.title) {
     state.queue[state.index].title = data.title;
     saveState();
@@ -385,15 +460,33 @@ function updateVideoData() {
   }
 }
 
+function handlePlayerError(e) {
+  const code = e && e.data;
+  if (state.playlistMode && (state.playlistMode.personalized || state.playlistMode.mix)) {
+    const seed = state.playlistMode.seedId;
+    setMessage('YouTube Mix could not load for this seed. Falling back and trying another seed after it ends.', 'error');
+    state.playlistMode = null;
+    if (seed) whenReady(() => player.loadVideoById(seed));
+    return;
+  }
+  setMessage('YouTube player error ' + code + '. The video may be unavailable or blocked from embeds.', 'error');
+}
+
 function playFromInput() {
   const parsed = parseInput();
   if (parsed.playlist) {
     playPlaylist(parsed.playlist.id, parsed.playlist.videoId);
-    setMessage('Playlist loaded. YouTube will handle the playlist sequence.', 'ok');
+    setMessage('Playlist loaded.', 'ok');
     return;
   }
   if (!parsed.videos.length) {
     setMessage('I could not find a valid YouTube video or playlist in that input.', 'error');
+    return;
+  }
+  if (parsed.videos.length === 1 && state.autoplayMode !== 'queue') {
+    playMixFromSeed(parsed.videos[0], state.autoplayMode === 'personalized' && !!profile, false);
+    setMessage(state.autoplayMode === 'personalized' && profile ?
+      'Using this video as the first personalized seed.' : 'YouTube Mix started from this video.', 'ok');
     return;
   }
   addVideos(parsed.videos, true);
@@ -402,7 +495,7 @@ function playFromInput() {
 function addFromInput() {
   const parsed = parseInput();
   if (parsed.playlist) {
-    setMessage('Playlist URLs play directly. Use Play now; expanding a playlist into the custom queue would require a YouTube Data API key.', 'error');
+    setMessage('Playlist URLs play directly. Use Play now.', 'error');
     return;
   }
   if (!parsed.videos.length) {
@@ -411,6 +504,32 @@ function addFromInput() {
   }
   addVideos(parsed.videos, false);
 }
+
+els.importTakeout.addEventListener('click', () => els.takeoutInput.click());
+els.takeoutInput.addEventListener('change', async () => {
+  const file = els.takeoutInput.files && els.takeoutInput.files[0];
+  if (!file) return;
+  els.importTakeout.disabled = true;
+  els.startPersonalized.disabled = true;
+  try {
+    setMessage('Importing Takeout locally…');
+    profile = await TakeoutPersonalization.importZip(file, msg => setMessage(msg));
+    renderProfile();
+    setMessage('Takeout imported. Raw archive data was discarded; only a compact local taste profile was saved.', 'ok');
+  } catch (err) {
+    setMessage(err.message || 'Takeout import failed.', 'error');
+  } finally {
+    els.importTakeout.disabled = false;
+    els.takeoutInput.value = '';
+  }
+});
+els.startPersonalized.addEventListener('click', () => startPersonalized(false));
+els.forgetProfile.addEventListener('click', async () => {
+  await TakeoutPersonalization.clear();
+  profile = null;
+  renderProfile();
+  setMessage('Local personalization profile deleted.', 'ok');
+});
 
 els.playNow.addEventListener('click', playFromInput);
 els.add.addEventListener('click', addFromInput);
@@ -429,40 +548,26 @@ els.clear.addEventListener('click', () => {
   renderQueue();
   setMessage('Queue cleared.');
 });
+els.autoplayMode.addEventListener('change', e => { state.autoplayMode = e.target.value; saveState(); });
 els.autoplay.addEventListener('change', e => { state.autoplay = e.target.checked; saveState(); });
 els.lowMemory.addEventListener('change', e => {
   state.lowMemory = e.target.checked;
   els.memoryLabel.textContent = state.lowMemory ? 'Low-memory mode on' : 'Low-memory mode off';
   saveState();
 });
-els.shuffle.addEventListener('change', e => {
-  state.shuffle = e.target.checked;
-  applyPlaylistOptions();
-  saveState();
-});
-els.repeat.addEventListener('change', e => {
-  state.repeat = e.target.value;
-  applyPlaylistOptions();
-  saveState();
-});
+els.shuffle.addEventListener('change', e => { state.shuffle = e.target.checked; applyPlaylistOptions(); saveState(); });
+els.repeat.addEventListener('change', e => { state.repeat = e.target.value; applyPlaylistOptions(); saveState(); });
 els.speed.addEventListener('change', e => {
   state.speed = Number(e.target.value);
-  whenReady(() => {
-    try { player.setPlaybackRate(state.speed); } catch (_) {}
-  });
+  whenReady(() => { try { player.setPlaybackRate(state.speed); } catch (_) {} });
   saveState();
 });
-els.refresh.addEventListener('change', e => {
-  state.refreshEvery = Number(e.target.value);
-  saveState();
-});
+els.refresh.addEventListener('change', e => { state.refreshEvery = Number(e.target.value); saveState(); });
 
 document.addEventListener('keydown', e => {
   if (['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) return;
-  if (e.code === 'Space') {
-    e.preventDefault();
-    els.toggle.click();
-  } else if (e.key.toLowerCase() === 'n') next();
+  if (e.code === 'Space') { e.preventDefault(); els.toggle.click(); }
+  else if (e.key.toLowerCase() === 'n') next();
   else if (e.key.toLowerCase() === 'p') previous();
   else if (e.key === 'ArrowLeft') whenReady(() => player.seekTo(Math.max(0, player.getCurrentTime() - 5), true));
   else if (e.key === 'ArrowRight') whenReady(() => player.seekTo(player.getCurrentTime() + 5, true));
@@ -471,3 +576,4 @@ document.addEventListener('keydown', e => {
 loadState();
 syncSettings();
 renderQueue();
+loadProfile();
