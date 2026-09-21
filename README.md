@@ -1,53 +1,47 @@
 # YouTube Super Lite
 
-A tiny, dependency-free YouTube queue/player designed for long playback sessions on low-memory PCs.
+A lightweight YouTube player for long sessions on low-memory PCs, with local personalization from a Google Takeout export.
+
+## Personalized mode
+
+Import a YouTube Takeout ZIP containing History, Subscriptions and optionally Playlists. The archive is processed inside a Web Worker in the browser. The raw Takeout data is discarded after import and **never uploaded**.
+
+The importer builds a compact local taste profile from:
+
+- watch frequency and recency
+- channel affinity
+- search-history topics
+- subscriptions
+- playlist membership
+
+Personalized autoplay chooses a seed from that profile, then starts a YouTube-generated Mix from the seed. Every few videos (configurable), Low-memory mode destroys the old iframe and Personalized mode chooses a new profile-aware seed.
+
+This is intentionally an approximation of the YouTube home/Up Next algorithm. A third-party static site cannot access Google's private account recommendation ranking. The Takeout profile gives the site your taste signals without scraping or uploading your signed-in account.
 
 ## Why it is lighter
 
-The site keeps only one YouTube iframe player and avoids the heavy parts of youtube.com: home feed, comments, Shorts, notifications, endless recommendations, and large client-side application state.
-
-**Low-memory mode** periodically destroys and recreates the player after a configurable number of completed videos. This is meant to release playback state that may accumulate during long sessions.
+Only one YouTube iframe player is kept. The site avoids the normal youtube.com feed, comments, Shorts, notifications, infinite recommendations UI, and large application state.
 
 ## Features
 
-- Paste a YouTube video URL, raw video ID, or playlist URL
-- Paste multiple video links and build a queue
-- Autoplay next
-- Previous / next
-- Shuffle
-- Repeat one / repeat queue
-- Playback speed
-- Drag to reorder the custom queue
-- Queue and preferences saved in localStorage
-- Keyboard shortcuts
-- Responsive dark interface
-- No frameworks, build step, analytics, or API key
-- One embedded player at a time
+- Local Takeout ZIP importer
+- Personalized / YouTube Mix / Queue-only autoplay modes
+- One iframe at a time
+- Periodic player rebuild in Low-memory mode
+- Video URL / ID / playlist input
+- Custom queue with drag ordering
+- Previous / next, shuffle, repeat, playback speed
+- Queue/preferences in localStorage
+- Taste profile in IndexedDB
+- No analytics or build framework
 
-## Important limitations
+## Takeout privacy
 
-- The first playback normally needs a user click because browsers restrict autoplay with sound.
-- Playlist URLs can be played directly, but they are not expanded into the custom queue because doing that reliably requires YouTube Data API access.
-- This project still uses YouTube's official iframe player, so the player itself has YouTube's normal memory cost. The goal is to remove the much heavier surrounding youtube.com interface.
-- Individual videos can disable embedding, in which case the player will show an error.
+Takeout parsing happens in a Web Worker. JSZip is loaded on demand only while importing. The raw archive is not committed to this repository and is not sent to the site owner.
 
-## Local use
+## Limitation
 
-Serve the repository with any static HTTP server. For example:
-
-```bash
-python -m http.server 8080
-```
-
-Then open `http://localhost:8080`.
-
-## GitHub Pages
-
-The repository includes a Pages workflow. Once Pages is enabled for GitHub Actions, pushes to `main` deploy automatically.
-
-## Privacy
-
-This site contains no analytics. YouTube receives the normal requests required by its embedded player.
+YouTube's actual signed-in Home and Up Next ranking is not exposed to the iframe API, so exact account-level recommendation parity is impossible without using unsupported account scraping. Super Lite instead combines your local history profile with YouTube Mix.
 
 ## License
 
