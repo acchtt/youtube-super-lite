@@ -3,6 +3,7 @@
 const STORAGE_KEY = 'yt-super-lite-v2';
 const HISTORY_KEY = 'yt-super-lite-video-history-v1';
 const LAST_PLAYLIST_KEY = 'yt-super-lite-last-playlist-v1';
+const LAST_VIDEO_KEY = 'yt-super-lite-last-video-v1';
 const HISTORY_LIMIT = 200;
 const state = {
   queue: [],
@@ -35,6 +36,7 @@ let tasteGateSkips = 0;
 let tasteGateChecking = false;
 let videoHistory = loadVideoHistory();
 let lastPlaylist = loadLastPlaylist();
+let lastVideo = loadLastVideo();
 let currentTabTrack = { title:'', author:'', state:'idle' };
 
 const $ = id => document.getElementById(id);
@@ -55,6 +57,8 @@ const els = {
   startupUrl: $('startupUrl'), startupError: $('startupError'),
   historyList: $('historyList'), historyCount: $('historyCount'),
   emptyHistory: $('emptyHistory'), clearHistory: $('clearHistoryBtn'),
+  resumeVideoBox: $('resumeVideoBox'), resumeVideoTitle: $('resumeVideoTitle'),
+  resumeVideoMeta: $('resumeVideoMeta'), resumeVideoBtn: $('resumeVideoBtn'),
   resumePlaylistBox: $('resumePlaylistBox'), resumePlaylistTitle: $('resumePlaylistTitle'),
   resumePlaylistMeta: $('resumePlaylistMeta'), resumePlaylistBtn: $('resumePlaylistBtn')
 };
@@ -122,7 +126,7 @@ function renderTabTitle() {
   const author = cleanTabText(currentTabTrack.author);
 
   if (!title) {
-    document.title = 'YouTube Super Lite · v0.8.4';
+    document.title = 'YouTube Super Lite · v0.8.5';
     return;
   }
 
@@ -277,6 +281,112 @@ function startFromStartupPrompt() {
     context.listId
       ? 'Session started from your chosen video. The pasted YouTube playlist/Radio will continue afterward.'
       : 'Session started from your chosen video. Its YouTube Radio will continue afterward.',
+    'ok'
+  );
+}
+
+function loadLastVideo() {
+  try {
+    const value = JSON.parse(localStorage.getItem(LAST_VIDEO_KEY) || 'null');
+    return value && value.id ? value : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function saveLastVideo() {
+  try {
+    if (lastVideo && lastVideo.id) {
+      localStorage.setItem(LAST_VIDEO_KEY, JSON.stringify(lastVideo));
+    }
+  } catch (_) {}
+}
+
+function rememberLastVideo(details = {}) {
+  if (!details.id) return;
+
+  lastVideo = {
+    id: details.id,
+    title: details.title || (lastVideo && lastVideo.id === details.id ? lastVideo.title : '') || 'YouTube video',
+    channel: details.channel || (lastVideo && lastVideo.id === details.id ? lastVideo.channel : '') || '',
+    seconds: Number.isFinite(details.seconds) ? Math.max(0, details.seconds) :
+      (lastVideo && lastVideo.id === details.id && Number.isFinite(lastVideo.seconds) ? lastVideo.seconds : 0),
+    listId: details.listId || (state.playlistMode && state.playlistMode.id) || null,
+    listIndex: Number.isInteger(details.listIndex) ? details.listIndex : null,
+    savedAt: Date.now()
+  };
+  saveLastVideo();
+  renderResumeVideo();
+}
+
+function formatPlaybackTime(seconds) {
+  const total = Math.max(0, Math.floor(Number(seconds) || 0));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const secs = total % 60;
+  return hours
+    ? hours + ':' + String(minutes).padStart(2, '0') + ':' + String(secs).padStart(2, '0')
+    : minutes + ':' + String(secs).padStart(2, '0');
+}
+
+function renderResumeVideo() {
+  if (!els.resumeVideoBox) return;
+  const available = !!(lastVideo && lastVideo.id);
+  els.resumeVideoBox.classList.toggle('hidden', !available);
+  if (!available) return;
+
+  els.resumeVideoTitle.textContent = lastVideo.title || 'Last played video';
+  els.resumeVideoMeta.textContent = [
+    lastVideo.channel,
+    Number(lastVideo.seconds) >= 5 ? ('at ' + formatPlaybackTime(lastVideo.seconds)) : '',
+    lastVideo.listId ? 'playlist/radio context saved' : ''
+  ].filter(Boolean).join(' · ');
+}
+
+function capturePlaybackProgress() {
+  if (!playerReady || !player) return;
+  let data = {};
+  let seconds = 0;
+  let listIndex = null;
+  try {
+    data = player.getVideoData() || {};
+    seconds = Number(player.getCurrentTime()) || 0;
+    if (state.playlistMode) {
+      const index = player.getPlaylistIndex();
+      if (Number.isInteger(index) && index >= 0) listIndex = index;
+    }
+  } catch (_) {
+    return;
+  }
+
+  if (!data.video_id) return;
+  rememberLastVideo({
+    id: data.video_id,
+    title: data.title || '',
+    channel: data.author || '',
+    seconds,
+    listId: state.playlistMode && state.playlistMode.id || null,
+    listIndex
+  });
+}
+
+function resumeLastVideo() {
+  if (!lastVideo || !lastVideo.id) return;
+
+  closeStartupGate();
+
+  playExactManual({
+    id: lastVideo.id,
+    title: lastVideo.title || '',
+    listId: lastVideo.listId || null,
+    listIndex: Number.isInteger(lastVideo.listIndex) ? lastVideo.listIndex : null,
+    startSeconds: Number(lastVideo.seconds) >= 5 ? Number(lastVideo.seconds) : 0
+  });
+
+  setMessage(
+    Number(lastVideo.seconds) >= 5
+      ? 'Resuming the last video from ' + formatPlaybackTime(lastVideo.seconds) + '.'
+      : 'Resuming the last played video.',
     'ok'
   );
 }
@@ -670,7 +780,12 @@ function playExactManual(item) {
   renderQueue();
   whenReady(() => {
     try { player.stopVideo(); } catch (_) {}
-    player.loadVideoById(item.id);
+    const startSeconds = Number(item.startSeconds) || 0;
+    if (startSeconds > 0) {
+      player.loadVideoById({ videoId:item.id, startSeconds });
+    } else {
+      player.loadVideoById(item.id);
+    }
     try { player.setPlaybackRate(state.speed); } catch (_) {}
     applyAudioPrefs(player);
   });
@@ -1040,6 +1155,23 @@ function updateVideoData() {
   if (id && id !== lastObservedVideoId) {
     lastObservedVideoId = id;
 
+    let currentListIndex = null;
+    if (state.playlistMode && playerReady && player) {
+      try {
+        const idx = player.getPlaylistIndex();
+        if (Number.isInteger(idx) && idx >= 0) currentListIndex = idx;
+      } catch (_) {}
+    }
+
+    rememberLastVideo({
+      id,
+      title: data.title || '',
+      channel: data.author || '',
+      seconds: 0,
+      listId: state.playlistMode && state.playlistMode.id || null,
+      listIndex: currentListIndex
+    });
+
     if (state.playlistMode && state.playlistMode.id) {
       rememberPlaylist(state.playlistMode, {
         currentVideoId: id,
@@ -1120,6 +1252,10 @@ if (els.startupForm) {
     event.preventDefault();
     startFromStartupPrompt();
   });
+}
+
+if (els.resumeVideoBtn) {
+  els.resumeVideoBtn.addEventListener('click', resumeLastVideo);
 }
 
 if (els.resumePlaylistBtn) {
@@ -1214,6 +1350,7 @@ loadState();
 syncSettings();
 renderQueue();
 renderVideoHistory();
+renderResumeVideo();
 renderResumePlaylist();
 loadProfile();
 setTimeout(() => {
@@ -1223,3 +1360,9 @@ setTimeout(() => {
 // The iframe API has no volume-change event. Poll lightly so user volume/mute
 // survives player rebuilds, reloads, and future videos without writing unless changed.
 setInterval(captureAudioPrefs, 1500);
+setInterval(capturePlaybackProgress, 5000);
+
+window.addEventListener('pagehide', () => {
+  captureAudioPrefs();
+  capturePlaybackProgress();
+});
