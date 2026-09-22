@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#090b0e">
-  <title>[CHECKING] Deployments · v0.8.1</title>
+  <title>[CHECKING] Deployments · v0.8.2</title>
   <link id="statusFavicon" rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='10' fill='%2375808e'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="styles.css?v=0.8.1">
+  <link rel="stylesheet" href="styles.css?v=0.8.2">
 </head>
 <body>
   <main class="shell">
@@ -25,6 +25,26 @@
         </div>
       </div>
     </header>
+
+    <section id="githubConnect" class="connect-panel panel">
+      <div class="connect-copy">
+        <span class="connect-kicker">RECOMMENDED</span>
+        <strong id="connectTitle">Connect GitHub for live tracking</strong>
+        <span id="connectSubtitle">Public mode is limited to 60 requests/hour. A fine-grained token raises the normal authenticated limit to 5,000 requests/hour and enables 15-second updates.</span>
+      </div>
+      <div class="connect-actions">
+        <div id="tokenEntry" class="connect-token-row">
+          <input id="tokenInput" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…">
+          <button id="saveTokenBtn" class="primary">Connect GitHub</button>
+          <a class="button" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noreferrer">Create token</a>
+        </div>
+        <div id="connectedActions" class="connected-actions hidden">
+          <span id="connectedBadge" class="connected-badge">● Connected</span>
+          <button id="clearTokenBtn" class="ghost danger">Disconnect</button>
+        </div>
+        <span id="connectMessage" class="connect-message">Token stays only in this browser tab. Use read-only Actions access for the tracked repositories.</span>
+      </div>
+    </section>
 
     <section class="toolbar panel">
       <div class="toolbar-left">
@@ -46,23 +66,13 @@
       <details>
         <summary>
           <div>
-            <strong>Real-time mode & tracked repos</strong>
-            <span>Optional GitHub token enables 15-second updates. Public mode uses a conservative adaptive interval to avoid GitHub API limits.</span>
+            <strong>Tracked repositories</strong>
+            <span>Add or remove deployment trackers. Authentication is managed above.</span>
           </div>
           <span class="chev">⌄</span>
         </summary>
 
         <div class="settings-body">
-          <div class="token-box">
-            <label for="tokenInput">Fine-grained GitHub token <span>(optional)</span></label>
-            <div class="token-row">
-              <input id="tokenInput" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…">
-              <button id="saveTokenBtn">Use for this tab</button>
-              <button id="clearTokenBtn" class="ghost danger">Clear</button>
-            </div>
-            <p>The token is stored only in <code>sessionStorage</code> for this browser tab and is sent directly to <code>api.github.com</code>. Use read-only Actions access.</p>
-          </div>
-
           <div class="repo-manager">
             <div class="repo-manager-head">
               <div>
@@ -125,6 +135,6 @@
     </article>
   </template>
 
-  <script src="app.js?v=0.8.1"></script>
+  <script src="app.js?v=0.8.2"></script>
 </body>
 </html>
