@@ -258,10 +258,10 @@ function loadVideoInto(target, item) {
 
 function playExactManual(item) {
   if (!item || !item.id) return;
-  manualContinuation = {
-    seed: item,
-    personalized: state.autoplayMode === 'personalized' && !!profile
-  };
+  // A manually pasted video is the strongest signal of current intent.
+  // Always continue from that video's own YouTube Radio rather than
+  // immediately handing control back to the historical Takeout profile.
+  manualContinuation = { seed: item };
   state.playlistMode = null;
   state.index = -1;
   els.nowTitle.textContent = 'Loading requested video…';
@@ -283,8 +283,9 @@ function continueAfterManualVideo() {
   state.playlistMode = {
     id: listId,
     seedId: next.seed.id,
-    personalized: !!next.personalized,
-    mix: !next.personalized
+    personalized: false,
+    mix: true,
+    manualRadio: true
   };
   state.index = -1;
   renderQueue();
@@ -308,7 +309,7 @@ function continueAfterManualVideo() {
   if (fresh) rebuildPlayer(action);
   else whenReady(() => action(player));
 
-  setMessage('Requested video finished. Continuing with related autoplay.', 'ok');
+  setMessage('Requested video finished. Continuing with its YouTube Radio.', 'ok');
   return true;
 }
 
