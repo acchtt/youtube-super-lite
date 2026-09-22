@@ -5,17 +5,30 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#0b0d10">
-  <meta name="application-version" content="0.6.5">
-  <title>YouTube Super Lite · v0.6.5</title>
-  <link rel="stylesheet" href="styles.css">
+  <meta name="application-version" content="0.7.0">
+  <title>YouTube Super Lite · v0.7.0</title>
+  <link rel="stylesheet" href="styles.css?v=0.7.0">
 </head>
-<body>
+<body class="startup-locked">
+  <div id="startupGate" class="startup-gate" role="dialog" aria-modal="true" aria-labelledby="startupTitle">
+    <form id="startupForm" class="startup-card">
+      <span class="eyebrow">START HERE</span>
+      <h2 id="startupTitle">Paste a YouTube video</h2>
+      <p>Choose the first video for this session. Super Lite will play it exactly, then continue from its YouTube Radio.</p>
+      <input id="startupUrl" type="text" inputmode="url" autocomplete="off" spellcheck="false"
+        placeholder="https://www.youtube.com/watch?v=..." autofocus>
+      <button id="startupPlay" class="primary" type="submit">Play video</button>
+      <span id="startupError" class="startup-error" aria-live="polite"></span>
+      <small>You’ll see this prompt every time the site is loaded.</small>
+    </form>
+  </div>
+
   <main class="app">
     <header class="topbar">
       <div>
         <div class="title-line">
           <h1>YouTube Super Lite</h1>
-          <span class="version-badge" title="Site version">v0.6.5</span>
+          <span class="version-badge" title="Site version">v0.7.0</span>
         </div>
         <p class="muted">Personalized autoplay without the heavy YouTube homepage, comments, Shorts, or infinite scroll.</p>
       </div>
@@ -147,8 +160,8 @@
     </footer>
   </main>
 
-  <script src="personalization.js"></script>
-  <script src="app.js"></script>
+  <script src="personalization.js?v=0.7.0"></script>
+  <script src="app.js?v=0.7.0"></script>
   <script src="https://www.youtube.com/iframe_api"></script>
 </body>
 </html>
