@@ -276,3 +276,7 @@ textarea:focus,select:focus{border-color:#8d7ca0;box-shadow:0 0 0 2px #9f86b526}
   .brand-aero{font-size:1.5rem}
   .brand-ive{font-size:.92rem}
 }
+
+
+/* Clean pre-play landing */
+.input-card{margin-top:2px}
