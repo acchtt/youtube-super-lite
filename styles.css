@@ -146,6 +146,12 @@ body.startup-locked .app{filter:blur(3px);pointer-events:none;user-select:none}
 }
 .startup-card input:focus{border-color:#687585;box-shadow:0 0 0 3px #68758526}
 .startup-card .primary{width:100%;padding:.76rem 1rem}
+
+.startup-skip{
+  width:100%;padding:.7rem 1rem;border:1px solid #2d3440;
+  background:transparent;color:#8f99a7;font-weight:700
+}
+.startup-skip:hover{background:#151920;color:#f3f5f7;border-color:#3a4350}
 .startup-error{min-height:1.1em;color:#ff8b8b;font-size:.8rem}
 .startup-card small{color:#687483;font-size:.72rem;text-align:center}
 
