@@ -604,16 +604,23 @@ function shouldSkipRadioChannel(channelName) {
     return affinity.watchCount < 3;
   }
 
-  // Balanced: allow discovery, but reject channels that are absent from the
-  // profile or only show weak/old affinity. Known recent channels pass.
-  if (!affinity.known) return true;
+  // Balanced must be conservative because YouTube author names do not always
+  // match Takeout channel labels exactly. Unknown/unmatched channels are allowed.
+  // Only skip a channel when the profile positively identifies it as both stale
+  // and very weak.
+  if (!affinity.known) return false;
   if (affinity.subscribed) return false;
-  if (affinity.recentRank <= 3500) return false;
+  if (affinity.recentRank <= 5000) return false;
   return affinity.watchCount < 2;
 }
 
 function skipCurrentRadioItem(channelName) {
-  if (tasteGateChecking || tasteGateSkips >= 6) return;
+  // Never allow the taste filter to turn into a rapid skip loop.
+  if (tasteGateChecking) return;
+  if (tasteGateSkips >= 2) {
+    tasteGateSkips = 0;
+    return;
+  }
   tasteGateChecking = true;
   tasteGateSkips++;
 
