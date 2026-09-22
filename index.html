@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#0b0d10">
-  <meta name="application-version" content="0.8.5">
-  <title>YouTube Super Lite · v0.8.5</title>
-  <link rel="stylesheet" href="styles.css?v=0.8.5">
+  <meta name="application-version" content="0.9.0">
+  <title>YouTube Super Lite · v0.9.0</title>
+  <link rel="stylesheet" href="styles.css?v=0.9.0">
 </head>
 <body class="startup-locked">
   <div id="startupGate" class="startup-gate" role="dialog" aria-modal="true" aria-labelledby="startupTitle">
@@ -40,7 +40,7 @@
         </div>
       </div>
 
-      <small>You’ll see this prompt every time the site is loaded.</small>
+      <small>You’ll see this prompt every time the site is loaded. Resume state is read from Cloudflare D1.</small>
     </form>
   </div>
 
@@ -49,7 +49,7 @@
       <div>
         <div class="title-line">
           <h1>YouTube Super Lite</h1>
-          <span class="version-badge" title="Site version">v0.8.5</span>
+          <span class="version-badge" title="Site version">v0.9.0</span>
         </div>
         <p class="muted">Personalized autoplay without the heavy YouTube homepage, comments, Shorts, or infinite scroll.</p>
       </div>
@@ -63,9 +63,9 @@
 
     <section class="profile-card card">
       <div class="profile-copy">
-        <span class="eyebrow">LOCAL PERSONALIZATION</span>
+        <span class="eyebrow">CLOUD PERSONALIZATION</span>
         <strong id="profileStatus">No YouTube Takeout profile imported</strong>
-        <span id="profileStats" class="muted">Import your YouTube Takeout ZIP. The archive is processed in your browser and is never uploaded to this site.</span>
+        <span id="profileStats" class="muted">Import your YouTube Takeout ZIP. The raw archive is parsed in your browser; only the compact taste profile is saved to Cloudflare D1.</span>
       </div>
       <div class="profile-actions">
         <input id="takeoutInput" class="hidden" type="file" accept=".zip,application/zip">
@@ -189,12 +189,13 @@
 
     <footer>
       <span>Pasted watch links keep their playlist/Radio context when present; plain video links fall back to that video's RD radio.</span>
-      <span>No analytics. Your Takeout data stays in IndexedDB on this device.</span>
+      <span>Persistent app data is stored in Cloudflare D1. The browser keeps only an anonymous HttpOnly session cookie.</span>
     </footer>
   </main>
 
-  <script src="personalization.js?v=0.8.5"></script>
-  <script src="app.js?v=0.8.5"></script>
+  <script src="cloud-state.js?v=0.9.0"></script>
+  <script src="personalization.js?v=0.9.0"></script>
+  <script src="app.js?v=0.9.0"></script>
   <script src="https://www.youtube.com/iframe_api"></script>
 </body>
 </html>
