@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-labelledby="title">
+  <title id="title">Aero logo concept 05 — Wing Lines</title>
+  <g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+    <path d="M22 68 50 28 78 68"/>
+    <path d="M28 69 50 37 72 69"/>
+    <path d="M35 69 50 47 65 69"/>
+    <path d="M21 58c13-4 26-5 39-3"/>
+    <path d="M25 51c12-3 23-3 34-1"/>
+    <path d="M31 44c9-2 17-2 25 0"/>
+  </g>
+</svg>
