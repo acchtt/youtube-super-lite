@@ -15,7 +15,9 @@ textarea{width:100%;resize:vertical;min-height:3.1rem;padding:.8rem;border-radiu
 textarea:focus,select:focus{border-color:#596272;box-shadow:0 0 0 2px #59627233}
 .app{width:min(1320px,calc(100% - 28px));margin:0 auto;padding:22px 0 28px}
 .topbar{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:18px}
-h1{font-size:clamp(1.35rem,3vw,2rem);line-height:1.1;margin:0 0 5px}
+.title-line{display:flex;align-items:center;gap:9px;margin-bottom:5px}
+h1{font-size:clamp(1.35rem,3vw,2rem);line-height:1.1;margin:0}
+.version-badge{display:inline-flex;align-items:center;border:1px solid #303740;background:#151a20;color:#93a0af;border-radius:999px;padding:.2rem .48rem;font-size:.68rem;font-weight:800;letter-spacing:.03em;white-space:nowrap}
 p{margin:0}.muted{color:#8e98a6}
 .card{background:#101318;border:1px solid #20252c;border-radius:14px;box-shadow:0 12px 34px #0003}
 .memory-pill{display:flex;align-items:center;gap:.45rem;color:#abb5c2;background:#11151a;border:1px solid #252b33;border-radius:999px;padding:.48rem .7rem;font-size:.82rem;white-space:nowrap}
@@ -29,9 +31,19 @@ p{margin:0}.muted{color:#8e98a6}
 .now-playing{padding:12px 14px;min-height:74px;display:flex;align-items:center}.now-text{min-width:0;display:grid;gap:2px}
 #nowTitle{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .eyebrow{font-size:.67rem;letter-spacing:.12em;color:#737f8f;font-weight:800}
-.controls{padding:12px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-.transport{display:flex;gap:8px}.settings-grid{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
+.controls{padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:12px;overflow:visible}
+.transport{display:flex;gap:8px;flex:none}
+.quick-settings{display:flex;align-items:center;justify-content:flex-end;gap:8px;min-width:0}
 .setting{display:flex;align-items:center;gap:7px;background:#15191f;border:1px solid #252b33;border-radius:10px;padding:.46rem .62rem;font-size:.82rem;color:#aeb7c2}
+.compact-setting{white-space:nowrap}
+.more-settings{position:relative}
+.more-settings summary{list-style:none;cursor:pointer;user-select:none;background:#15191f;border:1px solid #252b33;border-radius:10px;padding:.46rem .7rem;font-size:.82rem;color:#c1c8d1;font-weight:700}
+.more-settings summary::-webkit-details-marker{display:none}
+.more-settings summary::after{content:" ▾";color:#727e8d}
+.more-settings[open] summary::after{content:" ▴"}
+.more-settings-panel{position:absolute;right:0;top:calc(100% + 8px);z-index:20;width:280px;padding:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px;background:#0f1318;border:1px solid #29313a;border-radius:12px;box-shadow:0 18px 48px #000b}
+.more-settings-panel .setting{justify-content:space-between}
+.more-settings-panel .setting:last-child{grid-column:1/-1}
 .setting input{accent-color:#fff}.setting select{border:0;padding:0;background:transparent;color:#e9ebee;outline:0}
 .tips{padding:10px 12px;display:flex;flex-wrap:wrap;gap:14px;color:#7f8a99;font-size:.78rem}
 kbd{border:1px solid #343b45;background:#171b21;border-radius:5px;padding:.08rem .3rem;color:#bec6d0}
@@ -48,12 +60,14 @@ kbd{border:1px solid #343b45;background:#171b21;border-radius:5px;padding:.08rem
 footer{display:flex;justify-content:space-between;gap:10px;margin-top:17px;color:#626d7b;font-size:.72rem}
 @media(max-width:900px){
   .layout{grid-template-columns:1fr}.queue{position:static;max-height:460px;min-height:260px}
-  .controls{align-items:flex-start;flex-direction:column}.settings-grid{justify-content:flex-start}
+  .controls{align-items:center}.quick-settings{flex-wrap:wrap}
 }
 @media(max-width:600px){
   .app{width:min(100% - 16px,1320px);padding-top:12px}.topbar{align-items:flex-start}.memory-pill{font-size:0;padding:.58rem}
   .input-row{grid-template-columns:1fr}.input-actions{flex-direction:row}.input-actions button{flex:1}
-  .tips{display:none}.settings-grid{display:grid;grid-template-columns:1fr 1fr;width:100%}.setting{justify-content:space-between}
+  .tips{display:none}.controls{align-items:stretch;flex-direction:column}.transport{justify-content:center}
+  .quick-settings{display:grid;grid-template-columns:1fr 1fr auto;width:100%}.compact-setting{justify-content:space-between}
+  .more-settings-panel{position:fixed;left:8px;right:8px;top:auto;bottom:8px;width:auto;grid-template-columns:1fr 1fr}
   footer{flex-direction:column}.queue{max-height:390px}
 }
 
