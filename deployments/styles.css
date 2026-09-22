@@ -75,3 +75,36 @@ footer{display:flex;justify-content:space-between;gap:12px;margin-top:14px;color
   .cards{grid-template-columns:1fr}.token-row{grid-template-columns:1fr 1fr}.token-row input{grid-column:1/-1}.add-form{grid-template-columns:1fr}
   .add-form button{grid-column:auto}.settings summary span{max-width:28rem}footer{flex-direction:column}
 }
+
+/* Prominent authenticated GitHub connection */
+.connect-panel{
+  margin-bottom:14px;padding:14px 15px;display:flex;align-items:center;
+  justify-content:space-between;gap:18px;border-color:#33404d;
+  background:linear-gradient(135deg,#111820,#101318 58%)
+}
+.connect-panel.connected{border-color:#235b38;background:linear-gradient(135deg,#102419,#101318 58%)}
+.connect-copy{display:grid;gap:3px;min-width:240px;max-width:560px}
+.connect-kicker{font-size:.62rem;font-weight:900;letter-spacing:.12em;color:#f7c75a}
+.connect-panel.connected .connect-kicker{color:#6fe095}
+.connect-copy strong{font-size:1rem}
+.connect-copy>span:last-child{font-size:.76rem;color:#8b97a6;line-height:1.45}
+.connect-actions{display:grid;gap:7px;min-width:min(560px,55%);justify-items:end}
+.connect-token-row{display:grid;grid-template-columns:minmax(180px,1fr) auto auto;gap:8px;width:100%}
+.connect-token-row input{width:100%}
+.connected-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px}
+.connected-badge{
+  display:inline-flex;align-items:center;border:1px solid #285e3c;background:#11271a;
+  color:#70e29a;border-radius:999px;padding:.45rem .65rem;font-size:.76rem;font-weight:800
+}
+.connect-message{font-size:.68rem;color:#6f7c8b;text-align:right}
+@media(max-width:900px){
+  .connect-panel{align-items:stretch;flex-direction:column}
+  .connect-actions{min-width:0;width:100%;justify-items:stretch}
+  .connect-message{text-align:left}
+}
+@media(max-width:680px){
+  .connect-token-row{grid-template-columns:1fr 1fr}
+  .connect-token-row input{grid-column:1/-1}
+  .connect-token-row .button,.connect-token-row button{width:100%}
+  .connected-actions{justify-content:space-between}
+}
