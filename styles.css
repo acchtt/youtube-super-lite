@@ -196,3 +196,9 @@ body.startup-locked .app{filter:blur(3px);pointer-events:none;user-select:none}
   .resume-playlist{grid-template-columns:1fr}
   .resume-playlist button{width:100%}
 }
+
+
+.resume-options{display:grid;gap:8px}
+#resumeVideoMeta{
+  color:#6f7b89;font-size:.69rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+}
