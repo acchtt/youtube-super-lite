@@ -1,9 +1,5 @@
 'use strict';
 
-const STORAGE_KEY = 'yt-super-lite-v2';
-const HISTORY_KEY = 'yt-super-lite-video-history-v1';
-const LAST_PLAYLIST_KEY = 'yt-super-lite-last-playlist-v1';
-const LAST_VIDEO_KEY = 'yt-super-lite-last-video-v1';
 const HISTORY_LIMIT = 200;
 const state = {
   queue: [],
@@ -34,9 +30,9 @@ let personalizedMixPlays = 0;
 let lastObservedVideoId = '';
 let tasteGateSkips = 0;
 let tasteGateChecking = false;
-let videoHistory = loadVideoHistory();
-let lastPlaylist = loadLastPlaylist();
-let lastVideo = loadLastVideo();
+let videoHistory = [];
+let lastPlaylist = null;
+let lastVideo = null;
 let currentTabTrack = { title:'', author:'', state:'idle' };
 
 const $ = id => document.getElementById(id);
@@ -63,25 +59,28 @@ const els = {
   resumePlaylistMeta: $('resumePlaylistMeta'), resumePlaylistBtn: $('resumePlaylistBtn')
 };
 
-function loadState() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-    if (Array.isArray(saved.queue)) state.queue = saved.queue.filter(x => x && x.id);
-    ['autoplay','lowMemory','cinema','shuffle'].forEach(k => {
-      if (typeof saved[k] === 'boolean') state[k] = saved[k];
-    });
-    if (['personalized','mix','queue'].includes(saved.autoplayMode)) state.autoplayMode = saved.autoplayMode;
-    if (['off','balanced','strict'].includes(saved.tasteGate)) state.tasteGate = saved.tasteGate;
-    if (['off','one','queue'].includes(saved.repeat)) state.repeat = saved.repeat;
-    if ([0.5,0.75,1,1.25,1.5,1.75,2].includes(Number(saved.speed))) state.speed = Number(saved.speed);
-    if ([5,8,12,20].includes(Number(saved.refreshEvery))) state.refreshEvery = Number(saved.refreshEvery);
-    if (Number.isFinite(saved.volume) && saved.volume >= 0 && saved.volume <= 100) state.volume = saved.volume;
-    if (typeof saved.muted === 'boolean') state.muted = saved.muted;
-  } catch (_) {}
+async function loadState() {
+  const remote = await CloudState.loadState();
+  const saved = remote.settings || {};
+
+  if (Array.isArray(saved.queue)) state.queue = saved.queue.filter(x => x && x.id);
+  ['autoplay','lowMemory','cinema','shuffle'].forEach(k => {
+    if (typeof saved[k] === 'boolean') state[k] = saved[k];
+  });
+  if (['personalized','mix','queue'].includes(saved.autoplayMode)) state.autoplayMode = saved.autoplayMode;
+  if (['off','balanced','strict'].includes(saved.tasteGate)) state.tasteGate = saved.tasteGate;
+  if (['off','one','queue'].includes(saved.repeat)) state.repeat = saved.repeat;
+  if ([0.5,0.75,1,1.25,1.5,1.75,2].includes(Number(saved.speed))) state.speed = Number(saved.speed);
+  if ([5,8,12,20].includes(Number(saved.refreshEvery))) state.refreshEvery = Number(saved.refreshEvery);
+  if (Number.isFinite(saved.volume) && saved.volume >= 0 && saved.volume <= 100) state.volume = saved.volume;
+  if (typeof saved.muted === 'boolean') state.muted = saved.muted;
+
+  lastVideo = remote.lastVideo || null;
+  lastPlaylist = remote.lastPlaylist || null;
 }
 
 function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+  CloudState.saveSettings({
     queue: state.queue,
     autoplayMode: state.autoplayMode,
     autoplay: state.autoplay,
@@ -94,7 +93,7 @@ function saveState() {
     refreshEvery: state.refreshEvery,
     volume: state.volume,
     muted: state.muted
-  }));
+  });
 }
 
 function syncSettings() {
@@ -126,7 +125,7 @@ function renderTabTitle() {
   const author = cleanTabText(currentTabTrack.author);
 
   if (!title) {
-    document.title = 'YouTube Super Lite · v0.8.5';
+    document.title = 'YouTube Super Lite · v0.9.0';
     return;
   }
 
@@ -153,7 +152,7 @@ function setTabPlaybackState(playbackState) {
 function renderProfile() {
   if (!profile) {
     els.profileStatus.textContent = 'No YouTube Takeout profile imported';
-    els.profileStats.textContent = 'Import your YouTube Takeout ZIP. It is parsed locally and never uploaded.';
+    els.profileStats.textContent = 'Import your YouTube Takeout ZIP. It is parsed in this browser, then only the compact profile is stored in Cloudflare D1.';
     els.startPersonalized.disabled = true;
     els.forgetProfile.classList.add('hidden');
     return;
@@ -285,24 +284,11 @@ function startFromStartupPrompt() {
   );
 }
 
-function loadLastVideo() {
-  try {
-    const value = JSON.parse(localStorage.getItem(LAST_VIDEO_KEY) || 'null');
-    return value && value.id ? value : null;
-  } catch (_) {
-    return null;
-  }
+function saveLastVideo(force = false) {
+  if (lastVideo && lastVideo.id) CloudState.saveLastVideo(lastVideo, force);
 }
 
-function saveLastVideo() {
-  try {
-    if (lastVideo && lastVideo.id) {
-      localStorage.setItem(LAST_VIDEO_KEY, JSON.stringify(lastVideo));
-    }
-  } catch (_) {}
-}
-
-function rememberLastVideo(details = {}) {
+function rememberLastVideo(details = {}, force = false) {
   if (!details.id) return;
 
   lastVideo = {
@@ -315,7 +301,7 @@ function rememberLastVideo(details = {}) {
     listIndex: Number.isInteger(details.listIndex) ? details.listIndex : null,
     savedAt: Date.now()
   };
-  saveLastVideo();
+  saveLastVideo(force);
   renderResumeVideo();
 }
 
@@ -343,7 +329,7 @@ function renderResumeVideo() {
   ].filter(Boolean).join(' · ');
 }
 
-function capturePlaybackProgress() {
+function capturePlaybackProgress(force = false) {
   if (!playerReady || !player) return;
   let data = {};
   let seconds = 0;
@@ -367,7 +353,7 @@ function capturePlaybackProgress() {
     seconds,
     listId: state.playlistMode && state.playlistMode.id || null,
     listIndex
-  });
+  }, force);
 }
 
 function resumeLastVideo() {
@@ -391,21 +377,8 @@ function resumeLastVideo() {
   );
 }
 
-function loadLastPlaylist() {
-  try {
-    const value = JSON.parse(localStorage.getItem(LAST_PLAYLIST_KEY) || 'null');
-    return value && value.id ? value : null;
-  } catch (_) {
-    return null;
-  }
-}
-
-function saveLastPlaylist() {
-  try {
-    if (lastPlaylist && lastPlaylist.id) {
-      localStorage.setItem(LAST_PLAYLIST_KEY, JSON.stringify(lastPlaylist));
-    }
-  } catch (_) {}
+function saveLastPlaylist(force = false) {
+  if (lastPlaylist && lastPlaylist.id) CloudState.saveLastPlaylist(lastPlaylist, force);
 }
 
 function rememberPlaylist(mode, details = {}) {
@@ -510,19 +483,12 @@ function resumeLastPlaylist() {
   setMessage('Resumed the last playlist from this browser.', 'ok');
 }
 
-function loadVideoHistory() {
-  try {
-    const value = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
-    return Array.isArray(value) ? value.slice(0, HISTORY_LIMIT) : [];
-  } catch (_) {
-    return [];
-  }
+async function loadVideoHistory() {
+  return CloudState.loadHistory();
 }
 
 function saveVideoHistory() {
-  try {
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(videoHistory.slice(0, HISTORY_LIMIT)));
-  } catch (_) {}
+  return Promise.resolve();
 }
 
 function historySource() {
@@ -555,7 +521,7 @@ function recordVideoHistory(id, title, channel) {
     videoHistory.unshift(item);
   }
   videoHistory = videoHistory.slice(0, HISTORY_LIMIT);
-  saveVideoHistory();
+  CloudState.addHistory(item);
   renderVideoHistory();
 }
 
@@ -1272,7 +1238,7 @@ els.takeoutInput.addEventListener('change', async () => {
     setMessage('Importing Takeout locally…');
     profile = await TakeoutPersonalization.importZip(file, msg => setMessage(msg));
     renderProfile();
-    setMessage('Takeout imported. Raw archive data was discarded; only a compact local taste profile was saved.', 'ok');
+    setMessage('Takeout imported. Raw archive data was discarded; only the compact taste profile was saved to Cloudflare D1.', 'ok');
   } catch (err) {
     setMessage(err.message || 'Takeout import failed.', 'error');
   } finally {
@@ -1285,7 +1251,7 @@ els.forgetProfile.addEventListener('click', async () => {
   await TakeoutPersonalization.clear();
   profile = null;
   renderProfile();
-  setMessage('Local personalization profile deleted.', 'ok');
+  setMessage('Cloudflare personalization profile deleted.', 'ok');
 });
 
 els.playNow.addEventListener('click', playFromInput);
@@ -1298,11 +1264,12 @@ els.toggle.addEventListener('click', () => whenReady(() => {
   else player.playVideo();
 }));
 if (els.clearHistory) {
-  els.clearHistory.addEventListener('click', () => {
+  els.clearHistory.addEventListener('click', async () => {
     videoHistory = [];
-    saveVideoHistory();
+    try { await CloudState.clearHistory(); } catch (_) {}
     renderVideoHistory();
-    setMessage('Local video history cleared.', 'ok');
+    TakeoutPersonalization.hydrateRecent([]);
+    setMessage('Cloudflare video history cleared.', 'ok');
   });
 }
 
@@ -1346,23 +1313,39 @@ document.addEventListener('keydown', e => {
   else if (e.key === 'ArrowRight') whenReady(() => player.seekTo(player.getCurrentTime() + 5, true));
 });
 
-loadState();
-syncSettings();
-renderQueue();
-renderVideoHistory();
-renderResumeVideo();
-renderResumePlaylist();
-loadProfile();
-setTimeout(() => {
-  if (els.startupUrl) els.startupUrl.focus();
-}, 50);
+async function bootstrap() {
+  try {
+    await CloudState.migrateLegacyBrowserData();
+    await loadState();
+    videoHistory = await loadVideoHistory();
+    TakeoutPersonalization.hydrateRecent(videoHistory);
+    await loadProfile();
+
+    syncSettings();
+    renderQueue();
+    renderVideoHistory();
+    renderResumeVideo();
+    renderResumePlaylist();
+
+    if (els.startupUrl) els.startupUrl.focus();
+  } catch (error) {
+    console.error(error);
+    if (els.startupError) {
+      els.startupError.textContent =
+        'Cloudflare storage is not ready yet. Create/bind the D1 database as DB, run schema.sql, then redeploy.';
+    }
+  }
+}
+
+bootstrap();
 
 // The iframe API has no volume-change event. Poll lightly so user volume/mute
-// survives player rebuilds, reloads, and future videos without writing unless changed.
+// survives player rebuilds. Playback progress is persisted to D1 at a throttled rate.
 setInterval(captureAudioPrefs, 1500);
-setInterval(capturePlaybackProgress, 5000);
+setInterval(capturePlaybackProgress, 10000);
 
 window.addEventListener('pagehide', () => {
   captureAudioPrefs();
-  capturePlaybackProgress();
+  capturePlaybackProgress(true);
+  if (lastPlaylist && lastPlaylist.id) CloudState.saveLastPlaylist(lastPlaylist, true);
 });

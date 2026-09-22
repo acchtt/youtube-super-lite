@@ -1,71 +1,29 @@
 'use strict';
 
 window.TakeoutPersonalization = (() => {
-  const DB_NAME = 'yt-super-lite-profile';
-  const STORE = 'profile';
-  const KEY = 'current';
-  const RECENT_KEY = 'yt-super-lite-personalized-recent-v1';
-
   let profile = null;
   let recent = [];
-  try {
-    recent = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
-    if (!Array.isArray(recent)) recent = [];
-  } catch (_) { recent = []; }
-
-  function openDb() {
-    return new Promise((resolve, reject) => {
-      const req = indexedDB.open(DB_NAME, 1);
-      req.onupgradeneeded = () => {
-        if (!req.result.objectStoreNames.contains(STORE)) req.result.createObjectStore(STORE);
-      };
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error);
-    });
-  }
 
   async function save(value) {
-    const db = await openDb();
-    await new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE, 'readwrite');
-      tx.objectStore(STORE).put(value, KEY);
-      tx.oncomplete = resolve;
-      tx.onerror = () => reject(tx.error);
-    });
-    db.close();
+    await CloudState.saveProfile(value);
     profile = value;
   }
 
   async function load() {
     if (profile) return profile;
-    const db = await openDb();
-    profile = await new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE, 'readonly');
-      const req = tx.objectStore(STORE).get(KEY);
-      req.onsuccess = () => resolve(req.result || null);
-      req.onerror = () => reject(req.error);
-    });
-    db.close();
+    profile = await CloudState.loadProfile();
     return profile;
   }
 
   async function clear() {
-    const db = await openDb();
-    await new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE, 'readwrite');
-      tx.objectStore(STORE).delete(KEY);
-      tx.oncomplete = resolve;
-      tx.onerror = () => reject(tx.error);
-    });
-    db.close();
+    await CloudState.clearProfile();
     profile = null;
     recent = [];
-    localStorage.removeItem(RECENT_KEY);
   }
 
   function importZip(file, onProgress) {
     return new Promise((resolve, reject) => {
-      const worker = new Worker('takeout-worker.js');
+      const worker = new Worker('takeout-worker.js?v=0.9.0');
       worker.onmessage = async (event) => {
         const data = event.data || {};
         if (data.type === 'progress') {
@@ -74,6 +32,7 @@ window.TakeoutPersonalization = (() => {
         }
         if (data.type === 'done') {
           try {
+            if (onProgress) onProgress('Saving compact profile to Cloudflare D1…');
             await save(data.profile);
             worker.terminate();
             resolve(data.profile);
@@ -99,7 +58,6 @@ window.TakeoutPersonalization = (() => {
     recent = recent.filter(x => x.id !== videoId);
     recent.unshift({ id: videoId, channel: channel || '', at: Date.now() });
     recent = recent.slice(0, 120);
-    localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
   }
 
   function weightedPick(candidates, lastChannel) {
@@ -208,7 +166,15 @@ window.TakeoutPersonalization = (() => {
     };
   }
 
+  function hydrateRecent(items) {
+    recent = Array.isArray(items) ? items.slice(0, 120).map(item => ({
+      id: item.id,
+      channel: item.channel || '',
+      at: Number(item.at) || Date.now()
+    })).filter(item => item.id) : [];
+  }
+
   function get() { return profile; }
 
-  return { load, clear, importZip, pickSeed, markPlayed, getChannelAffinity, get };
+  return { load, clear, importZip, pickSeed, markPlayed, hydrateRecent, getChannelAffinity, get };
 })();
