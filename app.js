@@ -50,7 +50,7 @@ const els = {
   startPersonalized: $('startPersonalizedBtn'), forgetProfile: $('forgetProfileBtn'),
   profileStatus: $('profileStatus'), profileStats: $('profileStats'),
   startupGate: $('startupGate'), startupForm: $('startupForm'),
-  startupUrl: $('startupUrl'), startupError: $('startupError'),
+  startupUrl: $('startupUrl'), startupError: $('startupError'), startupSkip: $('startupSkip'),
   historyList: $('historyList'), historyCount: $('historyCount'),
   emptyHistory: $('emptyHistory'), clearHistory: $('clearHistoryBtn'),
   resumeVideoBox: $('resumeVideoBox'), resumeVideoTitle: $('resumeVideoTitle'),
@@ -125,7 +125,7 @@ function renderTabTitle() {
   const author = cleanTabText(currentTabTrack.author);
 
   if (!title) {
-    document.title = 'Aero × IVE · v0.10.0';
+    document.title = 'Aero × IVE · v0.10.1';
     return;
   }
 
@@ -1217,6 +1217,14 @@ if (els.startupForm) {
   els.startupForm.addEventListener('submit', event => {
     event.preventDefault();
     startFromStartupPrompt();
+  });
+}
+
+if (els.startupSkip) {
+  els.startupSkip.addEventListener('click', () => {
+    if (els.startupError) els.startupError.textContent = '';
+    closeStartupGate();
+    if (els.input) els.input.focus();
   });
 }
 
