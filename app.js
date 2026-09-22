@@ -288,8 +288,6 @@ function saveLastVideo(force = false) {
   if (lastVideo && lastVideo.id) CloudState.saveLastVideo(lastVideo, force);
 }
 
-function rememberLastVideo
-
 function rememberLastVideo(details = {}, force = false) {
   if (!details.id) return;
 
@@ -382,8 +380,6 @@ function resumeLastVideo() {
 function saveLastPlaylist(force = false) {
   if (lastPlaylist && lastPlaylist.id) CloudState.saveLastPlaylist(lastPlaylist, force);
 }
-
-function rememberPlaylist
 
 function rememberPlaylist(mode, details = {}) {
   if (!mode || !mode.id) return;
