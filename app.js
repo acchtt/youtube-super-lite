@@ -44,7 +44,9 @@ const els = {
   memoryLabel: $('memoryLabel'), playlistMode: $('playlistMode'),
   takeoutInput: $('takeoutInput'), importTakeout: $('importTakeoutBtn'),
   startPersonalized: $('startPersonalizedBtn'), forgetProfile: $('forgetProfileBtn'),
-  profileStatus: $('profileStatus'), profileStats: $('profileStats')
+  profileStatus: $('profileStatus'), profileStats: $('profileStats'),
+  startupGate: $('startupGate'), startupForm: $('startupForm'),
+  startupUrl: $('startupUrl'), startupError: $('startupError')
 };
 
 function loadState() {
@@ -178,6 +180,36 @@ function parseInput() {
     }
   }
   return { videos, playlist };
+}
+
+function videoIdFromStartup(value) {
+  return videoIdFrom(value);
+}
+
+function closeStartupGate() {
+  if (els.startupGate) els.startupGate.classList.add('hidden');
+  document.body.classList.remove('startup-locked');
+}
+
+function startFromStartupPrompt() {
+  const value = String(els.startupUrl && els.startupUrl.value || '').trim();
+  const id = videoIdFromStartup(value);
+
+  if (!id) {
+    if (els.startupError) els.startupError.textContent = 'Paste a valid YouTube video link or 11-character video ID.';
+    if (els.startupUrl) els.startupUrl.focus();
+    return;
+  }
+
+  if (els.startupError) els.startupError.textContent = '';
+  if (els.input) els.input.value = value;
+
+  closeStartupGate();
+
+  // Startup choice is always an exact manual video, independent of any
+  // previously saved autoplay mode. Its own YouTube Radio takes over after it ends.
+  playExactManual({ id, title: '' });
+  setMessage('Session started from your chosen video. Its YouTube Radio will continue afterward.', 'ok');
 }
 
 function renderQueue() {
@@ -722,6 +754,13 @@ function addFromInput() {
   addVideos(parsed.videos, false);
 }
 
+if (els.startupForm) {
+  els.startupForm.addEventListener('submit', event => {
+    event.preventDefault();
+    startFromStartupPrompt();
+  });
+}
+
 els.importTakeout.addEventListener('click', () => els.takeoutInput.click());
 els.takeoutInput.addEventListener('change', async () => {
   const file = els.takeoutInput.files && els.takeoutInput.files[0];
@@ -801,6 +840,9 @@ loadState();
 syncSettings();
 renderQueue();
 loadProfile();
+setTimeout(() => {
+  if (els.startupUrl) els.startupUrl.focus();
+}, 50);
 
 // The iframe API has no volume-change event. Poll lightly so user volume/mute
 // survives player rebuilds, reloads, and future videos without writing unless changed.
