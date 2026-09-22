@@ -43,6 +43,7 @@ let countdown = null;
 let nextAt = 0;
 let refreshing = false;
 let controller = null;
+let hasTabStatus = false;
 
 function loadCustom() {
   try {
@@ -115,6 +116,52 @@ function historyState(run) {
   if (run.status !== 'completed') return 'running';
   return run.conclusion === 'success' ? 'success' :
     ['failure','timed_out','action_required'].includes(run.conclusion) ? 'failure' : 'cancelled';
+}
+
+function setStatusFavicon(color) {
+  const link = document.getElementById('statusFavicon');
+  if (!link) return;
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">' +
+    '<circle cx="16" cy="16" r="10" fill="' + color + '"/></svg>';
+  link.href = 'data:image/svg+xml,' + encodeURIComponent(svg);
+}
+
+function updateTabStatus(results) {
+  let running = 0;
+  let failed = 0;
+  let live = 0;
+  let other = 0;
+
+  results.forEach(result => {
+    if (result.status !== 'fulfilled') {
+      failed++;
+      return;
+    }
+    const run = result.value && result.value[0];
+    const info = statusInfo(run);
+    if (info.state === 'running') running++;
+    else if (info.state === 'failure') failed++;
+    else if (info.state === 'success') live++;
+    else other++;
+  });
+
+  if (failed > 0) {
+    document.title = '[FAILED ' + failed + '] Deployments';
+    setStatusFavicon('#ff6868');
+  } else if (running > 0) {
+    document.title = '[DEPLOYING ' + running + '] Deployments';
+    setStatusFavicon('#f7c75a');
+  } else if (live > 0 && other === 0) {
+    document.title = '[LIVE] Deployments';
+    setStatusFavicon('#50dc86');
+  } else if (live > 0) {
+    document.title = '[LIVE ' + live + '/' + results.length + '] Deployments';
+    setStatusFavicon('#50dc86');
+  } else {
+    document.title = '[UNKNOWN] Deployments';
+    setStatusFavicon('#75808e');
+  }
+  hasTabStatus = true;
 }
 
 function makeCard(tracker) {
@@ -244,6 +291,10 @@ async function refreshAll() {
   els.refresh.disabled = true;
   els.liveDot.className = 'live-dot busy';
   els.liveLabel.textContent = 'Refreshing';
+  if (!hasTabStatus) {
+    document.title = '[CHECKING] Deployments';
+    setStatusFavicon('#75808e');
+  }
   if (controller) controller.abort();
   controller = new AbortController();
 
@@ -254,6 +305,7 @@ async function refreshAll() {
       if (result.status === 'fulfilled') applyCard(list[i], result.value);
       else if (result.reason && result.reason.name !== 'AbortError') applyError(list[i], result.reason);
     });
+    updateTabStatus(results);
     els.lastUpdated.textContent = 'Updated ' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
     els.liveDot.className = 'live-dot on';
     els.liveLabel.textContent = token ? 'Real-time mode' : 'Public mode';
@@ -271,8 +323,8 @@ function intervalMs() {
 function schedule() {
   clearTimeout(timer);
   clearInterval(countdown);
-  if (!els.auto.checked || document.hidden) {
-    els.nextRefresh.textContent = document.hidden ? 'Paused while hidden' : 'Auto refresh off';
+  if (!els.auto.checked) {
+    els.nextRefresh.textContent = 'Auto refresh off';
     return;
   }
   const ms = intervalMs();
@@ -331,8 +383,9 @@ els.addForm.addEventListener('submit', event => {
 });
 
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) schedule();
-  else refreshAll();
+  // Keep the existing polling timer alive while hidden. When the user returns,
+  // refresh immediately so the cards and tab indicator are current.
+  if (!document.hidden) refreshAll();
 });
 
 renderCards();
