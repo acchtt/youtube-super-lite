@@ -250,7 +250,14 @@ body{
   -webkit-background-clip:text;background-clip:text;color:transparent
 }
 .brand-x{color:#6f7580;font-size:.86rem;font-weight:700}
-.brand-ive{font-size:1.03rem;letter-spacing:.16em;color:#f8edf5}
+.brand-ive-logo{
+  display:inline-flex;align-items:center;justify-content:center;
+  height:1.18rem;line-height:1;flex:0 0 auto
+}
+.brand-ive-logo svg{display:block;height:100%;width:auto;overflow:visible}
+.ive-logo-letters>*{fill:#f8edf5}
+.ive-logo-star{fill:var(--aero-pink)}
+.brand-lockup--gate .brand-ive-logo{height:1.28rem}
 .fan-badge{
   border:1px solid #a985a72e;background:#a985a710;color:#bba8bd;
   border-radius:999px;padding:.18rem .42rem;font-size:.58rem;font-weight:800;letter-spacing:.08em;white-space:nowrap
@@ -274,7 +281,7 @@ textarea:focus,select:focus{border-color:#8d7ca0;box-shadow:0 0 0 2px #9f86b526}
   .brand-lockup .fan-badge{display:none}
   .brand-lockup--gate .fan-badge{display:inline-flex}
   .brand-aero{font-size:1.5rem}
-  .brand-ive{font-size:.92rem}
+  .brand-ive-logo{height:1.08rem}
 }
 
 
