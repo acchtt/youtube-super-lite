@@ -18,6 +18,13 @@ const DEFAULT_TRACKERS = [
     workflow: 'pages.yml',
     label: 'SlipTrace',
     site: 'https://acchtt.github.io/SlipTrace/'
+  },
+  {
+    repo: 'acchtt/TheLedgerHall',
+    mode: 'branch',
+    branch: 'main',
+    label: 'The Ledger Hall',
+    site: 'https://acchtt.github.io/TheLedgerHall/'
   }
 ];
 
@@ -61,7 +68,8 @@ function trackers() {
 }
 
 function keyOf(t) {
-  return t.repo.toLowerCase() + '|' + t.workflow.toLowerCase();
+  const target = t.workflow || ('branch:' + (t.branch || 'main'));
+  return t.repo.toLowerCase() + '|' + target.toLowerCase();
 }
 
 function escapeText(value) {
@@ -69,7 +77,15 @@ function escapeText(value) {
 }
 
 function statusInfo(run) {
-  if (!run) return { state:'failure', pill:'NO RUN', title:'No workflow run found', detail:'Check workflow filename or GitHub Actions.' };
+  if (!run) return { state:'failure', pill:'NO RUN', title:'No deployment data found', detail:'Check the tracker configuration.' };
+  if (run.branchSource) {
+    return {
+      state:'success',
+      pill:'BRANCH',
+      title:'Main branch tracked',
+      detail:'GitHub Pages source: main / repository root (no Actions workflow).'
+    };
+  }
   if (run.status !== 'completed') {
     const queued = ['queued','requested','waiting','pending'].includes(run.status);
     return {
@@ -102,6 +118,7 @@ function relativeTime(value) {
 
 function duration(run) {
   if (!run || !run.run_started_at) return '—';
+  if (run.branchSource) return '—';
   const start = new Date(run.run_started_at).getTime();
   const end = run.status === 'completed' && run.updated_at ? new Date(run.updated_at).getTime() : Date.now();
   const sec = Math.max(0, Math.floor((end - start) / 1000));
@@ -169,9 +186,17 @@ function makeCard(tracker) {
   node.dataset.key = keyOf(tracker);
   node.querySelector('.repo-name').textContent = tracker.label || tracker.repo.split('/')[1];
   node.querySelector('.repo-name').href = 'https://github.com/' + tracker.repo;
-  node.querySelector('.workflow-name').textContent = tracker.repo + ' · ' + tracker.workflow;
+  const sourceLabel = tracker.mode === 'branch'
+    ? ((tracker.branch || 'main') + ' branch Pages')
+    : tracker.workflow;
+  node.querySelector('.workflow-name').textContent = tracker.repo + ' · ' + sourceLabel;
   const runLink = node.querySelector('.run-link');
-  runLink.href = 'https://github.com/' + tracker.repo + '/actions/workflows/' + encodeURIComponent(tracker.workflow);
+  if (tracker.mode === 'branch') {
+    runLink.href = 'https://github.com/' + tracker.repo + '/commits/' + encodeURIComponent(tracker.branch || 'main');
+    runLink.textContent = 'View commits';
+  } else {
+    runLink.href = 'https://github.com/' + tracker.repo + '/actions/workflows/' + encodeURIComponent(tracker.workflow);
+  }
   const site = node.querySelector('.site-link');
   if (tracker.site) site.href = tracker.site;
   else site.classList.add('hidden');
@@ -190,7 +215,8 @@ function renderTrackedList() {
     const chip = document.createElement('span');
     chip.className = 'tracked-chip';
     const name = document.createElement('span');
-    name.textContent = (t.label || t.repo) + ' · ' + t.workflow;
+    name.textContent = (t.label || t.repo) + ' · ' +
+      (t.mode === 'branch' ? ((t.branch || 'main') + ' branch') : t.workflow);
     chip.appendChild(name);
     if (i >= DEFAULT_TRACKERS.length) {
       const remove = document.createElement('button');
@@ -228,6 +254,27 @@ async function apiFetch(url, signal) {
 }
 
 async function loadTracker(tracker, signal) {
+  if (tracker.mode === 'branch') {
+    const branch = encodeURIComponent(tracker.branch || 'main');
+    const url = 'https://api.github.com/repos/' + tracker.repo + '/commits?sha=' + branch + '&per_page=5';
+    const commits = await apiFetch(url, signal);
+    return (Array.isArray(commits) ? commits : []).map(commit => {
+      const authored = commit.commit && (commit.commit.committer || commit.commit.author);
+      return {
+        branchSource: true,
+        status: 'completed',
+        conclusion: 'success',
+        name: 'GitHub Pages · ' + (tracker.branch || 'main') + ' branch',
+        head_branch: tracker.branch || 'main',
+        head_sha: commit.sha,
+        run_started_at: authored && authored.date,
+        updated_at: authored && authored.date,
+        html_url: commit.html_url,
+        head_commit: { message: commit.commit && commit.commit.message || '' }
+      };
+    });
+  }
+
   const workflow = encodeURIComponent(tracker.workflow);
   const url = 'https://api.github.com/repos/' + tracker.repo + '/actions/workflows/' + workflow + '/runs?per_page=5';
   const data = await apiFetch(url, signal);
