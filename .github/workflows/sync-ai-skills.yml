@@ -1,0 +1,74 @@
+name: Sync project AI skills
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/sync-ai-skills.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  sync-skills:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out project
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install UI/UX Pro Max and Logo Generator
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          rm -rf .agents/skills/ui-ux-pro-max .agents/skills/logo-generator
+          mkdir -p .agents/skills
+
+          git clone --depth 1 https://github.com/nextlevelbuilder/ui-ux-pro-max-skill.git /tmp/ui-ux-pro-max-skill
+          cp -R /tmp/ui-ux-pro-max-skill/.claude/skills/ui-ux-pro-max .agents/skills/ui-ux-pro-max
+
+          git clone --depth 1 https://github.com/op7418/logo-generator-skill.git /tmp/logo-generator-skill
+          mkdir -p .agents/skills/logo-generator
+          rsync -a --exclude=".git" --exclude=".DS_Store" /tmp/logo-generator-skill/ .agents/skills/logo-generator/
+
+          UI_SHA="$(git -C /tmp/ui-ux-pro-max-skill rev-parse HEAD)"
+          LOGO_SHA="$(git -C /tmp/logo-generator-skill rev-parse HEAD)"
+
+          cat > .agents/skills/README.md <<EOF
+          # Project AI skills
+
+          These are development-time skills for Aero × IVE. They are not runtime website dependencies.
+
+          ## Installed skills
+
+          - UI/UX Pro Max
+            - Source: https://github.com/nextlevelbuilder/ui-ux-pro-max-skill
+            - Upstream commit: \`$UI_SHA\`
+            - Installed to: \`.agents/skills/ui-ux-pro-max\`
+
+          - Logo Generator
+            - Source: https://github.com/op7418/logo-generator-skill
+            - Upstream commit: \`$LOGO_SHA\`
+            - Installed to: \`.agents/skills/logo-generator\`
+
+          The Logo Generator SVG/design workflow is available from the installed skill. Its optional Gemini showcase-image workflow still requires the Python dependencies listed in that skill and a Gemini API key.
+          EOF
+
+      - name: Commit installed skills
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -f .agents/skills
+
+          if git diff --cached --quiet; then
+            echo "Skills are already up to date."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore: install project AI skills"
+          git push origin HEAD:main
