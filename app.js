@@ -10,6 +10,7 @@ const state = {
   lowMemory: true,
   cinema: true,
   shuffle: false,
+  tasteGate: 'balanced',
   repeat: 'off',
   speed: 1,
   refreshEvery: 8,
@@ -27,6 +28,8 @@ let profile = null;
 let manualContinuation = null;
 let personalizedMixPlays = 0;
 let lastObservedVideoId = '';
+let tasteGateSkips = 0;
+let tasteGateChecking = false;
 
 const $ = id => document.getElementById(id);
 const els = {
@@ -36,6 +39,7 @@ const els = {
   prev: $('prevBtn'), toggle: $('toggleBtn'), next: $('nextBtn'),
   autoplayMode: $('autoplayModeSelect'), autoplay: $('autoplayToggle'),
   lowMemory: $('lowMemoryToggle'), cinema: $('cinemaToggle'), shuffle: $('shuffleToggle'),
+  tasteGate: $('tasteGateSelect'),
   repeat: $('repeatSelect'), speed: $('speedSelect'), refresh: $('refreshSelect'),
   memoryLabel: $('memoryLabel'), playlistMode: $('playlistMode'),
   takeoutInput: $('takeoutInput'), importTakeout: $('importTakeoutBtn'),
@@ -51,6 +55,7 @@ function loadState() {
       if (typeof saved[k] === 'boolean') state[k] = saved[k];
     });
     if (['personalized','mix','queue'].includes(saved.autoplayMode)) state.autoplayMode = saved.autoplayMode;
+    if (['off','balanced','strict'].includes(saved.tasteGate)) state.tasteGate = saved.tasteGate;
     if (['off','one','queue'].includes(saved.repeat)) state.repeat = saved.repeat;
     if ([0.5,0.75,1,1.25,1.5,1.75,2].includes(Number(saved.speed))) state.speed = Number(saved.speed);
     if ([5,8,12,20].includes(Number(saved.refreshEvery))) state.refreshEvery = Number(saved.refreshEvery);
@@ -67,6 +72,7 @@ function saveState() {
     lowMemory: state.lowMemory,
     cinema: state.cinema,
     shuffle: state.shuffle,
+    tasteGate: state.tasteGate,
     repeat: state.repeat,
     speed: state.speed,
     refreshEvery: state.refreshEvery,
@@ -82,6 +88,7 @@ function syncSettings() {
   els.cinema.checked = state.cinema;
   document.body.classList.toggle('cinema', state.cinema);
   els.shuffle.checked = state.shuffle;
+  els.tasteGate.value = state.tasteGate;
   els.repeat.value = state.repeat;
   els.speed.value = String(state.speed);
   els.refresh.value = String(state.refreshEvery);
@@ -312,6 +319,7 @@ function loadVideoInto(target, item) {
 
 function playExactManual(item) {
   if (!item || !item.id) return;
+  tasteGateSkips = 0;
   // A manually pasted video is the strongest signal of current intent.
   // Always continue from that video's own YouTube Radio rather than
   // immediately handing control back to the historical Takeout profile.
@@ -331,6 +339,7 @@ function playExactManual(item) {
 
 function continueAfterManualVideo() {
   if (!manualContinuation) return false;
+  tasteGateSkips = 0;
 
   // Ignore a stale ENDED event from the previously loaded playlist/video.
   // Only start the radio after the exact requested seed has actually played.
@@ -581,6 +590,49 @@ function onPlayerStateChange(event) {
   }
 }
 
+function shouldSkipRadioChannel(channelName) {
+  if (state.tasteGate === 'off' || !profile) return false;
+  if (!(state.playlistMode && state.playlistMode.manualRadio)) return false;
+
+  const affinity = TakeoutPersonalization.getChannelAffinity(channelName);
+  if (!affinity) return false;
+
+  if (state.tasteGate === 'strict') {
+    if (!affinity.known) return true;
+    if (affinity.subscribed) return false;
+    if (affinity.recentRank <= 1800) return false;
+    return affinity.watchCount < 3;
+  }
+
+  // Balanced: allow discovery, but reject channels that are absent from the
+  // profile or only show weak/old affinity. Known recent channels pass.
+  if (!affinity.known) return true;
+  if (affinity.subscribed) return false;
+  if (affinity.recentRank <= 3500) return false;
+  return affinity.watchCount < 2;
+}
+
+function skipCurrentRadioItem(channelName) {
+  if (tasteGateChecking || tasteGateSkips >= 6) return;
+  tasteGateChecking = true;
+  tasteGateSkips++;
+
+  setMessage(
+    'Skipping ' + (channelName || 'an unfamiliar channel') +
+    ' because it is outside your recent Takeout taste.',
+    'ok'
+  );
+
+  setTimeout(() => {
+    try {
+      if (playerReady && player && state.playlistMode && state.playlistMode.manualRadio) {
+        player.nextVideo();
+      }
+    } catch (_) {}
+    tasteGateChecking = false;
+  }, 250);
+}
+
 function updateVideoData() {
   if (!playerReady || !player) return;
   let data = {};
@@ -597,6 +649,18 @@ function updateVideoData() {
 
   if (id && id !== lastObservedVideoId) {
     lastObservedVideoId = id;
+
+    if (
+      state.playlistMode &&
+      state.playlistMode.manualRadio &&
+      data.author &&
+      shouldSkipRadioChannel(data.author)
+    ) {
+      skipCurrentRadioItem(data.author);
+      return;
+    }
+
+    tasteGateSkips = 0;
     if (state.playlistMode && state.playlistMode.personalized) personalizedMixPlays++;
     TakeoutPersonalization.markPlayed(id, data.author || '');
   }
@@ -708,6 +772,7 @@ els.cinema.addEventListener('change', e => {
   saveState();
 });
 els.shuffle.addEventListener('change', e => { state.shuffle = e.target.checked; applyPlaylistOptions(); saveState(); });
+els.tasteGate.addEventListener('change', e => { state.tasteGate = e.target.value; saveState(); });
 els.repeat.addEventListener('change', e => { state.repeat = e.target.value; applyPlaylistOptions(); saveState(); });
 els.speed.addEventListener('change', e => {
   state.speed = Number(e.target.value);
