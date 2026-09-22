@@ -181,7 +181,34 @@ window.TakeoutPersonalization = (() => {
     return weightedPick(profile.candidates, lastChannel || '');
   }
 
+  function getChannelAffinity(channelName) {
+    if (!profile || !Array.isArray(profile.candidates)) return null;
+    const target = String(channelName || '').trim().toLowerCase();
+    if (!target) return null;
+
+    let bestRecentRank = Infinity;
+    let watchCount = 0;
+    let subscribed = false;
+    let matched = false;
+
+    for (const item of profile.candidates) {
+      if (String(item.channel || '').trim().toLowerCase() !== target) continue;
+      matched = true;
+      if (Number.isFinite(item.recentRank)) bestRecentRank = Math.min(bestRecentRank, item.recentRank);
+      watchCount += Number(item.count) || 0;
+      if (item.subscribed) subscribed = true;
+    }
+
+    if (!matched) return { known:false, recentRank:Infinity, watchCount:0, subscribed:false };
+    return {
+      known: true,
+      recentRank: Number.isFinite(bestRecentRank) ? bestRecentRank : Infinity,
+      watchCount,
+      subscribed
+    };
+  }
+
   function get() { return profile; }
 
-  return { load, clear, importZip, pickSeed, markPlayed, get };
+  return { load, clear, importZip, pickSeed, markPlayed, getChannelAffinity, get };
 })();
