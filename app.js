@@ -14,7 +14,9 @@ const state = {
   speed: 1,
   refreshEvery: 8,
   playsSinceRefresh: 0,
-  lastChannel: ''
+  lastChannel: '',
+  volume: null,
+  muted: null
 };
 
 let player = null;
@@ -52,6 +54,8 @@ function loadState() {
     if (['off','one','queue'].includes(saved.repeat)) state.repeat = saved.repeat;
     if ([0.5,0.75,1,1.25,1.5,1.75,2].includes(Number(saved.speed))) state.speed = Number(saved.speed);
     if ([5,8,12,20].includes(Number(saved.refreshEvery))) state.refreshEvery = Number(saved.refreshEvery);
+    if (Number.isFinite(saved.volume) && saved.volume >= 0 && saved.volume <= 100) state.volume = saved.volume;
+    if (typeof saved.muted === 'boolean') state.muted = saved.muted;
   } catch (_) {}
 }
 
@@ -65,7 +69,9 @@ function saveState() {
     shuffle: state.shuffle,
     repeat: state.repeat,
     speed: state.speed,
-    refreshEvery: state.refreshEvery
+    refreshEvery: state.refreshEvery,
+    volume: state.volume,
+    muted: state.muted
   }));
 }
 
@@ -135,15 +141,34 @@ function playlistIdFrom(value) {
   return null;
 }
 
+function isStandalonePlaylistUrl(value) {
+  try {
+    const u = new URL(String(value || '').trim());
+    const host = u.hostname.replace(/^www\./, '');
+    return host.endsWith('youtube.com') && u.pathname === '/playlist' && !!u.searchParams.get('list');
+  } catch (_) {}
+  return false;
+}
+
 function parseInput() {
   const lines = els.input.value.split(/\n|\s+(?=https?:\/\/)/).map(s => s.trim()).filter(Boolean);
   const videos = [];
   let playlist = null;
+
   for (const line of lines) {
-    const listId = playlistIdFrom(line);
     const vid = videoIdFrom(line);
-    if (listId && lines.length === 1) playlist = { id: listId, videoId: vid };
-    else if (vid) videos.push({ id: vid, title: '' });
+
+    // A watch/short/live/youtu.be URL is always an exact-video request.
+    // Ignore any &list=... context YouTube appended to copied watch URLs.
+    if (vid) {
+      videos.push({ id: vid, title: '' });
+      continue;
+    }
+
+    if (lines.length === 1 && isStandalonePlaylistUrl(line)) {
+      const listId = playlistIdFrom(line);
+      if (listId) playlist = { id: listId, videoId: null };
+    }
   }
   return { videos, playlist };
 }
@@ -208,6 +233,33 @@ function renderQueue() {
   });
 }
 
+function applyAudioPrefs(target) {
+  if (!target) return;
+  try {
+    if (state.volume != null) target.setVolume(state.volume);
+    if (state.muted === true) target.mute();
+    else if (state.muted === false) target.unMute();
+  } catch (_) {}
+}
+
+function captureAudioPrefs() {
+  if (!playerReady || !player) return;
+  try {
+    const volume = player.getVolume();
+    const muted = player.isMuted();
+    let changed = false;
+    if (Number.isFinite(volume) && volume !== state.volume) {
+      state.volume = volume;
+      changed = true;
+    }
+    if (typeof muted === 'boolean' && muted !== state.muted) {
+      state.muted = muted;
+      changed = true;
+    }
+    if (changed) saveState();
+  } catch (_) {}
+}
+
 function createPlayer(onReadyAction) {
   playerReady = false;
   player = new YT.Player('player', {
@@ -218,6 +270,7 @@ function createPlayer(onReadyAction) {
       onReady: event => {
         playerReady = true;
         try { event.target.setPlaybackRate(state.speed); } catch (_) {}
+        applyAudioPrefs(event.target);
         const jobs = pending.splice(0);
         jobs.forEach(fn => fn());
         if (onReadyAction) onReadyAction(event.target);
@@ -236,6 +289,7 @@ function whenReady(fn) {
 }
 
 function rebuildPlayer(action) {
+  captureAudioPrefs();
   playerReady = false;
   pending = [];
   try { if (player) player.destroy(); } catch (_) {}
@@ -261,20 +315,27 @@ function playExactManual(item) {
   // A manually pasted video is the strongest signal of current intent.
   // Always continue from that video's own YouTube Radio rather than
   // immediately handing control back to the historical Takeout profile.
-  manualContinuation = { seed: item };
+  manualContinuation = { seed: item, started: false };
   state.playlistMode = null;
   state.index = -1;
   els.nowTitle.textContent = 'Loading requested video…';
   els.nowMeta.textContent = item.id;
   renderQueue();
   whenReady(() => {
+    try { player.stopVideo(); } catch (_) {}
     player.loadVideoById(item.id);
     try { player.setPlaybackRate(state.speed); } catch (_) {}
+    applyAudioPrefs(player);
   });
 }
 
 function continueAfterManualVideo() {
   if (!manualContinuation) return false;
+
+  // Ignore a stale ENDED event from the previously loaded playlist/video.
+  // Only start the radio after the exact requested seed has actually played.
+  if (!manualContinuation.started) return true;
+
   const next = manualContinuation;
   manualContinuation = null;
   personalizedMixPlays = 0;
@@ -487,6 +548,7 @@ function onPlayerStateChange(event) {
     els.toggle.textContent = '▶';
   } else if (event.data === YT.PlayerState.ENDED) {
     els.toggle.textContent = '▶';
+    captureAudioPrefs();
     state.playsSinceRefresh++;
 
     if (state.repeat === 'one') {
@@ -528,6 +590,10 @@ function updateVideoData() {
   if (data.author) state.lastChannel = data.author;
   els.nowMeta.textContent = [data.author, id].filter(Boolean).join(' · ') ||
     (state.playlistMode ? state.playlistMode.id : '');
+
+  if (id && manualContinuation && id === manualContinuation.seed.id) {
+    manualContinuation.started = true;
+  }
 
   if (id && id !== lastObservedVideoId) {
     lastObservedVideoId = id;
@@ -663,3 +729,7 @@ loadState();
 syncSettings();
 renderQueue();
 loadProfile();
+
+// The iframe API has no volume-change event. Poll lightly so user volume/mute
+// survives player rebuilds, reloads, and future videos without writing unless changed.
+setInterval(captureAudioPrefs, 1500);
