@@ -29,8 +29,9 @@ const DEFAULT_TRACKERS = [
 ];
 
 const STORAGE_KEY = 'deployment-tracker-custom-v1';
+const CACHE_KEY = 'deployment-tracker-last-good-v1';
 const TOKEN_KEY = 'deployment-tracker-token-v1';
-const PUBLIC_INTERVAL = 240000;
+const PUBLIC_MIN_INTERVAL = 600000;
 const TOKEN_INTERVAL = 15000;
 
 const $ = id => document.getElementById(id);
@@ -51,6 +52,8 @@ let nextAt = 0;
 let refreshing = false;
 let controller = null;
 let hasTabStatus = false;
+let rateLimitResetAt = 0;
+let lastGood = loadLastGood();
 
 function loadCustom() {
   try {
@@ -61,6 +64,19 @@ function loadCustom() {
 
 function saveCustom() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(customTrackers));
+}
+
+function loadLastGood() {
+  try {
+    const value = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+    return value && typeof value === 'object' ? value : {};
+  } catch (_) {
+    return {};
+  }
+}
+
+function saveLastGood() {
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify(lastGood)); } catch (_) {}
 }
 
 function trackers() {
@@ -148,10 +164,12 @@ function updateTabStatus(results) {
   let failed = 0;
   let live = 0;
   let other = 0;
+  let rateLimited = 0;
 
   results.forEach(result => {
     if (result.status !== 'fulfilled') {
-      failed++;
+      if (result.reason && result.reason.code === 'RATE_LIMIT') rateLimited++;
+      else failed++;
       return;
     }
     const run = result.value && result.value[0];
@@ -172,8 +190,13 @@ function updateTabStatus(results) {
     document.title = '[LIVE] Deployments';
     setStatusFavicon('#50dc86');
   } else if (live > 0) {
-    document.title = '[LIVE ' + live + '/' + results.length + '] Deployments';
-    setStatusFavicon('#50dc86');
+    document.title = rateLimited > 0
+      ? '[CACHED ' + live + '/' + results.length + '] Deployments'
+      : '[LIVE ' + live + '/' + results.length + '] Deployments';
+    setStatusFavicon(rateLimited > 0 ? '#f7c75a' : '#50dc86');
+  } else if (rateLimited > 0) {
+    document.title = '[RATE LIMIT] Deployments';
+    setStatusFavicon('#f7c75a');
   } else {
     document.title = '[UNKNOWN] Deployments';
     setStatusFavicon('#75808e');
@@ -205,8 +228,16 @@ function makeCard(tracker) {
 
 function renderCards() {
   els.cards.textContent = '';
-  trackers().forEach(t => els.cards.appendChild(makeCard(t)));
+  const list = trackers();
+  list.forEach(t => els.cards.appendChild(makeCard(t)));
   renderTrackedList();
+
+  // Restore the last successful API snapshot immediately so a temporary
+  // GitHub rate limit never makes healthy deployments look failed.
+  list.forEach(t => {
+    const cached = lastGood[keyOf(t)];
+    if (cached && Array.isArray(cached.runs)) applyCard(t, cached.runs, false);
+  });
 }
 
 function renderTrackedList() {
@@ -241,14 +272,26 @@ async function apiFetch(url, signal) {
   const response = await fetch(url, { headers, signal });
   const remaining = response.headers.get('x-ratelimit-remaining');
   const limit = response.headers.get('x-ratelimit-limit');
-  if (remaining != null && limit != null) els.rate.textContent = 'API ' + remaining + '/' + limit + ' remaining';
+  const reset = Number(response.headers.get('x-ratelimit-reset')) * 1000;
+
+  if (remaining != null && limit != null) {
+    els.rate.textContent = 'API ' + remaining + '/' + limit + ' remaining';
+  }
+
   if (!response.ok) {
     let message = response.status + ' ' + response.statusText;
     try {
       const data = await response.json();
       if (data.message) message = data.message;
     } catch (_) {}
-    throw new Error(message);
+
+    const error = new Error(message);
+    if (response.status === 403 && (remaining === '0' || /rate limit/i.test(message))) {
+      error.code = 'RATE_LIMIT';
+      error.resetAt = Number.isFinite(reset) ? reset : (Date.now() + 3600000);
+      rateLimitResetAt = Math.max(rateLimitResetAt, error.resetAt);
+    }
+    throw error;
   }
   return response.json();
 }
@@ -281,7 +324,7 @@ async function loadTracker(tracker, signal) {
   return data.workflow_runs || [];
 }
 
-function applyCard(tracker, runs) {
+function applyCard(tracker, runs, persist = true) {
   const card = els.cards.querySelector('[data-key="' + CSS.escape(keyOf(tracker)) + '"]');
   if (!card) return;
   const run = runs[0] || null;
@@ -320,11 +363,35 @@ function applyCard(tracker, runs) {
     el.title = (r.conclusion || r.status || 'unknown') + ' · ' + relativeTime(r.run_started_at || r.created_at);
     history.appendChild(el);
   });
+
+  if (persist && runs.length) {
+    lastGood[keyOf(tracker)] = { at: Date.now(), runs };
+    saveLastGood();
+  }
 }
 
 function applyError(tracker, error) {
   const card = els.cards.querySelector('[data-key="' + CSS.escape(keyOf(tracker)) + '"]');
   if (!card) return;
+
+  if (error && error.code === 'RATE_LIMIT') {
+    const cached = lastGood[keyOf(tracker)];
+    if (cached && Array.isArray(cached.runs) && cached.runs.length) {
+      applyCard(tracker, cached.runs, false);
+      card.querySelector('.status-detail').textContent =
+        'GitHub API rate limited · showing last known status from ' +
+        relativeTime(cached.at) + '.';
+    } else {
+      card.dataset.state = 'cancelled';
+      card.querySelector('.status-dot').className = 'status-dot cancelled';
+      card.querySelector('.status-pill').textContent = 'RATE LIMIT';
+      card.querySelector('.status-title').textContent = 'Waiting for GitHub API';
+      card.querySelector('.status-detail').textContent =
+        'Public API quota is exhausted. Status will refresh automatically after reset.';
+    }
+    return;
+  }
+
   card.dataset.state = 'failure';
   card.querySelector('.status-dot').className = 'status-dot failure';
   card.querySelector('.status-pill').textContent = 'ERROR';
@@ -353,9 +420,15 @@ async function refreshAll() {
       else if (result.reason && result.reason.name !== 'AbortError') applyError(list[i], result.reason);
     });
     updateTabStatus(results);
-    els.lastUpdated.textContent = 'Updated ' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
-    els.liveDot.className = 'live-dot on';
-    els.liveLabel.textContent = token ? 'Real-time mode' : 'Public mode';
+
+    const limited = results.some(r => r.status === 'rejected' && r.reason && r.reason.code === 'RATE_LIMIT');
+    els.lastUpdated.textContent = limited
+      ? 'Rate limited · cached status retained'
+      : 'Updated ' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    els.liveDot.className = limited ? 'live-dot busy' : 'live-dot on';
+    els.liveLabel.textContent = limited
+      ? 'Rate limited'
+      : (token ? 'Real-time mode' : 'Public mode');
   } finally {
     refreshing = false;
     els.refresh.disabled = false;
@@ -364,7 +437,12 @@ async function refreshAll() {
 }
 
 function intervalMs() {
-  return token ? TOKEN_INTERVAL : PUBLIC_INTERVAL;
+  if (token) return TOKEN_INTERVAL;
+
+  // Keep public-mode usage well below GitHub's unauthenticated 60 req/hour.
+  // Each refresh costs roughly one request per tracked repo.
+  const repoScaled = trackers().length * 120000;
+  return Math.max(PUBLIC_MIN_INTERVAL, repoScaled);
 }
 
 function schedule() {
@@ -374,15 +452,27 @@ function schedule() {
     els.nextRefresh.textContent = 'Auto refresh off';
     return;
   }
-  const ms = intervalMs();
+  let ms = intervalMs();
+
+  if (!token && rateLimitResetAt > Date.now()) {
+    ms = Math.max(ms, rateLimitResetAt - Date.now() + 5000);
+    const resetTime = new Date(rateLimitResetAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    els.nextRefresh.textContent = 'API resets around ' + resetTime;
+  }
+
   nextAt = Date.now() + ms;
   timer = setTimeout(refreshAll, ms);
-  updateCountdown();
+  if (!(rateLimitResetAt > Date.now() && !token)) updateCountdown();
   countdown = setInterval(updateCountdown, 1000);
 }
 
 function updateCountdown() {
   const sec = Math.max(0, Math.ceil((nextAt - Date.now()) / 1000));
+  if (!token && rateLimitResetAt > Date.now()) {
+    const resetTime = new Date(rateLimitResetAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    els.nextRefresh.textContent = 'API resets around ' + resetTime;
+    return;
+  }
   if (sec >= 60) els.nextRefresh.textContent = 'Next update in ' + Math.ceil(sec / 60) + 'm';
   else els.nextRefresh.textContent = 'Next update in ' + sec + 's';
 }
@@ -430,9 +520,9 @@ els.addForm.addEventListener('submit', event => {
 });
 
 document.addEventListener('visibilitychange', () => {
-  // Keep the existing polling timer alive while hidden. When the user returns,
-  // refresh immediately so the cards and tab indicator are current.
-  if (!document.hidden) refreshAll();
+  // Do not spend an extra API request simply because the user changed tabs.
+  // Only refresh on return when the scheduled refresh is already overdue.
+  if (!document.hidden && nextAt && Date.now() >= nextAt) refreshAll();
 });
 
 renderCards();
