@@ -39,7 +39,10 @@ const els = {
   cards: $('cards'), template: $('cardTemplate'), refresh: $('refreshBtn'),
   auto: $('autoRefresh'), lastUpdated: $('lastUpdated'), rate: $('rateInfo'),
   liveDot: $('liveDot'), liveLabel: $('liveLabel'), nextRefresh: $('nextRefresh'),
-  token: $('tokenInput'), saveToken: $('saveTokenBtn'), clearToken: $('clearTokenBtn'),
+  githubConnect: $('githubConnect'), token: $('tokenInput'), saveToken: $('saveTokenBtn'),
+  clearToken: $('clearTokenBtn'), tokenEntry: $('tokenEntry'), connectedActions: $('connectedActions'),
+  connectTitle: $('connectTitle'), connectSubtitle: $('connectSubtitle'),
+  connectMessage: $('connectMessage'), connectedBadge: $('connectedBadge'),
   trackedList: $('trackedList'), addForm: $('addForm'), repoInput: $('repoInput'),
   workflowInput: $('workflowInput'), labelInput: $('labelInput'), siteInput: $('siteInput')
 };
@@ -266,6 +269,52 @@ function renderTrackedList() {
   });
 }
 
+function updateConnectionUI() {
+  const connected = !!token;
+  if (els.tokenEntry) els.tokenEntry.classList.toggle('hidden', connected);
+  if (els.connectedActions) els.connectedActions.classList.toggle('hidden', !connected);
+
+  if (connected) {
+    if (els.githubConnect) els.githubConnect.classList.add('connected');
+    if (els.connectTitle) els.connectTitle.textContent = 'GitHub connected';
+    if (els.connectSubtitle) els.connectSubtitle.textContent =
+      'Authenticated mode is active: 15-second deployment checks with GitHub’s normal 5,000 requests/hour user limit.';
+    if (els.connectMessage) els.connectMessage.textContent =
+      'Your token is stored only in sessionStorage for this browser tab and is sent directly to api.github.com.';
+    if (els.connectedBadge) els.connectedBadge.textContent = '● Authenticated · 5,000 req/hr';
+  } else {
+    if (els.githubConnect) els.githubConnect.classList.remove('connected');
+    if (els.connectTitle) els.connectTitle.textContent = 'Connect GitHub for live tracking';
+    if (els.connectSubtitle) els.connectSubtitle.textContent =
+      'Public mode is limited to 60 requests/hour. A fine-grained token raises the normal authenticated limit to 5,000 requests/hour and enables 15-second updates.';
+    if (els.connectMessage) els.connectMessage.textContent =
+      'Token stays only in this browser tab. Use read-only Actions access for the tracked repositories.';
+  }
+}
+
+async function validateToken(candidate) {
+  const response = await fetch('https://api.github.com/rate_limit', {
+    headers: {
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      Authorization: 'Bearer ' + candidate
+    }
+  });
+
+  if (!response.ok) {
+    let message = 'GitHub rejected this token.';
+    try {
+      const data = await response.json();
+      if (data && data.message) message = data.message;
+    } catch (_) {}
+    throw new Error(message);
+  }
+
+  const data = await response.json();
+  const core = data && data.resources && data.resources.core;
+  return core || null;
+}
+
 async function apiFetch(url, signal) {
   const headers = { Accept:'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28' };
   if (token) headers.Authorization = 'Bearer ' + token;
@@ -480,21 +529,49 @@ function updateCountdown() {
 els.refresh.addEventListener('click', refreshAll);
 els.auto.addEventListener('change', schedule);
 
-els.saveToken.addEventListener('click', () => {
+els.saveToken.addEventListener('click', async () => {
   const value = els.token.value.trim();
   if (!value) return;
-  token = value;
-  sessionStorage.setItem(TOKEN_KEY, token);
-  els.token.value = '';
-  els.liveLabel.textContent = 'Real-time mode';
-  refreshAll();
+
+  els.saveToken.disabled = true;
+  const originalText = els.saveToken.textContent;
+  els.saveToken.textContent = 'Connecting…';
+  if (els.connectMessage) els.connectMessage.textContent = 'Checking token with GitHub…';
+
+  try {
+    const core = await validateToken(value);
+    token = value;
+    rateLimitResetAt = 0;
+    sessionStorage.setItem(TOKEN_KEY, token);
+    els.token.value = '';
+    updateConnectionUI();
+
+    if (core && Number.isFinite(core.limit)) {
+      els.rate.textContent = 'API ' + core.remaining + '/' + core.limit + ' remaining';
+      if (els.connectedBadge) {
+        els.connectedBadge.textContent = '● Authenticated · ' + core.limit.toLocaleString() + ' req/hr';
+      }
+    }
+
+    els.liveLabel.textContent = 'Real-time mode';
+    refreshAll();
+  } catch (error) {
+    if (els.connectMessage) {
+      els.connectMessage.textContent = 'Connection failed: ' + (error.message || String(error));
+    }
+  } finally {
+    els.saveToken.disabled = false;
+    els.saveToken.textContent = originalText;
+  }
 });
 
 els.clearToken.addEventListener('click', () => {
   token = '';
+  rateLimitResetAt = 0;
   sessionStorage.removeItem(TOKEN_KEY);
   els.token.value = '';
-  els.liveLabel.textContent = 'Public mode';
+  els.liveLabel.textContent = 'Public fallback';
+  updateConnectionUI();
   refreshAll();
 });
 
@@ -526,7 +603,10 @@ document.addEventListener('visibilitychange', () => {
 });
 
 renderCards();
+updateConnectionUI();
 if (token) {
   els.liveLabel.textContent = 'Real-time mode';
+} else {
+  els.liveLabel.textContent = 'Public fallback';
 }
 refreshAll();
