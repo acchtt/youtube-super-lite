@@ -202,3 +202,71 @@ body.startup-locked .app{filter:blur(3px);pointer-events:none;user-select:none}
 #resumeVideoMeta{
   color:#6f7b89;font-size:.69rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis
 }
+
+
+/* Aero × IVE — lightweight fan-edition branding.
+   Pure CSS: no image payload, animation, or extra runtime cost. */
+:root{
+  --aero-lilac:#d9d0ff;
+  --aero-pink:#ff9bc5;
+  --aero-ice:#98eaff;
+}
+body{
+  background:
+    radial-gradient(circle at 12% -10%,#5b3b6d22 0,transparent 28rem),
+    radial-gradient(circle at 88% -18%,#20536a18 0,transparent 30rem),
+    radial-gradient(circle at top,#17141c 0,#0b0d10 40rem);
+}
+.brand-block{min-width:0}
+.brand-lockup{display:flex;align-items:center;gap:10px;min-width:0;margin-bottom:6px}
+.brand-lockup--gate{margin:-2px 0 2px}
+.aero-mark{
+  position:relative;display:inline-block;flex:0 0 auto;width:35px;height:35px;
+  border:1px solid #ffffff1f;border-radius:11px;
+  background:linear-gradient(145deg,#ffffff12,#ffffff04);
+  box-shadow:inset 0 1px 0 #ffffff12,0 8px 24px #0005;
+  overflow:hidden
+}
+.aero-mark::before{
+  content:"";position:absolute;inset:7px 6px 6px 7px;
+  background:linear-gradient(135deg,var(--aero-lilac),var(--aero-pink) 56%,var(--aero-ice));
+  clip-path:polygon(0 100%,40% 0,57% 0,35% 45%,76% 45%,100% 100%,73% 100%,63% 72%,23% 72%,15% 100%)
+}
+.aero-mark-core{
+  position:absolute;left:14px;top:13px;width:0;height:0;z-index:2;
+  border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:8px solid #0d0b12;
+  opacity:.9
+}
+.brand-wordmark{display:inline-flex;align-items:baseline;gap:.34em;font-weight:850;line-height:1;white-space:nowrap}
+.brand-aero{
+  font-size:clamp(1.45rem,3vw,2.05rem);letter-spacing:-.055em;
+  background:linear-gradient(100deg,#fff 0,var(--aero-lilac) 48%,var(--aero-ice) 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent
+}
+.brand-x{color:#6f7580;font-size:.86rem;font-weight:700}
+.brand-ive{font-size:1.03rem;letter-spacing:.16em;color:#f8edf5}
+.fan-badge{
+  border:1px solid #a985a72e;background:#a985a710;color:#bba8bd;
+  border-radius:999px;padding:.18rem .42rem;font-size:.58rem;font-weight:800;letter-spacing:.08em;white-space:nowrap
+}
+.brand-lockup .version-badge{margin-left:-2px}
+.startup-card{border-color:#3b3140}
+.startup-card::before{
+  content:"";display:block;height:1px;margin:-22px -22px 8px;
+  background:linear-gradient(90deg,transparent,var(--aero-pink),var(--aero-lilac),var(--aero-ice),transparent);
+  opacity:.72
+}
+button.primary{
+  background:linear-gradient(100deg,#fff 0,#f7f0ff 52%,#ebfbff 100%);
+  color:#0b0d10;border-color:#fff
+}
+textarea:focus,select:focus{border-color:#8d7ca0;box-shadow:0 0 0 2px #9f86b526}
+.dot{background:#b8a5ff;box-shadow:0 0 12px #b8a5ffaa}
+.fan-note{color:#746a77}
+@media(max-width:600px){
+  .brand-lockup{gap:7px;flex-wrap:wrap}
+  .brand-lockup .fan-badge{display:none}
+  .brand-lockup--gate .fan-badge{display:inline-flex}
+  .brand-aero{font-size:1.5rem}
+  .brand-ive{font-size:.92rem}
+}
