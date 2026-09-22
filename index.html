@@ -5,14 +5,18 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#0b0d10">
-  <title>YouTube Super Lite</title>
+  <meta name="application-version" content="0.6.0">
+  <title>YouTube Super Lite · v0.6.0</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <main class="app">
     <header class="topbar">
       <div>
-        <h1>YouTube Super Lite</h1>
+        <div class="title-line">
+          <h1>YouTube Super Lite</h1>
+          <span class="version-badge" title="Site version">v0.6.0</span>
+        </div>
         <p class="muted">Personalized autoplay without the heavy YouTube homepage, comments, Shorts, or infinite scroll.</p>
       </div>
       <div class="top-links">
@@ -69,45 +73,52 @@
             <button id="nextBtn" aria-label="Next">⏭</button>
           </div>
 
-          <div class="settings-grid">
-            <label class="setting"><span>Autoplay mode</span>
+          <div class="quick-settings">
+            <label class="setting compact-setting"><span>Mode</span>
               <select id="autoplayModeSelect">
                 <option value="personalized">Personalized</option>
                 <option value="mix">YouTube Mix</option>
                 <option value="queue">Queue only</option>
               </select>
             </label>
-            <label class="setting"><span>Autoplay</span><input id="autoplayToggle" type="checkbox" checked></label>
-            <label class="setting"><span>Low-memory</span><input id="lowMemoryToggle" type="checkbox" checked></label>
-            <label class="setting"><span>Cinema</span><input id="cinemaToggle" type="checkbox" checked></label>
-            <label class="setting"><span>Shuffle</span><input id="shuffleToggle" type="checkbox"></label>
-            <label class="setting"><span>Taste gate</span>
+
+            <label class="setting compact-setting"><span>Taste</span>
               <select id="tasteGateSelect">
                 <option value="off">Off</option>
                 <option value="balanced" selected>Balanced</option>
                 <option value="strict">Strict</option>
               </select>
             </label>
-            <label class="setting"><span>Repeat</span>
-              <select id="repeatSelect">
-                <option value="off">Off</option>
-                <option value="one">One</option>
-                <option value="queue">Queue</option>
-              </select>
-            </label>
-            <label class="setting"><span>Speed</span>
-              <select id="speedSelect">
-                <option value="0.5">0.5×</option><option value="0.75">0.75×</option>
-                <option value="1" selected>1×</option><option value="1.25">1.25×</option>
-                <option value="1.5">1.5×</option><option value="1.75">1.75×</option><option value="2">2×</option>
-              </select>
-            </label>
-            <label class="setting"><span>Reseed/refresh</span>
-              <select id="refreshSelect">
-                <option value="5">5 videos</option><option value="8" selected>8 videos</option>
-                <option value="12">12 videos</option><option value="20">20 videos</option>
-              </select>
-            </label>
+
+            <details class="more-settings">
+              <summary>More</summary>
+              <div class="more-settings-panel">
+                <label class="setting"><span>Autoplay</span><input id="autoplayToggle" type="checkbox" checked></label>
+                <label class="setting"><span>Low-memory</span><input id="lowMemoryToggle" type="checkbox" checked></label>
+                <label class="setting"><span>Cinema</span><input id="cinemaToggle" type="checkbox" checked></label>
+                <label class="setting"><span>Shuffle</span><input id="shuffleToggle" type="checkbox"></label>
+                <label class="setting"><span>Repeat</span>
+                  <select id="repeatSelect">
+                    <option value="off">Off</option>
+                    <option value="one">One</option>
+                    <option value="queue">Queue</option>
+                  </select>
+                </label>
+                <label class="setting"><span>Speed</span>
+                  <select id="speedSelect">
+                    <option value="0.5">0.5×</option><option value="0.75">0.75×</option>
+                    <option value="1" selected>1×</option><option value="1.25">1.25×</option>
+                    <option value="1.5">1.5×</option><option value="1.75">1.75×</option><option value="2">2×</option>
+                  </select>
+                </label>
+                <label class="setting"><span>Refresh player</span>
+                  <select id="refreshSelect">
+                    <option value="5">5 videos</option><option value="8" selected>8 videos</option>
+                    <option value="12">12 videos</option><option value="20">20 videos</option>
+                  </select>
+                </label>
+              </div>
+            </details>
           </div>
         </div>
 
