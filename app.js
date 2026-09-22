@@ -2,6 +2,7 @@
 
 const STORAGE_KEY = 'yt-super-lite-v2';
 const HISTORY_KEY = 'yt-super-lite-video-history-v1';
+const LAST_PLAYLIST_KEY = 'yt-super-lite-last-playlist-v1';
 const HISTORY_LIMIT = 200;
 const state = {
   queue: [],
@@ -33,6 +34,7 @@ let lastObservedVideoId = '';
 let tasteGateSkips = 0;
 let tasteGateChecking = false;
 let videoHistory = loadVideoHistory();
+let lastPlaylist = loadLastPlaylist();
 let currentTabTrack = { title:'', author:'', state:'idle' };
 
 const $ = id => document.getElementById(id);
@@ -52,7 +54,9 @@ const els = {
   startupGate: $('startupGate'), startupForm: $('startupForm'),
   startupUrl: $('startupUrl'), startupError: $('startupError'),
   historyList: $('historyList'), historyCount: $('historyCount'),
-  emptyHistory: $('emptyHistory'), clearHistory: $('clearHistoryBtn')
+  emptyHistory: $('emptyHistory'), clearHistory: $('clearHistoryBtn'),
+  resumePlaylistBox: $('resumePlaylistBox'), resumePlaylistTitle: $('resumePlaylistTitle'),
+  resumePlaylistMeta: $('resumePlaylistMeta'), resumePlaylistBtn: $('resumePlaylistBtn')
 };
 
 function loadState() {
@@ -118,7 +122,7 @@ function renderTabTitle() {
   const author = cleanTabText(currentTabTrack.author);
 
   if (!title) {
-    document.title = 'YouTube Super Lite · v0.8.3';
+    document.title = 'YouTube Super Lite · v0.8.4';
     return;
   }
 
@@ -275,6 +279,125 @@ function startFromStartupPrompt() {
       : 'Session started from your chosen video. Its YouTube Radio will continue afterward.',
     'ok'
   );
+}
+
+function loadLastPlaylist() {
+  try {
+    const value = JSON.parse(localStorage.getItem(LAST_PLAYLIST_KEY) || 'null');
+    return value && value.id ? value : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function saveLastPlaylist() {
+  try {
+    if (lastPlaylist && lastPlaylist.id) {
+      localStorage.setItem(LAST_PLAYLIST_KEY, JSON.stringify(lastPlaylist));
+    }
+  } catch (_) {}
+}
+
+function rememberPlaylist(mode, details = {}) {
+  if (!mode || !mode.id) return;
+
+  let playlistIndex = Number.isInteger(details.index) ? details.index : null;
+  if (playlistIndex == null && playerReady && player) {
+    try {
+      const current = player.getPlaylistIndex();
+      if (Number.isInteger(current) && current >= 0) playlistIndex = current;
+    } catch (_) {}
+  }
+
+  lastPlaylist = {
+    id: mode.id,
+    index: playlistIndex,
+    currentVideoId: details.currentVideoId || '',
+    title: details.title || '',
+    channel: details.channel || '',
+    savedAt: Date.now(),
+    personalized: !!mode.personalized,
+    mix: !!mode.mix,
+    radio: !!mode.radio,
+    manualRadio: !!mode.manualRadio,
+    sourceList: !!mode.sourceList,
+    preserveSequence: !!mode.preserveSequence,
+    seedId: mode.seedId || ''
+  };
+  saveLastPlaylist();
+  renderResumePlaylist();
+}
+
+function renderResumePlaylist() {
+  if (!els.resumePlaylistBox) return;
+  const available = !!(lastPlaylist && lastPlaylist.id);
+  els.resumePlaylistBox.classList.toggle('hidden', !available);
+  if (!available) return;
+
+  const label = lastPlaylist.radio || /^RD/.test(lastPlaylist.id)
+    ? 'YouTube Radio'
+    : 'YouTube playlist';
+
+  els.resumePlaylistTitle.textContent = lastPlaylist.title || label;
+  els.resumePlaylistMeta.textContent = [
+    lastPlaylist.channel,
+    label,
+    lastPlaylist.id
+  ].filter(Boolean).join(' · ');
+}
+
+function resumeLastPlaylist() {
+  if (!lastPlaylist || !lastPlaylist.id) return;
+
+  closeStartupGate();
+  manualContinuation = null;
+  personalizedMixPlays = 0;
+
+  state.playlistMode = {
+    id: lastPlaylist.id,
+    seedId: lastPlaylist.seedId || lastPlaylist.currentVideoId || '',
+    personalized: !!lastPlaylist.personalized,
+    mix: !!lastPlaylist.mix || /^RD/.test(lastPlaylist.id),
+    radio: !!lastPlaylist.radio || /^RD/.test(lastPlaylist.id),
+    manualRadio: !!lastPlaylist.manualRadio || /^RD/.test(lastPlaylist.id),
+    sourceList: !!lastPlaylist.sourceList,
+    preserveSequence: !!lastPlaylist.preserveSequence,
+    resumed: true
+  };
+  state.index = -1;
+  renderQueue();
+
+  els.nowTitle.textContent = lastPlaylist.title || 'Resuming last playlist…';
+  els.nowMeta.textContent = lastPlaylist.id;
+
+  whenReady(() => {
+    const preferredIndex = Number.isInteger(lastPlaylist.index) && lastPlaylist.index >= 0
+      ? lastPlaylist.index
+      : 0;
+
+    player.loadPlaylist({
+      listType: 'playlist',
+      list: lastPlaylist.id,
+      index: preferredIndex,
+      startSeconds: 0
+    });
+
+    setTimeout(() => {
+      try {
+        const ids = player.getPlaylist ? player.getPlaylist() : [];
+        if (lastPlaylist.currentVideoId && ids && ids.length) {
+          const found = ids.indexOf(lastPlaylist.currentVideoId);
+          if (found >= 0 && found !== player.getPlaylistIndex()) player.playVideoAt(found);
+        }
+      } catch (_) {}
+    }, 900);
+
+    try { player.setLoop(state.repeat === 'queue'); } catch (_) {}
+    try { player.setShuffle(state.shuffle); } catch (_) {}
+    applyAudioPrefs(player);
+  });
+
+  setMessage('Resumed the last playlist from this browser.', 'ok');
 }
 
 function loadVideoHistory() {
@@ -521,6 +644,25 @@ function playExactManual(item) {
     listId: item.listId || null,
     listIndex: Number.isInteger(item.listIndex) ? item.listIndex : null
   };
+
+  if (item.listId) {
+    const isRadio = /^RD/.test(item.listId);
+    rememberPlaylist({
+      id: item.listId,
+      seedId: item.id,
+      personalized: false,
+      mix: isRadio,
+      radio: isRadio,
+      manualRadio: isRadio,
+      sourceList: true,
+      preserveSequence: true
+    }, {
+      index: Number.isInteger(item.listIndex) ? item.listIndex : null,
+      currentVideoId: item.id,
+      title: item.title || ''
+    });
+  }
+
   state.playlistMode = null;
   state.index = -1;
   els.nowTitle.textContent = 'Loading requested video…';
@@ -559,6 +701,11 @@ function continueAfterManualVideo() {
     preserveSequence: !!next.listId
   };
   state.index = -1;
+  rememberPlaylist(state.playlistMode, {
+    index: Number.isInteger(next.listIndex) ? next.listIndex : 0,
+    currentVideoId: next.seed.id,
+    title: next.seed.title || ''
+  });
   renderQueue();
 
   const action = target => {
@@ -623,8 +770,16 @@ function loadPlaylistInto(target, listId, videoId) {
 
 function playPlaylist(listId, videoId) {
   manualContinuation = null;
-  state.playlistMode = { id: listId };
+  state.playlistMode = {
+    id: listId,
+    sourceList: true,
+    preserveSequence: true,
+    radio: /^RD/.test(listId),
+    manualRadio: /^RD/.test(listId),
+    mix: /^RD/.test(listId)
+  };
   state.index = -1;
+  rememberPlaylist(state.playlistMode, { currentVideoId: videoId || '' });
   renderQueue();
   els.nowTitle.textContent = 'YouTube playlist';
   els.nowMeta.textContent = listId;
@@ -636,8 +791,21 @@ function playMixFromSeed(item, personalized, fresh) {
   personalizedMixPlays = 0;
   if (!item || !item.id) return;
   const listId = 'RD' + item.id;
-  state.playlistMode = { id: listId, seedId: item.id, personalized: !!personalized, mix: !personalized };
+  state.playlistMode = {
+    id: listId,
+    seedId: item.id,
+    personalized: !!personalized,
+    mix: !personalized,
+    radio: true,
+    manualRadio: !personalized
+  };
   state.index = -1;
+  rememberPlaylist(state.playlistMode, {
+    index: 0,
+    currentVideoId: item.id,
+    title: item.title || '',
+    channel: item.channel || ''
+  });
   if (item.channel) state.lastChannel = item.channel;
   els.nowTitle.textContent = item.title || (personalized ? 'Personalized Mix' : 'YouTube Mix');
   els.nowMeta.textContent = personalized ? 'Taste-profile seed · ' + item.id : 'YouTube Mix seed · ' + item.id;
@@ -871,6 +1039,15 @@ function updateVideoData() {
 
   if (id && id !== lastObservedVideoId) {
     lastObservedVideoId = id;
+
+    if (state.playlistMode && state.playlistMode.id) {
+      rememberPlaylist(state.playlistMode, {
+        currentVideoId: id,
+        title: data.title || '',
+        channel: data.author || ''
+      });
+    }
+
     recordVideoHistory(id, data.title || '', data.author || '');
 
     if (
@@ -943,6 +1120,10 @@ if (els.startupForm) {
     event.preventDefault();
     startFromStartupPrompt();
   });
+}
+
+if (els.resumePlaylistBtn) {
+  els.resumePlaylistBtn.addEventListener('click', resumeLastPlaylist);
 }
 
 els.importTakeout.addEventListener('click', () => els.takeoutInput.click());
@@ -1033,6 +1214,7 @@ loadState();
 syncSettings();
 renderQueue();
 renderVideoHistory();
+renderResumePlaylist();
 loadProfile();
 setTimeout(() => {
   if (els.startupUrl) els.startupUrl.focus();
