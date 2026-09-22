@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-labelledby="title">
+  <title id="title">Aero logo concept 06 — Orbit A</title>
+  <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M31 72 49 27c.8-2.1 3.8-2.1 4.7 0L72 72" stroke-width="4"/>
+    <path d="M22 58c14 10 38 13 58 2" stroke-width="3"/>
+  </g>
+  <circle cx="78" cy="60" r="4" fill="currentColor"/>
+</svg>
