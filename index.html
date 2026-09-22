@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#0d0b12">
-  <meta name="application-version" content="0.10.1">
-  <title>Aero × IVE · v0.10.1</title>
-  <link rel="stylesheet" href="styles.css?v=0.10.1">
+  <meta name="application-version" content="0.10.2">
+  <title>Aero × IVE · v0.10.2</title>
+  <link rel="stylesheet" href="styles.css?v=0.10.2">
 </head>
 <body class="startup-locked">
   <div id="startupGate" class="startup-gate" role="dialog" aria-modal="true" aria-labelledby="startupTitle">
@@ -57,9 +57,9 @@
           <span class="aero-mark" aria-hidden="true"><span class="aero-mark-core"></span></span>
           <span class="brand-wordmark"><span class="brand-aero">Aero</span><span class="brand-x">×</span><span class="brand-ive">IVE</span></span>
           <span class="fan-badge">FAN EDITION</span>
-          <span class="version-badge" title="Site version">v0.10.1</span>
+          <span class="version-badge" title="Site version">v0.10.2</span>
         </div>
-        <p class="muted">A super-light YouTube player: your videos and personalization, without the feed, comments, Shorts, or page bloat.</p>
+        <p class="muted">A super-light YouTube player: your videos without the feed, comments, Shorts, or page bloat.</p>
       </div>
       <div class="top-links">
         <a class="deploy-link" href="deployments/">Deployments</a>
@@ -68,20 +68,6 @@
         </div>
       </div>
     </header>
-
-    <section class="profile-card card">
-      <div class="profile-copy">
-        <span class="eyebrow">CLOUD PERSONALIZATION</span>
-        <strong id="profileStatus">No YouTube Takeout profile imported</strong>
-        <span id="profileStats" class="muted">Import your YouTube Takeout ZIP. The raw archive is parsed in your browser; only the compact taste profile is saved to Cloudflare D1.</span>
-      </div>
-      <div class="profile-actions">
-        <input id="takeoutInput" class="hidden" type="file" accept=".zip,application/zip">
-        <button id="importTakeoutBtn">Import Takeout ZIP</button>
-        <button id="startPersonalizedBtn" class="primary" disabled>Start personalized</button>
-        <button id="forgetProfileBtn" class="ghost danger hidden">Forget profile</button>
-      </div>
-    </section>
 
     <section class="input-card card">
       <label for="urlInput">YouTube video URL, video ID, or playlist URL</label>
@@ -95,7 +81,7 @@
       <p id="message" class="message" aria-live="polite"></p>
     </section>
 
-    <section class="layout">
+    <section id="mediaLayout" class="layout hidden">
       <div class="player-column">
         <div class="player-shell card">
           <div class="aspect"><div id="player"></div></div>
@@ -103,7 +89,7 @@
             <div class="now-text">
               <span class="eyebrow">NOW PLAYING</span>
               <strong id="nowTitle">Nothing loaded</strong>
-              <span id="nowMeta" class="muted">Paste a YouTube link or start personalized mode.</span>
+              <span id="nowMeta" class="muted">Paste a YouTube link to start.</span>
             </div>
           </div>
         </div>
@@ -202,9 +188,9 @@
     </footer>
   </main>
 
-  <script src="cloud-state.js?v=0.10.1"></script>
-  <script src="personalization.js?v=0.10.1"></script>
-  <script src="app.js?v=0.10.1"></script>
+  <script src="cloud-state.js?v=0.10.2"></script>
+  <script src="personalization.js?v=0.10.2"></script>
+  <script src="app.js?v=0.10.2"></script>
   <script src="https://www.youtube.com/iframe_api"></script>
 </body>
 </html>
