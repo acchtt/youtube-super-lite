@@ -33,6 +33,7 @@ let lastObservedVideoId = '';
 let tasteGateSkips = 0;
 let tasteGateChecking = false;
 let videoHistory = loadVideoHistory();
+let currentTabTrack = { title:'', author:'', state:'idle' };
 
 const $ = id => document.getElementById(id);
 const els = {
@@ -105,6 +106,40 @@ function syncSettings() {
 function setMessage(text, kind) {
   els.message.textContent = text || '';
   els.message.className = 'message' + (kind ? ' ' + kind : '');
+}
+
+
+function cleanTabText(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function renderTabTitle() {
+  const title = cleanTabText(currentTabTrack.title);
+  const author = cleanTabText(currentTabTrack.author);
+
+  if (!title) {
+    document.title = 'YouTube Super Lite · v0.8.3';
+    return;
+  }
+
+  const icon = currentTabTrack.state === 'paused' ? '⏸' :
+    currentTabTrack.state === 'playing' ? '▶' : '♪';
+  const suffix = author ? ' · ' + author : '';
+  document.title = icon + ' ' + title + suffix;
+}
+
+function setTabTrack(title, author, playbackState) {
+  currentTabTrack = {
+    title: cleanTabText(title),
+    author: cleanTabText(author),
+    state: playbackState || currentTabTrack.state || 'playing'
+  };
+  renderTabTitle();
+}
+
+function setTabPlaybackState(playbackState) {
+  currentTabTrack.state = playbackState;
+  renderTabTitle();
 }
 
 function renderProfile() {
@@ -726,8 +761,12 @@ function refreshCurrentPlaylist() {
 function onPlayerStateChange(event) {
   if (event.data === YT.PlayerState.PLAYING) {
     els.toggle.textContent = '❚❚';
+    setTabPlaybackState('playing');
     setTimeout(updateVideoData, 250);
-  } else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.CUED) {
+  } else if (event.data === YT.PlayerState.PAUSED) {
+    els.toggle.textContent = '▶';
+    setTabPlaybackState('paused');
+  } else if (event.data === YT.PlayerState.CUED) {
     els.toggle.textContent = '▶';
   } else if (event.data === YT.PlayerState.ENDED) {
     els.toggle.textContent = '▶';
@@ -822,6 +861,7 @@ function updateVideoData() {
   if (data.title) els.nowTitle.textContent = data.title;
   const id = data.video_id || '';
   if (data.author) state.lastChannel = data.author;
+  if (data.title) setTabTrack(data.title, data.author || '', 'playing');
   els.nowMeta.textContent = [data.author, id].filter(Boolean).join(' · ') ||
     (state.playlistMode ? state.playlistMode.id : '');
 
