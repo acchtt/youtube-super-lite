@@ -176,3 +176,23 @@ body.startup-locked .app{filter:blur(3px);pointer-events:none;user-select:none}
   .history-list{max-height:220px}
   .history-item{padding:7px}
 }
+
+
+/* Resume last playlist inside the startup gate */
+.resume-playlist{
+  margin-top:2px;padding:11px;border:1px solid #2b333d;border-radius:11px;
+  background:#0c1015;display:grid;grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;gap:12px
+}
+.resume-playlist-copy{min-width:0;display:grid;gap:2px}
+.resume-playlist-copy strong{
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.86rem
+}
+#resumePlaylistMeta{
+  color:#6f7b89;font-size:.69rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+}
+.resume-playlist button{white-space:nowrap;padding:.55rem .7rem}
+@media(max-width:600px){
+  .resume-playlist{grid-template-columns:1fr}
+  .resume-playlist button{width:100%}
+}
