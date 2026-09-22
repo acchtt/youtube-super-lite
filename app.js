@@ -1,6 +1,8 @@
 'use strict';
 
 const STORAGE_KEY = 'yt-super-lite-v2';
+const HISTORY_KEY = 'yt-super-lite-video-history-v1';
+const HISTORY_LIMIT = 200;
 const state = {
   queue: [],
   index: -1,
@@ -30,6 +32,7 @@ let personalizedMixPlays = 0;
 let lastObservedVideoId = '';
 let tasteGateSkips = 0;
 let tasteGateChecking = false;
+let videoHistory = loadVideoHistory();
 
 const $ = id => document.getElementById(id);
 const els = {
@@ -46,7 +49,9 @@ const els = {
   startPersonalized: $('startPersonalizedBtn'), forgetProfile: $('forgetProfileBtn'),
   profileStatus: $('profileStatus'), profileStats: $('profileStats'),
   startupGate: $('startupGate'), startupForm: $('startupForm'),
-  startupUrl: $('startupUrl'), startupError: $('startupError')
+  startupUrl: $('startupUrl'), startupError: $('startupError'),
+  historyList: $('historyList'), historyCount: $('historyCount'),
+  emptyHistory: $('emptyHistory'), clearHistory: $('clearHistoryBtn')
 };
 
 function loadState() {
@@ -150,6 +155,25 @@ function playlistIdFrom(value) {
   return null;
 }
 
+function playbackContextFrom(value) {
+  const raw = String(value || '').trim();
+  const id = videoIdFrom(raw);
+  if (!id) return null;
+
+  let listId = null;
+  let listIndex = null;
+  try {
+    const u = new URL(raw);
+    if (u.hostname.includes('youtube.com') || u.hostname.includes('youtu.be')) {
+      listId = u.searchParams.get('list') || null;
+      const index = Number(u.searchParams.get('index'));
+      if (Number.isInteger(index) && index > 0) listIndex = index - 1;
+    }
+  } catch (_) {}
+
+  return { id, title:'', listId, listIndex };
+}
+
 function isStandalonePlaylistUrl(value) {
   try {
     const u = new URL(String(value || '').trim());
@@ -165,12 +189,12 @@ function parseInput() {
   let playlist = null;
 
   for (const line of lines) {
-    const vid = videoIdFrom(line);
+    const context = playbackContextFrom(line);
 
-    // A watch/short/live/youtu.be URL is always an exact-video request.
-    // Ignore any &list=... context YouTube appended to copied watch URLs.
-    if (vid) {
-      videos.push({ id: vid, title: '' });
+    // Always play the exact watch video first, but preserve any list= context
+    // so the continuation uses the same playlist/radio the user pasted.
+    if (context) {
+      videos.push(context);
       continue;
     }
 
@@ -183,7 +207,8 @@ function parseInput() {
 }
 
 function videoIdFromStartup(value) {
-  return videoIdFrom(value);
+  const context = playbackContextFrom(value);
+  return context ? context.id : null;
 }
 
 function closeStartupGate() {
@@ -193,9 +218,9 @@ function closeStartupGate() {
 
 function startFromStartupPrompt() {
   const value = String(els.startupUrl && els.startupUrl.value || '').trim();
-  const id = videoIdFromStartup(value);
+  const context = playbackContextFrom(value);
 
-  if (!id) {
+  if (!context) {
     if (els.startupError) els.startupError.textContent = 'Paste a valid YouTube video link or 11-character video ID.';
     if (els.startupUrl) els.startupUrl.focus();
     return;
@@ -206,10 +231,110 @@ function startFromStartupPrompt() {
 
   closeStartupGate();
 
-  // Startup choice is always an exact manual video, independent of any
-  // previously saved autoplay mode. Its own YouTube Radio takes over after it ends.
-  playExactManual({ id, title: '' });
-  setMessage('Session started from your chosen video. Its YouTube Radio will continue afterward.', 'ok');
+  // Startup choice is always exact. If YouTube supplied list= in the copied
+  // URL, preserve it for the continuation instead of regenerating a new RD list.
+  playExactManual(context);
+  setMessage(
+    context.listId
+      ? 'Session started from your chosen video. The pasted YouTube playlist/Radio will continue afterward.'
+      : 'Session started from your chosen video. Its YouTube Radio will continue afterward.',
+    'ok'
+  );
+}
+
+function loadVideoHistory() {
+  try {
+    const value = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+    return Array.isArray(value) ? value.slice(0, HISTORY_LIMIT) : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function saveVideoHistory() {
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(videoHistory.slice(0, HISTORY_LIMIT)));
+  } catch (_) {}
+}
+
+function historySource() {
+  if (manualContinuation) return 'Manual';
+  if (state.playlistMode && state.playlistMode.sourceList) {
+    return state.playlistMode.radio ? 'Pasted radio' : 'Pasted playlist';
+  }
+  if (state.playlistMode && state.playlistMode.personalized) return 'Personalized';
+  if (state.playlistMode && state.playlistMode.manualRadio) return 'Radio';
+  if (state.playlistMode) return 'Playlist';
+  if (state.index >= 0) return 'Queue';
+  return 'Video';
+}
+
+function recordVideoHistory(id, title, channel) {
+  if (!id) return;
+  const item = {
+    id,
+    title: title || 'YouTube video',
+    channel: channel || '',
+    at: Date.now(),
+    source: historySource(),
+    listId: state.playlistMode && state.playlistMode.id || null
+  };
+
+  // Collapse only immediate duplicate state events; later replays remain visible.
+  if (videoHistory[0] && videoHistory[0].id === id) {
+    videoHistory[0] = { ...videoHistory[0], ...item };
+  } else {
+    videoHistory.unshift(item);
+  }
+  videoHistory = videoHistory.slice(0, HISTORY_LIMIT);
+  saveVideoHistory();
+  renderVideoHistory();
+}
+
+function formatHistoryTime(value) {
+  const d = new Date(value || 0);
+  if (!Number.isFinite(d.getTime())) return '';
+  return d.toLocaleString([], {
+    month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'
+  });
+}
+
+function renderVideoHistory() {
+  if (!els.historyList) return;
+  els.historyList.textContent = '';
+  if (els.historyCount) {
+    els.historyCount.textContent = videoHistory.length + (videoHistory.length === 1 ? ' video' : ' videos');
+  }
+  if (els.emptyHistory) els.emptyHistory.classList.toggle('hidden', videoHistory.length > 0);
+
+  videoHistory.slice(0, 60).forEach(item => {
+    const li = document.createElement('li');
+    li.className = 'history-item';
+
+    const copy = document.createElement('div');
+    copy.className = 'history-copy';
+    const title = document.createElement('strong');
+    title.className = 'history-title';
+    title.textContent = item.title || 'YouTube video';
+    const meta = document.createElement('span');
+    meta.className = 'history-meta';
+    meta.textContent = [item.channel, item.source, formatHistoryTime(item.at)].filter(Boolean).join(' · ');
+    copy.append(title, meta);
+
+    const play = document.createElement('button');
+    play.type = 'button';
+    play.className = 'history-play';
+    play.textContent = '▶';
+    play.title = 'Play this video';
+    play.addEventListener('click', () => {
+      playExactManual({ id:item.id, title:item.title || '', listId:null, listIndex:null });
+      setMessage('Playing from local video history.', 'ok');
+      window.scrollTo({ top:0, behavior:'smooth' });
+    });
+
+    li.append(copy, play);
+    els.historyList.appendChild(li);
+  });
 }
 
 function renderQueue() {
@@ -355,7 +480,12 @@ function playExactManual(item) {
   // A manually pasted video is the strongest signal of current intent.
   // Always continue from that video's own YouTube Radio rather than
   // immediately handing control back to the historical Takeout profile.
-  manualContinuation = { seed: item, started: false };
+  manualContinuation = {
+    seed: item,
+    started: false,
+    listId: item.listId || null,
+    listIndex: Number.isInteger(item.listIndex) ? item.listIndex : null
+  };
   state.playlistMode = null;
   state.index = -1;
   els.nowTitle.textContent = 'Loading requested video…';
@@ -381,13 +511,17 @@ function continueAfterManualVideo() {
   manualContinuation = null;
   personalizedMixPlays = 0;
 
-  const listId = 'RD' + next.seed.id;
+  const listId = next.listId || ('RD' + next.seed.id);
+  const isRadio = /^RD/.test(listId);
   state.playlistMode = {
     id: listId,
     seedId: next.seed.id,
     personalized: false,
-    mix: true,
-    manualRadio: true
+    mix: isRadio,
+    radio: isRadio,
+    manualRadio: isRadio,
+    sourceList: !!next.listId,
+    preserveSequence: !!next.listId
   };
   state.index = -1;
   renderQueue();
@@ -400,6 +534,9 @@ function continueAfterManualVideo() {
         const seedIndex = ids ? ids.indexOf(next.seed.id) : -1;
         if (seedIndex >= 0 && ids.length > 1) {
           target.playVideoAt((seedIndex + 1) % ids.length);
+        } else if (Number.isInteger(next.listIndex) && ids && ids.length) {
+          const nextIndex = Math.min(next.listIndex + 1, ids.length - 1);
+          target.playVideoAt(nextIndex);
         }
       } catch (_) {}
     }, 900);
@@ -411,7 +548,12 @@ function continueAfterManualVideo() {
   if (fresh) rebuildPlayer(action);
   else whenReady(() => action(player));
 
-  setMessage('Requested video finished. Continuing with its YouTube Radio.', 'ok');
+  setMessage(
+    next.listId
+      ? 'Requested video finished. Continuing with the playlist/Radio from the pasted URL.'
+      : 'Requested video finished. Continuing with its generated YouTube Radio.',
+    'ok'
+  );
   return true;
 }
 
@@ -625,6 +767,7 @@ function onPlayerStateChange(event) {
 function shouldSkipRadioChannel(channelName) {
   if (state.tasteGate === 'off' || !profile) return false;
   if (!(state.playlistMode && state.playlistMode.manualRadio)) return false;
+  if (state.playlistMode.preserveSequence) return false;
 
   const affinity = TakeoutPersonalization.getChannelAffinity(channelName);
   if (!affinity) return false;
@@ -688,6 +831,7 @@ function updateVideoData() {
 
   if (id && id !== lastObservedVideoId) {
     lastObservedVideoId = id;
+    recordVideoHistory(id, data.title || '', data.author || '');
 
     if (
       state.playlistMode &&
@@ -796,6 +940,15 @@ els.toggle.addEventListener('click', () => whenReady(() => {
   if (s === YT.PlayerState.PLAYING) player.pauseVideo();
   else player.playVideo();
 }));
+if (els.clearHistory) {
+  els.clearHistory.addEventListener('click', () => {
+    videoHistory = [];
+    saveVideoHistory();
+    renderVideoHistory();
+    setMessage('Local video history cleared.', 'ok');
+  });
+}
+
 els.clear.addEventListener('click', () => {
   state.queue = [];
   state.index = -1;
@@ -839,6 +992,7 @@ document.addEventListener('keydown', e => {
 loadState();
 syncSettings();
 renderQueue();
+renderVideoHistory();
 loadProfile();
 setTimeout(() => {
   if (els.startupUrl) els.startupUrl.focus();
