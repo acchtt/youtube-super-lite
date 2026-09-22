@@ -51,6 +51,7 @@ const els = {
   profileStatus: $('profileStatus'), profileStats: $('profileStats'),
   startupGate: $('startupGate'), startupForm: $('startupForm'),
   startupUrl: $('startupUrl'), startupError: $('startupError'), startupSkip: $('startupSkip'),
+  mediaLayout: $('mediaLayout'),
   historyList: $('historyList'), historyCount: $('historyCount'),
   emptyHistory: $('emptyHistory'), clearHistory: $('clearHistoryBtn'),
   resumeVideoBox: $('resumeVideoBox'), resumeVideoTitle: $('resumeVideoTitle'),
@@ -125,7 +126,7 @@ function renderTabTitle() {
   const author = cleanTabText(currentTabTrack.author);
 
   if (!title) {
-    document.title = 'Aero × IVE · v0.10.1';
+    document.title = 'Aero × IVE · v0.10.2';
     return;
   }
 
@@ -150,6 +151,7 @@ function setTabPlaybackState(playbackState) {
 }
 
 function renderProfile() {
+  if (!els.profileStatus || !els.profileStats || !els.startPersonalized || !els.forgetProfile) return;
   if (!profile) {
     els.profileStatus.textContent = 'No YouTube Takeout profile imported';
     els.profileStats.textContent = 'Import your YouTube Takeout ZIP. It is parsed in this browser, then only the compact profile is stored in Cloudflare D1.';
@@ -256,6 +258,10 @@ function videoIdFromStartup(value) {
 function closeStartupGate() {
   if (els.startupGate) els.startupGate.classList.add('hidden');
   document.body.classList.remove('startup-locked');
+}
+
+function showMediaLayout() {
+  if (els.mediaLayout) els.mediaLayout.classList.remove('hidden');
 }
 
 function startFromStartupPrompt() {
@@ -432,6 +438,7 @@ function renderResumePlaylist() {
 function resumeLastPlaylist() {
   if (!lastPlaylist || !lastPlaylist.id) return;
 
+  showMediaLayout();
   closeStartupGate();
   manualContinuation = null;
   personalizedMixPlays = 0;
@@ -710,6 +717,7 @@ function loadVideoInto(target, item) {
 
 function playExactManual(item) {
   if (!item || !item.id) return;
+  showMediaLayout();
   tasteGateSkips = 0;
   // A manually pasted video is the strongest signal of current intent.
   // Always continue from that video's own YouTube Radio rather than
@@ -823,6 +831,7 @@ function continueAfterManualVideo() {
 function playQueueIndex(i, useFreshPlayer) {
   manualContinuation = null;
   if (!state.queue[i]) return;
+  showMediaLayout();
   state.index = i;
   state.playlistMode = null;
   const item = state.queue[i];
@@ -850,6 +859,7 @@ function loadPlaylistInto(target, listId, videoId) {
 }
 
 function playPlaylist(listId, videoId) {
+  showMediaLayout();
   manualContinuation = null;
   state.playlistMode = {
     id: listId,
@@ -871,6 +881,7 @@ function playMixFromSeed(item, personalized, fresh) {
   manualContinuation = null;
   personalizedMixPlays = 0;
   if (!item || !item.id) return;
+  showMediaLayout();
   const listId = 'RD' + item.id;
   state.playlistMode = {
     id: listId,
@@ -1236,31 +1247,35 @@ if (els.resumePlaylistBtn) {
   els.resumePlaylistBtn.addEventListener('click', resumeLastPlaylist);
 }
 
-els.importTakeout.addEventListener('click', () => els.takeoutInput.click());
-els.takeoutInput.addEventListener('change', async () => {
-  const file = els.takeoutInput.files && els.takeoutInput.files[0];
-  if (!file) return;
-  els.importTakeout.disabled = true;
-  els.startPersonalized.disabled = true;
-  try {
-    setMessage('Importing Takeout locally…');
-    profile = await TakeoutPersonalization.importZip(file, msg => setMessage(msg));
+if (els.importTakeout && els.takeoutInput && els.startPersonalized && els.forgetProfile) {
+  els.importTakeout.addEventListener('click', () => els.takeoutInput.click());
+  els.takeoutInput.addEventListener('change', async () => {
+    const file = els.takeoutInput.files && els.takeoutInput.files[0];
+    if (!file) return;
+    els.importTakeout.disabled = true;
+    els.startPersonalized.disabled = true;
+    try {
+      setMessage('Importing Takeout locally…');
+      profile = await TakeoutPersonalization.importZip(file, msg => setMessage(msg));
+      renderProfile();
+      setMessage('Takeout imported. Raw archive data was discarded; only the compact taste profile was saved to Cloudflare D1.', 'ok');
+    } catch (err) {
+      setMessage(err.message || 'Takeout import failed.', 'error');
+    } finally {
+      els.importTakeout.disabled = false;
+      els.takeoutInput.value = '';
+    }
+  });
+  els.startPersonalized.addEventListener('click', () => startPersonalized(false));
+  els.forgetProfile.addEventListener('click', async () => {
+    await TakeoutPersonalization.clear();
+    profile = null;
     renderProfile();
-    setMessage('Takeout imported. Raw archive data was discarded; only the compact taste profile was saved to Cloudflare D1.', 'ok');
-  } catch (err) {
-    setMessage(err.message || 'Takeout import failed.', 'error');
-  } finally {
-    els.importTakeout.disabled = false;
-    els.takeoutInput.value = '';
-  }
-});
-els.startPersonalized.addEventListener('click', () => startPersonalized(false));
-els.forgetProfile.addEventListener('click', async () => {
-  await TakeoutPersonalization.clear();
-  profile = null;
-  renderProfile();
-  setMessage('Cloudflare personalization profile deleted.', 'ok');
-});
+    setMessage('Cloudflare personalization profile deleted.', 'ok');
+  });
+  
+  
+}
 
 els.playNow.addEventListener('click', playFromInput);
 els.add.addEventListener('click', addFromInput);
