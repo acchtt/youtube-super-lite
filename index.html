@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#0b0d10">
-  <meta name="application-version" content="0.8.4">
-  <title>YouTube Super Lite · v0.8.4</title>
-  <link rel="stylesheet" href="styles.css?v=0.8.4">
+  <meta name="application-version" content="0.8.5">
+  <title>YouTube Super Lite · v0.8.5</title>
+  <link rel="stylesheet" href="styles.css?v=0.8.5">
 </head>
 <body class="startup-locked">
   <div id="startupGate" class="startup-gate" role="dialog" aria-modal="true" aria-labelledby="startupTitle">
@@ -20,13 +20,24 @@
       <button id="startupPlay" class="primary" type="submit">Play video</button>
       <span id="startupError" class="startup-error" aria-live="polite"></span>
 
-      <div id="resumePlaylistBox" class="resume-playlist hidden">
-        <div class="resume-playlist-copy">
-          <span class="eyebrow">LAST PLAYLIST</span>
-          <strong id="resumePlaylistTitle">Previous playlist</strong>
-          <span id="resumePlaylistMeta"></span>
+      <div class="resume-options">
+        <div id="resumeVideoBox" class="resume-playlist hidden">
+          <div class="resume-playlist-copy">
+            <span class="eyebrow">LAST VIDEO</span>
+            <strong id="resumeVideoTitle">Previous video</strong>
+            <span id="resumeVideoMeta"></span>
+          </div>
+          <button id="resumeVideoBtn" type="button">Resume video</button>
         </div>
-        <button id="resumePlaylistBtn" type="button">Resume last playlist</button>
+
+        <div id="resumePlaylistBox" class="resume-playlist hidden">
+          <div class="resume-playlist-copy">
+            <span class="eyebrow">LAST PLAYLIST / RADIO</span>
+            <strong id="resumePlaylistTitle">Previous playlist</strong>
+            <span id="resumePlaylistMeta"></span>
+          </div>
+          <button id="resumePlaylistBtn" type="button">Resume playlist</button>
+        </div>
       </div>
 
       <small>You’ll see this prompt every time the site is loaded.</small>
@@ -38,7 +49,7 @@
       <div>
         <div class="title-line">
           <h1>YouTube Super Lite</h1>
-          <span class="version-badge" title="Site version">v0.8.4</span>
+          <span class="version-badge" title="Site version">v0.8.5</span>
         </div>
         <p class="muted">Personalized autoplay without the heavy YouTube homepage, comments, Shorts, or infinite scroll.</p>
       </div>
@@ -182,8 +193,8 @@
     </footer>
   </main>
 
-  <script src="personalization.js?v=0.8.4"></script>
-  <script src="app.js?v=0.8.4"></script>
+  <script src="personalization.js?v=0.8.5"></script>
+  <script src="app.js?v=0.8.5"></script>
   <script src="https://www.youtube.com/iframe_api"></script>
 </body>
 </html>
