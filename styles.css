@@ -287,3 +287,17 @@ textarea:focus,select:focus{border-color:#8d7ca0;box-shadow:0 0 0 2px #9f86b526}
 
 /* Clean pre-play landing */
 .input-card{margin-top:2px}
+
+
+/* Low-memory player viewport.
+   On desktop the embedded YouTube document gets half the CSS viewport in each
+   dimension, then is composited back to the normal visible 16:9 size. This
+   reduces the player surface/quality pressure without changing Aero's layout. */
+@media (min-width:900px) {
+  body.low-memory-player .aspect iframe {
+    width:50%!important;
+    height:50%!important;
+    transform:scale(2);
+    transform-origin:top left;
+  }
+}

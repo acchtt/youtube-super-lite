@@ -28,6 +28,8 @@ let rebuildToken = 0;
 let pending = [];
 let draggedIndex = null;
 let profile = null;
+let profileLoaded = false;
+let profileLoadPromise = null;
 let manualContinuation = null;
 let personalizedMixPlays = 0;
 let lastObservedVideoId = '';
@@ -110,6 +112,7 @@ function syncSettings() {
   els.lowMemory.checked = state.lowMemory;
   els.cinema.checked = state.cinema;
   document.body.classList.toggle('cinema', state.cinema);
+  document.body.classList.toggle('low-memory-player', state.lowMemory);
   els.shuffle.checked = state.shuffle;
   els.tasteGate.value = state.tasteGate;
   els.repeat.value = state.repeat;
@@ -332,7 +335,7 @@ function renderTabTitle() {
   const author = cleanTabText(currentTabTrack.author);
 
   if (!title) {
-    document.title = 'Aero × IVE · v0.11.6';
+    document.title = 'Aero × IVE · v0.11.7';
     return;
   }
 
@@ -377,8 +380,18 @@ function renderProfile() {
 }
 
 async function loadProfile() {
-  try { profile = await TakeoutPersonalization.load(); } catch (_) { profile = null; }
-  renderProfile();
+  if (profileLoaded) return profile;
+  if (profileLoadPromise) return profileLoadPromise;
+
+  profileLoadPromise = (async () => {
+    try { profile = await TakeoutPersonalization.load(); } catch (_) { profile = null; }
+    profileLoaded = true;
+    profileLoadPromise = null;
+    renderProfile();
+    return profile;
+  })();
+
+  return profileLoadPromise;
 }
 
 function videoIdFrom(value) {
@@ -1263,9 +1276,10 @@ function playMixFromSeed(item, personalized, fresh) {
   else whenReady(() => action(player));
 }
 
-function startPersonalized(fresh) {
+async function startPersonalized(fresh) {
+  if (!profileLoaded) await loadProfile();
   if (!profile) {
-    setMessage('Import your YouTube Takeout ZIP first.', 'error');
+    setMessage('No personalization profile is available.', 'error');
     return;
   }
   const seed = TakeoutPersonalization.pickSeed(state.lastChannel);
@@ -1341,7 +1355,7 @@ function next() {
 
   const n = nextQueueIndex();
   if (n >= 0) playQueueIndex(n);
-  else if (state.autoplay && state.autoplayMode === 'personalized') startPersonalized(false);
+  else if (state.autoplay && state.autoplayMode === 'personalized') void startPersonalized(false);
 }
 
 function previous() {
@@ -1428,8 +1442,8 @@ function onPlayerStateChange(event) {
 
     if (continueAfterManualVideo()) return;
 
-    if (state.autoplayMode === 'personalized' && profile) {
-      startPersonalized(state.lowMemory && state.playsSinceRefresh >= state.refreshEvery);
+    if (state.autoplayMode === 'personalized') {
+      void startPersonalized(state.lowMemory && state.playsSinceRefresh >= state.refreshEvery);
       return;
     }
     const n = nextQueueIndex();
@@ -1656,7 +1670,7 @@ if (els.importTakeout && els.takeoutInput && els.startPersonalized && els.forget
       els.takeoutInput.value = '';
     }
   });
-  els.startPersonalized.addEventListener('click', () => startPersonalized(false));
+  els.startPersonalized.addEventListener('click', () => { void startPersonalized(false); });
   els.forgetProfile.addEventListener('click', async () => {
     await TakeoutPersonalization.clear();
     profile = null;
@@ -1702,6 +1716,7 @@ els.autoplay.addEventListener('change', e => { state.autoplay = e.target.checked
 els.lowMemory.addEventListener('change', e => {
   state.lowMemory = e.target.checked;
   els.memoryLabel.textContent = state.lowMemory ? 'Low-memory mode on' : 'Low-memory mode off';
+  document.body.classList.toggle('low-memory-player', state.lowMemory);
   saveState();
 });
 els.cinema.addEventListener('change', e => {
@@ -1734,7 +1749,10 @@ async function bootstrap() {
     await loadState();
     videoHistory = await loadVideoHistory();
     TakeoutPersonalization.hydrateRecent(videoHistory);
-    await loadProfile();
+
+    // Visible Takeout UI is disabled. Keep its potentially large profile out
+    // of memory unless Personalized mode is explicitly invoked.
+    renderProfile();
 
     syncSettings();
     renderQueue();
@@ -1760,8 +1778,8 @@ bootstrap();
 
 // The iframe API has no volume-change event. Poll lightly so user volume/mute
 // survives player rebuilds. Playback progress is persisted to D1 at a throttled rate.
-setInterval(captureAudioPrefs, 1500);
-setInterval(capturePlaybackProgress, 10000);
+setInterval(captureAudioPrefs, 5000);
+setInterval(capturePlaybackProgress, 15000);
 
 window.addEventListener('pagehide', () => {
   captureAudioPrefs();

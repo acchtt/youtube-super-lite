@@ -26,6 +26,8 @@ Aero keeps one YouTube iframe player and avoids the normal YouTube feed, comment
 - custom queue
 - previous / next, shuffle, repeat and playback speed
 - aggressive low-memory iframe recycling between bridged Mix songs
+- reduced internal YouTube player viewport in Low-memory mode
+- personalization profile is loaded only when Personalized mode is actually used
 - CSS-only Cinema mode
 - startup resume for last video and last playlist/radio
 - persistent video history
