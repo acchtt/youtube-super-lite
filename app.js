@@ -126,7 +126,7 @@ function renderTabTitle() {
   const author = cleanTabText(currentTabTrack.author);
 
   if (!title) {
-    document.title = 'Aero × IVE · v0.10.5';
+    document.title = 'Aero × IVE · v0.10.6';
     return;
   }
 
@@ -284,7 +284,7 @@ function startFromStartupPrompt() {
   playExactManual(context);
   setMessage(
     context.listId
-      ? 'Session started from your chosen video. The pasted YouTube playlist/Radio will continue afterward.'
+      ? 'Session started inside the exact playlist/Radio from your pasted URL.'
       : 'Session started from your chosen video. Its YouTube Radio will continue afterward.',
     'ok'
   );
@@ -719,19 +719,16 @@ function playExactManual(item) {
   if (!item || !item.id) return;
   showMediaLayout();
   tasteGateSkips = 0;
-  // A manually pasted video is the strongest signal of current intent.
-  // Always continue from that video's own YouTube Radio rather than
-  // immediately handing control back to the historical Takeout profile.
-  manualContinuation = {
-    seed: item,
-    started: false,
-    listId: item.listId || null,
-    listIndex: Number.isInteger(item.listIndex) ? item.listIndex : null
-  };
+  personalizedMixPlays = 0;
 
+  // A watch URL with list= must enter that exact playlist/radio context
+  // immediately. Keeping the seed outside playlist mode until it ended meant
+  // the Next button could fall through to Personalized mode and ignore the
+  // user's pasted Radio/playlist.
   if (item.listId) {
+    manualContinuation = null;
     const isRadio = /^RD/.test(item.listId);
-    rememberPlaylist({
+    state.playlistMode = {
       id: item.listId,
       seedId: item.id,
       personalized: false,
@@ -740,18 +737,65 @@ function playExactManual(item) {
       manualRadio: isRadio,
       sourceList: true,
       preserveSequence: true
-    }, {
-      index: Number.isInteger(item.listIndex) ? item.listIndex : null,
+    };
+    state.index = -1;
+
+    rememberPlaylist(state.playlistMode, {
+      index: Number.isInteger(item.listIndex) ? item.listIndex : 0,
       currentVideoId: item.id,
       title: item.title || ''
     });
+
+    els.nowTitle.textContent = 'Loading requested playlist/Radio…';
+    els.nowMeta.textContent = item.listId;
+    renderQueue();
+
+    whenReady(() => {
+      try { player.stopVideo(); } catch (_) {}
+      const requestedIndex = Number.isInteger(item.listIndex) ? item.listIndex : 0;
+      const startSeconds = Number(item.startSeconds) || 0;
+
+      player.loadPlaylist({
+        listType: 'playlist',
+        list: item.listId,
+        index: requestedIndex,
+        startSeconds
+      });
+
+      // For watch URLs without index=, radio seeds are normally first, but
+      // ordinary playlists may not be. Once YouTube exposes the list, force the
+      // exact pasted video if it is present so the user's v= always wins.
+      setTimeout(() => {
+        try {
+          const ids = player.getPlaylist ? player.getPlaylist() : [];
+          const seedIndex = ids && ids.length ? ids.indexOf(item.id) : -1;
+          const currentIndex = player.getPlaylistIndex ? player.getPlaylistIndex() : -1;
+          if (seedIndex >= 0 && seedIndex !== currentIndex) player.playVideoAt(seedIndex);
+        } catch (_) {}
+      }, 900);
+
+      try { player.setLoop(state.repeat === 'queue'); } catch (_) {}
+      try { player.setShuffle(state.shuffle); } catch (_) {}
+      try { player.setPlaybackRate(state.speed); } catch (_) {}
+      applyAudioPrefs(player);
+    });
+    return;
   }
 
+  // Plain watch URLs still play the exact requested video first, then continue
+  // into that video's generated RD<videoId> Radio after it ends.
+  manualContinuation = {
+    seed: item,
+    started: false,
+    listId: null,
+    listIndex: null
+  };
   state.playlistMode = null;
   state.index = -1;
   els.nowTitle.textContent = 'Loading requested video…';
   els.nowMeta.textContent = item.id;
   renderQueue();
+
   whenReady(() => {
     try { player.stopVideo(); } catch (_) {}
     const startSeconds = Number(item.startSeconds) || 0;
@@ -977,6 +1021,15 @@ function next() {
     whenReady(() => player.nextVideo());
     return;
   }
+
+  // If the user pasted a plain watch URL and presses Next before it ends,
+  // honor that manual intent by entering the seed's YouTube Radio instead of
+  // falling through to the historical Personalized profile.
+  if (manualContinuation) {
+    manualContinuation.started = true;
+    if (continueAfterManualVideo()) return;
+  }
+
   const n = nextQueueIndex();
   if (n >= 0) playQueueIndex(n);
   else if (state.autoplay && state.autoplayMode === 'personalized') startPersonalized(false);
@@ -1204,8 +1257,14 @@ function playFromInput() {
     return;
   }
   if (parsed.videos.length === 1 && state.autoplayMode !== 'queue') {
-    playExactManual(parsed.videos[0]);
-    setMessage('Playing the exact video you pasted. Related autoplay starts only after it ends.', 'ok');
+    const item = parsed.videos[0];
+    playExactManual(item);
+    setMessage(
+      item.listId
+        ? 'Playing the exact video inside the playlist/Radio context you pasted.'
+        : 'Playing the exact video you pasted. Its YouTube Radio starts only after it ends.',
+      'ok'
+    );
     return;
   }
   addVideos(parsed.videos, true);
