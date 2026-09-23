@@ -204,4 +204,4 @@ Once the user approves a symbol:
 
 2026-09-23 ICT
 
-Created the permanent repository handoff and established the rule that it must be maintained after every committed project update.
+Created the permanent repository handoff and established the rule that it must be maintained after every committed project update. Also refreshed README.md to the current Aero × IVE / D1 architecture and corrected CLOUDFLARE_SETUP.md so production tracks main at aero-x-ive.pages.dev.
