@@ -19,7 +19,7 @@ AGENTS.md contains the standing repository instruction for this rule.
 - Product name: Aero × IVE
 - Product role: lightweight YouTube player / unofficial IVE fan edition
 - Production: https://aero-x-ive.pages.dev
-- Current app version: v0.12.0
+- Current app version: v0.12.1
 - Deployment: Cloudflare Pages from main
 - D1 database: youtube-super-lite
 - D1 binding: DB
@@ -170,7 +170,7 @@ Important: the user later explicitly asked to stop using the logo skill for the 
 
 ## Versioning
 
-Current version: v0.12.0
+Current version: v0.12.1
 
 When bumping the visible app version, keep these aligned:
 - application-version meta
@@ -222,4 +222,4 @@ Once the user approves a new logo:
 
 2026-09-23 ICT
 
-v0.12.0 isolates Mix Bridge completely from the player and from the Aero browser tab. The extension is now v0.3.0 with only activeTab + scripting permissions: there is no Aero content script, chrome.storage bridge, storage listener, or window.postMessage handshake. After one-shot capture, the popup opens Aero with a compact URL fragment containing ordered video IDs; Aero imports it into D1-backed state and removes the fragment. Captured playback is also no longer represented as YouTube playlistMode. It uses a separate bridgePlayback queue, while the iframe sees the same simple loadVideoById() calls as pre-bridge manual/queue playback. This is intended to get memory behavior as close as possible to the pre-bridge ~190–220 MB baseline while preserving exact captured order. Extension v0.3.0 must be reloaded after git pull and the Mix must be captured once again.
+v0.12.1 completes the Mix Bridge isolation. Extension v0.3.0 has no Aero content script/runtime and transfers only a compact ordered-ID URL fragment. Captured playback uses the separate bridgePlayback queue rather than state.playlistMode, so the YouTube iframe sees the same simple loadVideoById() path as pre-bridge playback. Old saved bridge-era resume records are now migrated into bridgePlayback too, eliminating the final playlistMode.bridged playback path. The pre-bridge v0.10.9 player lifecycle remains intact. After git pull, reload extension v0.3.0 and recapture the Mix once.

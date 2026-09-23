@@ -333,7 +333,7 @@ function renderTabTitle() {
   const author = cleanTabText(currentTabTrack.author);
 
   if (!title) {
-    document.title = 'Aero × IVE · v0.12.0';
+    document.title = 'Aero × IVE · v0.12.1';
     return;
   }
 
@@ -666,7 +666,43 @@ function resumeLastPlaylist() {
   closeStartupGate();
   manualContinuation = null;
   personalizedMixPlays = 0;
+  state.index = -1;
 
+  // Migrate old bridge-era resume records into the isolated bridge queue.
+  if (lastPlaylist.bridged && Array.isArray(lastPlaylist.bridgeIds) && lastPlaylist.bridgeIds.length > 1) {
+    const ids = lastPlaylist.bridgeIds.filter(id => /^[A-Za-z0-9_-]{11}$/.test(id));
+    const preferredIndex = Math.max(0, Math.min(
+      Number.isInteger(lastPlaylist.bridgeIndex)
+        ? lastPlaylist.bridgeIndex
+        : (Number.isInteger(lastPlaylist.index) ? lastPlaylist.index : 0),
+      ids.length - 1
+    ));
+
+    state.playlistMode = null;
+    bridgePlayback = {
+      listId: lastPlaylist.id,
+      seedId: lastPlaylist.seedId || ids[0] || '',
+      ids,
+      index: preferredIndex
+    };
+    renderQueue();
+
+    els.nowTitle.textContent = lastPlaylist.title || 'Resuming captured Mix…';
+    els.nowMeta.textContent = 'Mix Bridge · exact order';
+
+    whenReady(() => {
+      if (bridgePlayback && bridgePlayback.ids[bridgePlayback.index]) {
+        player.loadVideoById(bridgePlayback.ids[bridgePlayback.index]);
+        try { player.setPlaybackRate(state.speed); } catch (_) {}
+        applyAudioPrefs(player);
+      }
+    });
+
+    setMessage('Resumed the captured Mix through the isolated bridge queue.', 'ok');
+    return;
+  }
+
+  bridgePlayback = null;
   state.playlistMode = {
     id: lastPlaylist.id,
     seedId: lastPlaylist.seedId || lastPlaylist.currentVideoId || '',
@@ -676,14 +712,8 @@ function resumeLastPlaylist() {
     manualRadio: !!lastPlaylist.manualRadio || /^RD/.test(lastPlaylist.id),
     sourceList: !!lastPlaylist.sourceList,
     preserveSequence: !!lastPlaylist.preserveSequence,
-    bridged: !!lastPlaylist.bridged && Array.isArray(lastPlaylist.bridgeIds) && lastPlaylist.bridgeIds.length > 1,
-    bridgeIds: Array.isArray(lastPlaylist.bridgeIds) ? lastPlaylist.bridgeIds.slice(0, 120) : null,
-    bridgeIndex: Number.isInteger(lastPlaylist.bridgeIndex)
-      ? lastPlaylist.bridgeIndex
-      : (Number.isInteger(lastPlaylist.index) ? lastPlaylist.index : 0),
     resumed: true
   };
-  state.index = -1;
   renderQueue();
 
   els.nowTitle.textContent = lastPlaylist.title || 'Resuming last playlist…';
@@ -694,34 +724,22 @@ function resumeLastPlaylist() {
       ? lastPlaylist.index
       : 0;
 
-    if (state.playlistMode.bridged) {
-      const ids = state.playlistMode.bridgeIds || [];
-      const safeIndex = Math.max(0, Math.min(
-        Number.isInteger(state.playlistMode.bridgeIndex) ? state.playlistMode.bridgeIndex : preferredIndex,
-        ids.length - 1
-      ));
-      state.playlistMode.bridgeIndex = safeIndex;
-      if (ids[safeIndex]) player.loadVideoById(ids[safeIndex]);
-    } else {
-      player.loadPlaylist({
-        listType: 'playlist',
-        list: lastPlaylist.id,
-        index: preferredIndex,
-        startSeconds: 0
-      });
-    }
+    player.loadPlaylist({
+      listType: 'playlist',
+      list: lastPlaylist.id,
+      index: preferredIndex,
+      startSeconds: 0
+    });
 
-    if (!state.playlistMode.bridged) {
-      setTimeout(() => {
-        try {
-          const ids = player.getPlaylist ? player.getPlaylist() : [];
-          if (lastPlaylist.currentVideoId && ids && ids.length) {
-            const found = ids.indexOf(lastPlaylist.currentVideoId);
-            if (found >= 0 && found !== player.getPlaylistIndex()) player.playVideoAt(found);
-          }
-        } catch (_) {}
-      }, 900);
-    }
+    setTimeout(() => {
+      try {
+        const ids = player.getPlaylist ? player.getPlaylist() : [];
+        if (lastPlaylist.currentVideoId && ids && ids.length) {
+          const found = ids.indexOf(lastPlaylist.currentVideoId);
+          if (found >= 0 && found !== player.getPlaylistIndex()) player.playVideoAt(found);
+        }
+      } catch (_) {}
+    }, 900);
 
     try { player.setLoop(state.repeat === 'queue'); } catch (_) {}
     try { player.setShuffle(state.shuffle); } catch (_) {}
