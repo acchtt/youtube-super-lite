@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title>Vector Notch concept</title>
+  <defs>
+    <linearGradient id="g" x1="8" y1="12" x2="56" y2="52" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#d9d0ff"/>
+      <stop offset=".52" stop-color="#ff9bc5"/>
+      <stop offset="1" stop-color="#98eaff"/>
+    </linearGradient>
+  </defs>
+  <polygon fill="url(#g)" points="7,16 34,16 57,32 34,48 7,48 28,32"/>
+  <polygon fill="#0d0b12" points="28,24 41,32 28,40 34,32"/>
+</svg>

@@ -139,6 +139,21 @@ The old committed explorations under branding/aero-logo are obsolete/discarded d
 
 The latest symbol concepts were generated only as chat image explorations and were not integrated into the production site.
 
+
+### Fresh symbol exploration — round 2
+
+A new from-scratch angular symbol set is committed under `branding/aero-symbol-round2/`.
+
+It contains six unapproved directions plus a comparison page:
+- 01 Vector Notch
+- 02 Twin Wing
+- 03 Prism Cut
+- 04 Flight Core
+- 05 Crosswind
+- 06 Delta Frame
+
+These were created without using the logo-generator skill and without reusing the discarded curved/swooping explorations. They are exploration assets only and are not integrated into the live header.
+
 ## Installed development skills
 
 Project-local skills:
@@ -189,12 +204,12 @@ For visual experiments, do not push branding into the production header until th
 
 ## Current next step
 
-Continue designing a new symbol-only Aero logo from scratch.
+Review the fresh round-2 symbol set in `branding/aero-symbol-round2/` and select a direction or request another round.
 
-Do not use the discarded SVG/logo-skill explorations as the starting point.
+No round-2 symbol is approved yet. Do not integrate one into production until the user explicitly selects it.
 
 Once the user approves a symbol:
-1. produce a clean production asset suitable for the site/app icon;
+1. refine the selected geometry into the production asset;
 2. integrate it into the Aero header/startup lockup;
 3. preserve the separate IVE fan-edition treatment/disclaimer as appropriate;
 4. bump the app version;
@@ -204,4 +219,4 @@ Once the user approves a symbol:
 
 2026-09-23 ICT
 
-Created the permanent repository handoff and established the rule that it must be maintained after every committed project update. Also refreshed README.md to the current Aero × IVE / D1 architecture and corrected CLOUDFLARE_SETUP.md so production tracks main at aero-x-ive.pages.dev.
+Added a fresh, from-scratch round-2 Aero symbol exploration under `branding/aero-symbol-round2/`: six angular symbol-only concepts and a comparison page. No concept is approved or integrated into production. The logo-generator skill was not used.
