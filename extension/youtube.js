@@ -1,6 +1,8 @@
 'use strict';
 
+const STORAGE_KEY = 'latestAeroMix';
 let timer = null;
+let intervalId = null;
 let lastFingerprint = '';
 
 function clean(value) {
@@ -24,7 +26,7 @@ function extractQueue() {
   const context = currentWatchContext();
   if (!context) return null;
 
-  const rows = Array.from(document.querySelectorAll('ytd-playlist-panel-video-renderer'));
+  const rows = document.querySelectorAll('ytd-playlist-panel-video-renderer');
   if (rows.length < 2) return null;
 
   const seen = new Set();
@@ -59,9 +61,10 @@ function extractQueue() {
       id,
       title: clean(titleNode && (titleNode.getAttribute('title') || titleNode.textContent)),
       channel: clean(channelNode && channelNode.textContent),
-      index: Number.isInteger(indexRaw) && indexRaw > 0 ? indexRaw - 1 : null,
-      selected: row.hasAttribute('selected') || row.getAttribute('aria-current') === 'true'
+      index: Number.isInteger(indexRaw) && indexRaw > 0 ? indexRaw - 1 : null
     });
+
+    if (items.length >= 100) break;
   }
 
   if (items.length < 2) return null;
@@ -76,40 +79,57 @@ function extractQueue() {
   };
 }
 
-function publish() {
+async function publish() {
   timer = null;
+  if (document.hidden) return;
+
   const snapshot = extractQueue();
   if (!snapshot) return;
 
-  const fingerprint = [
-    snapshot.listId,
-    snapshot.seedId,
-    snapshot.items.map(item => item.id).join(',')
-  ].join('|');
+  const fingerprint =
+    snapshot.listId + '|' +
+    snapshot.seedId + '|' +
+    snapshot.items.map(item => item.id).join(',');
 
   if (fingerprint === lastFingerprint) return;
   lastFingerprint = fingerprint;
 
   try {
-    chrome.runtime.sendMessage({
-      type: 'AERO_MIX_SNAPSHOT',
-      payload: snapshot
-    });
+    await chrome.storage.local.set({ [STORAGE_KEY]: snapshot });
   } catch (_) {}
 }
 
-function schedule(delay = 500) {
+function schedule(delay = 800) {
+  if (document.hidden) return;
   if (timer) clearTimeout(timer);
   timer = setTimeout(publish, delay);
 }
 
-document.addEventListener('yt-navigate-finish', () => schedule(250), true);
-document.addEventListener('yt-page-data-updated', () => schedule(350), true);
+function startPolling() {
+  if (intervalId) return;
+  intervalId = setInterval(() => {
+    if (!document.hidden && currentWatchContext()) schedule(0);
+  }, 15000);
+}
 
-const observer = new MutationObserver(() => {
-  if (location.pathname === '/watch' && location.search.includes('list=')) schedule(700);
+function stopPolling() {
+  if (!intervalId) return;
+  clearInterval(intervalId);
+  intervalId = null;
+}
+
+document.addEventListener('yt-navigate-finish', () => schedule(600), true);
+document.addEventListener('yt-page-data-updated', () => schedule(900), true);
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    if (timer) clearTimeout(timer);
+    timer = null;
+    stopPolling();
+  } else {
+    schedule(300);
+    startPolling();
+  }
 });
-observer.observe(document.documentElement, { childList:true, subtree:true });
 
-schedule(300);
-setInterval(() => schedule(0), 5000);
+schedule(500);
+startPolling();

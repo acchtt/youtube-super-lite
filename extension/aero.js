@@ -1,5 +1,7 @@
 'use strict';
 
+const STORAGE_KEY = 'latestAeroMix';
+
 function postToAero(type, payload) {
   window.postMessage({
     source: 'aero-mix-bridge',
@@ -10,22 +12,24 @@ function postToAero(type, payload) {
 
 async function sendLatest() {
   try {
-    const response = await chrome.runtime.sendMessage({ type: 'AERO_GET_MIX' });
-    if (response && response.payload) postToAero('AERO_MIX_SNAPSHOT', response.payload);
+    const result = await chrome.storage.local.get(STORAGE_KEY);
+    if (result && result[STORAGE_KEY]) {
+      postToAero('AERO_MIX_SNAPSHOT', result[STORAGE_KEY]);
+    }
   } catch (_) {}
 }
 
 window.addEventListener('message', event => {
   if (event.source !== window || !event.data || typeof event.data !== 'object') return;
   if (event.data.source !== 'aero-web' || event.data.type !== 'AERO_BRIDGE_REQUEST') return;
-  postToAero('AERO_BRIDGE_READY', { version: '0.1.0' });
+  postToAero('AERO_BRIDGE_READY', { version: '0.1.1' });
   sendLatest();
 });
 
-chrome.runtime.onMessage.addListener(message => {
-  if (!message || message.type !== 'AERO_MIX_SNAPSHOT' || !message.payload) return;
-  postToAero('AERO_MIX_SNAPSHOT', message.payload);
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== 'local' || !changes[STORAGE_KEY] || !changes[STORAGE_KEY].newValue) return;
+  postToAero('AERO_MIX_SNAPSHOT', changes[STORAGE_KEY].newValue);
 });
 
-postToAero('AERO_BRIDGE_READY', { version: '0.1.0' });
+postToAero('AERO_BRIDGE_READY', { version: '0.1.1' });
 sendLatest();

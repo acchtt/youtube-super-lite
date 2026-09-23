@@ -77,7 +77,6 @@ Purpose:
 
 Files:
 - `extension/manifest.json`
-- `extension/background.js`
 - `extension/youtube.js`
 - `extension/aero.js`
 - `extension/README.md`
@@ -223,4 +222,4 @@ Once the user approves a new logo:
 
 2026-09-23 ICT
 
-v0.11.1 finishes the first Aero Mix Bridge workflow. The Chrome/Edge extension under `extension/` captures the visible personalized Mix queue from youtube.com and bridges it to Aero; matching RD URLs use that fixed queue from the second track onward and persist the captured IDs for resume. The header reports bridge connection/track count. The YouTube link is now context-aware: after the user pastes a YouTube/Mix URL, it becomes “Open Mix in YouTube” and opens that exact URL so the extension can capture it. Without a matching bridge snapshot Aero falls back to embedded YouTube Radio. YouTube Watch History remains best-effort through the standard embed only.
+Optimized Aero Mix Bridge extension to v0.1.1 after the initial version caused severe browser RAM usage. Removed the document-wide MutationObserver, background service worker, tabs permission, and tab-broadcast messaging. YouTube and Aero content scripts now communicate through chrome.storage.local directly. Queue capture runs on YouTube navigation/data events plus one lightweight 15-second check only while the YouTube tab is visible, and caps captured queue processing at 100 items. The web app itself remains v0.11.1.

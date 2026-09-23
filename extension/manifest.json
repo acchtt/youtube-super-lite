@@ -1,16 +1,13 @@
 {
   "manifest_version": 3,
   "name": "Aero Mix Bridge",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Captures the personalized YouTube Mix queue from youtube.com and sends it to Aero × IVE.",
-  "permissions": ["storage", "tabs"],
+  "permissions": ["storage"],
   "host_permissions": [
     "https://www.youtube.com/*",
     "https://aero-x-ive.pages.dev/*"
   ],
-  "background": {
-    "service_worker": "background.js"
-  },
   "content_scripts": [
     {
       "matches": ["https://www.youtube.com/*"],

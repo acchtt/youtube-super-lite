@@ -22,7 +22,7 @@ It solves one specific limitation of the YouTube IFrame API: an `RD...` Mix ID d
 5. Paste the same YouTube watch + `list=RD...` URL into Aero.
 6. Aero plays the exact pasted seed first, then continues through the captured youtube.com queue in the same order.
 
-The extension refreshes the snapshot as YouTube changes or extends the visible Mix panel.
+The extension refreshes the snapshot on YouTube navigation/data updates and with a lightweight 15-second check while the YouTube tab is visible. It does not observe the entire YouTube DOM.
 
 ## Privacy / data
 
@@ -33,3 +33,7 @@ It does not read passwords or Google cookies and does not send the queue to a th
 ## YouTube watch history
 
 Aero still uses the standard YouTube embedded player. If YouTube recognizes your signed-in session and records embed playback, those plays may appear in YouTube Watch History. The extension does **not** fabricate background YouTube plays or use an unofficial endpoint to force Watch History entries.
+
+## Low-memory design
+
+Version 0.1.1 removes the full-page MutationObserver, the background service worker, and the tabs permission. The extension now uses direct extension storage between the YouTube and Aero content scripts and pauses polling while the YouTube tab is hidden.
