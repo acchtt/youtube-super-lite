@@ -19,7 +19,7 @@ AGENTS.md contains the standing repository instruction for this rule.
 - Product name: Aero × IVE
 - Product role: lightweight YouTube player / unofficial IVE fan edition
 - Production: https://aero-x-ive.pages.dev
-- Current app version: v0.10.5
+- Current app version: v0.10.6
 - Deployment: Cloudflare Pages from main
 - D1 database: youtube-super-lite
 - D1 binding: DB
@@ -49,8 +49,8 @@ Before media is loaded, the player, controls, history and queue layout remain hi
 ### Playback
 
 - Exact pasted video plays first.
-- If a pasted watch URL contains list= context, Aero preserves that playlist/radio context.
-- A plain watch URL falls back to that video's generated RD<videoId> YouTube Radio after the exact video.
+- If a pasted watch URL contains `list=` context, Aero loads that playlist/radio context immediately and forces the pasted `v=` video inside it. Next/Previous therefore stay inside the pasted list instead of falling through to Personalized mode.
+- A plain watch URL falls back to that video's generated `RD<videoId>` YouTube Radio after the exact video; pressing Next early also enters that generated radio rather than Personalized mode.
 - Only one YouTube iframe is kept.
 - Low-memory mode periodically rebuilds the iframe; default is every 8 videos.
 - Cinema mode is CSS-only.
@@ -149,7 +149,7 @@ Important: the user later explicitly asked to stop using the logo skill for the 
 
 ## Versioning
 
-Current version: v0.10.5
+Current version: v0.10.6
 
 When bumping the visible app version, keep these aligned:
 - application-version meta
@@ -201,4 +201,4 @@ Once the user approves a new logo:
 
 2026-09-23 ICT
 
-Discarded all prior Aero logo explorations and reset logo work to a blank slate. Removed both committed exploration sets (`branding/aero-logo/` and `branding/aero-symbol-round2/`) from `main`. The existing live CSS Aero mark remains only as a temporary legacy placeholder until a new logo is approved.
+Fixed pasted YouTube playlist/Radio handling in v0.10.6. Watch URLs containing `list=` now enter that exact list context immediately while still forcing the pasted `v=` video to play first. This fixes Next incorrectly falling through to Takeout-based Personalized playback. For plain watch URLs, pressing Next before the seed ends now enters the seed's generated YouTube Radio. Updated the visible version and cache-busting strings to v0.10.6.
