@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#0d0b12">
-  <meta name="application-version" content="0.10.9">
-  <title>Aero × IVE · v0.10.9</title>
-  <link rel="stylesheet" href="styles.css?v=0.10.9">
+  <meta name="application-version" content="0.11.0">
+  <title>Aero × IVE · v0.11.0</title>
+  <link rel="stylesheet" href="styles.css?v=0.11.0">
 </head>
 <body class="startup-locked">
   <div id="startupGate" class="startup-gate" role="dialog" aria-modal="true" aria-labelledby="startupTitle">
@@ -57,7 +57,7 @@
       </div>
 
       <small>You’ll see this prompt every time the site is loaded. Resume state is read from Cloudflare D1.</small>
-      <small>Sign in to youtube.com in this browser if you want the standard embedded player to use your YouTube session where supported. Aero always forces the exact pasted video first; YouTube may still generate a different RD/Mix continuation than the youtube.com watch page.</small>
+      <small>To reproduce the exact personalized Mix from youtube.com, install the Aero Mix Bridge extension, open the Mix on youtube.com, then return here. Aero will use the captured queue in the same order. Standard embedded playback remains best-effort for YouTube watch-history recording.</small>
     </form>
   </div>
 
@@ -78,12 +78,13 @@
               </svg>
             </span></span>
           <span class="fan-badge">FAN EDITION</span>
-          <span class="version-badge" title="Site version">v0.10.9</span>
+          <span class="version-badge" title="Site version">v0.11.0</span>
         </div>
         <p class="muted">A super-light YouTube player: your videos without the feed, comments, Shorts, or page bloat.</p>
       </div>
       <div class="top-links">
         <a class="deploy-link" href="https://www.youtube.com/" target="_blank" rel="noopener">Open YouTube</a>
+        <span id="mixBridgeStatus" class="version-badge" title="Aero Mix Bridge status">Mix Bridge: not connected</span>
         <a class="deploy-link" href="deployments/">Deployments</a>
         <div class="memory-pill" title="Player is periodically rebuilt in Low-memory mode">
         <span class="dot"></span><span id="memoryLabel">Low-memory mode on</span>
@@ -210,9 +211,9 @@
     </footer>
   </main>
 
-  <script src="cloud-state.js?v=0.10.9"></script>
-  <script src="personalization.js?v=0.10.9"></script>
-  <script src="app.js?v=0.10.9"></script>
+  <script src="cloud-state.js?v=0.11.0"></script>
+  <script src="personalization.js?v=0.11.0"></script>
+  <script src="app.js?v=0.11.0"></script>
   <script src="https://www.youtube.com/iframe_api"></script>
 </body>
 </html>

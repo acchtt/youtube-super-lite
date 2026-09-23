@@ -34,6 +34,7 @@ let videoHistory = [];
 let lastPlaylist = null;
 let lastVideo = null;
 let currentTabTrack = { title:'', author:'', state:'idle' };
+let mixBridge = { connected:false, snapshot:null, receivedAt:0 };
 
 const $ = id => document.getElementById(id);
 const els = {
@@ -57,7 +58,8 @@ const els = {
   resumeVideoBox: $('resumeVideoBox'), resumeVideoTitle: $('resumeVideoTitle'),
   resumeVideoMeta: $('resumeVideoMeta'), resumeVideoBtn: $('resumeVideoBtn'),
   resumePlaylistBox: $('resumePlaylistBox'), resumePlaylistTitle: $('resumePlaylistTitle'),
-  resumePlaylistMeta: $('resumePlaylistMeta'), resumePlaylistBtn: $('resumePlaylistBtn')
+  resumePlaylistMeta: $('resumePlaylistMeta'), resumePlaylistBtn: $('resumePlaylistBtn'),
+  mixBridgeStatus: $('mixBridgeStatus')
 };
 
 async function loadState() {
@@ -117,6 +119,101 @@ function setMessage(text, kind) {
 }
 
 
+function renderMixBridgeStatus() {
+  if (!els.mixBridgeStatus) return;
+  if (!mixBridge.connected) {
+    els.mixBridgeStatus.textContent = 'Mix Bridge: not connected';
+    els.mixBridgeStatus.title = 'Install/load the Aero Mix Bridge extension to capture your exact youtube.com Mix queue.';
+    return;
+  }
+
+  const count = mixBridge.snapshot && Array.isArray(mixBridge.snapshot.items)
+    ? mixBridge.snapshot.items.length
+    : 0;
+  els.mixBridgeStatus.textContent = count ? ('Mix Bridge: ' + count + ' tracks') : 'Mix Bridge: connected';
+  els.mixBridgeStatus.title = count
+    ? 'Captured from youtube.com: ' + (mixBridge.snapshot.listId || 'Mix queue')
+    : 'Aero Mix Bridge is connected. Open the personalized Mix on youtube.com so it can capture the queue.';
+}
+
+function sanitizeBridgeSnapshot(payload) {
+  if (!payload || typeof payload !== 'object') return null;
+  const listId = String(payload.listId || '').trim();
+  if (!listId) return null;
+
+  const seen = new Set();
+  const items = [];
+  for (const raw of Array.isArray(payload.items) ? payload.items : []) {
+    const id = String(raw && raw.id || '').trim();
+    if (!/^[A-Za-z0-9_-]{11}$/.test(id) || seen.has(id)) continue;
+    seen.add(id);
+    items.push({
+      id,
+      title: cleanTabText(raw && raw.title || ''),
+      channel: cleanTabText(raw && raw.channel || ''),
+      index: Number.isInteger(raw && raw.index) ? raw.index : null
+    });
+  }
+  if (items.length < 2) return null;
+
+  return {
+    listId,
+    seedId: String(payload.seedId || '').trim(),
+    sourceUrl: String(payload.sourceUrl || ''),
+    capturedAt: Number(payload.capturedAt) || Date.now(),
+    items
+  };
+}
+
+function bridgeSnapshotFor(item) {
+  const snap = mixBridge.snapshot;
+  if (!item || !item.listId || !snap || snap.listId !== item.listId) return null;
+  if (!snap.items.some(x => x.id === item.id)) return null;
+  return snap;
+}
+
+function applyBridgeSnapshot(payload) {
+  const snap = sanitizeBridgeSnapshot(payload);
+  if (!snap) return;
+  mixBridge.connected = true;
+  mixBridge.snapshot = snap;
+  mixBridge.receivedAt = Date.now();
+  renderMixBridgeStatus();
+
+  if (manualContinuation && manualContinuation.listId === snap.listId) {
+    manualContinuation.bridgeIds = snap.items.map(x => x.id);
+    manualContinuation.bridgeCapturedAt = snap.capturedAt;
+  }
+
+  setMessage(
+    'Captured ' + snap.items.length + ' tracks from your youtube.com Mix. Aero will use this exact order for continuation.',
+    'ok'
+  );
+}
+
+window.addEventListener('message', event => {
+  if (event.source !== window || !event.data || typeof event.data !== 'object') return;
+  if (event.data.source !== 'aero-mix-bridge') return;
+
+  if (event.data.type === 'AERO_BRIDGE_READY') {
+    mixBridge.connected = true;
+    renderMixBridgeStatus();
+    window.postMessage({ source:'aero-web', type:'AERO_BRIDGE_REQUEST' }, window.location.origin);
+    return;
+  }
+
+  if (event.data.type === 'AERO_MIX_SNAPSHOT') {
+    mixBridge.connected = true;
+    applyBridgeSnapshot(event.data.payload);
+  }
+});
+
+function requestMixBridgeSnapshot() {
+  window.postMessage({ source:'aero-web', type:'AERO_BRIDGE_REQUEST' }, window.location.origin);
+}
+
+
+
 function cleanTabText(value) {
   return String(value || '').replace(/\s+/g, ' ').trim();
 }
@@ -126,7 +223,7 @@ function renderTabTitle() {
   const author = cleanTabText(currentTabTrack.author);
 
   if (!title) {
-    document.title = 'Aero × IVE · v0.10.9';
+    document.title = 'Aero × IVE · v0.11.0';
     return;
   }
 
@@ -411,7 +508,9 @@ function rememberPlaylist(mode, details = {}) {
     manualRadio: !!mode.manualRadio,
     sourceList: !!mode.sourceList,
     preserveSequence: !!mode.preserveSequence,
-    seedId: mode.seedId || ''
+    seedId: mode.seedId || '',
+    bridged: !!mode.bridged,
+    bridgeIds: Array.isArray(mode.bridgeIds) ? mode.bridgeIds.slice(0, 120) : null
   };
   saveLastPlaylist();
   renderResumePlaylist();
@@ -452,6 +551,8 @@ function resumeLastPlaylist() {
     manualRadio: !!lastPlaylist.manualRadio || /^RD/.test(lastPlaylist.id),
     sourceList: !!lastPlaylist.sourceList,
     preserveSequence: !!lastPlaylist.preserveSequence,
+    bridged: !!lastPlaylist.bridged && Array.isArray(lastPlaylist.bridgeIds) && lastPlaylist.bridgeIds.length > 1,
+    bridgeIds: Array.isArray(lastPlaylist.bridgeIds) ? lastPlaylist.bridgeIds.slice(0, 120) : null,
     resumed: true
   };
   state.index = -1;
@@ -465,12 +566,16 @@ function resumeLastPlaylist() {
       ? lastPlaylist.index
       : 0;
 
-    player.loadPlaylist({
-      listType: 'playlist',
-      list: lastPlaylist.id,
-      index: preferredIndex,
-      startSeconds: 0
-    });
+    if (state.playlistMode.bridged) {
+      player.loadPlaylist(state.playlistMode.bridgeIds, preferredIndex, 0);
+    } else {
+      player.loadPlaylist({
+        listType: 'playlist',
+        list: lastPlaylist.id,
+        index: preferredIndex,
+        startSeconds: 0
+      });
+    }
 
     setTimeout(() => {
       try {
@@ -499,6 +604,7 @@ function saveVideoHistory() {
 }
 
 function historySource() {
+  if (state.playlistMode && state.playlistMode.bridged) return 'YouTube Mix Bridge';
   if (manualContinuation) return 'Manual';
   if (state.playlistMode && state.playlistMode.sourceList) {
     return state.playlistMode.radio ? 'Pasted radio' : 'Pasted playlist';
@@ -584,7 +690,8 @@ function renderQueue() {
   els.emptyQueue.classList.toggle('hidden', state.queue.length > 0 || !!state.playlistMode);
   els.playlistMode.classList.toggle('hidden', !state.playlistMode);
   if (state.playlistMode) {
-    const label = state.playlistMode.personalized ? 'Personalized Mix' :
+    const label = state.playlistMode.bridged ? 'YouTube Mix Bridge' :
+      state.playlistMode.personalized ? 'Personalized Mix' :
       state.playlistMode.mix ? 'YouTube Mix' : 'Playlist mode';
     els.playlistMode.textContent = label + ' · ' + state.playlistMode.id;
   }
@@ -729,11 +836,14 @@ function playExactManual(item) {
 
   // Deterministic first-track rule: never let list=/RD context choose the
   // initial iframe item. The exact pasted v= ID is always loaded directly.
+  const bridge = bridgeSnapshotFor(item);
   manualContinuation = {
     seed: item,
     started: false,
     listId: item.listId || null,
-    listIndex: Number.isInteger(item.listIndex) ? item.listIndex : null
+    listIndex: Number.isInteger(item.listIndex) ? item.listIndex : null,
+    bridgeIds: bridge ? bridge.items.map(x => x.id) : null,
+    bridgeCapturedAt: bridge ? bridge.capturedAt : null
   };
 
   if (item.listId) {
@@ -778,7 +888,7 @@ function continueAfterManualVideo() {
   tasteGateSkips = 0;
 
   // Ignore a stale ENDED event from the previously loaded playlist/video.
-  // Only start the radio after the exact requested seed has actually played.
+  // Only start continuation after the exact requested seed actually played.
   if (!manualContinuation.started) return true;
 
   const next = manualContinuation;
@@ -787,6 +897,11 @@ function continueAfterManualVideo() {
 
   const listId = next.listId || ('RD' + next.seed.id);
   const isRadio = /^RD/.test(listId);
+  const bridgeIds = Array.isArray(next.bridgeIds)
+    ? next.bridgeIds.filter(id => /^[A-Za-z0-9_-]{11}$/.test(id))
+    : [];
+  const bridged = bridgeIds.length > 1 && bridgeIds.includes(next.seed.id);
+
   state.playlistMode = {
     id: listId,
     seedId: next.seed.id,
@@ -795,30 +910,42 @@ function continueAfterManualVideo() {
     radio: isRadio,
     manualRadio: isRadio,
     sourceList: !!next.listId,
-    preserveSequence: !!next.listId
+    preserveSequence: !!next.listId,
+    bridged,
+    bridgeIds: bridged ? bridgeIds.slice(0, 120) : null
   };
   state.index = -1;
+
+  const seedIndex = bridged ? bridgeIds.indexOf(next.seed.id) : -1;
+  const bridgeNextIndex = bridged
+    ? Math.min(seedIndex + 1, bridgeIds.length - 1)
+    : 0;
+
   rememberPlaylist(state.playlistMode, {
-    index: Number.isInteger(next.listIndex) ? next.listIndex : 0,
+    index: bridged ? bridgeNextIndex : (Number.isInteger(next.listIndex) ? next.listIndex : 0),
     currentVideoId: next.seed.id,
     title: next.seed.title || ''
   });
   renderQueue();
 
   const action = target => {
-    target.loadPlaylist({ listType: 'playlist', list: listId, index: 0, startSeconds: 0 });
-    setTimeout(() => {
-      try {
-        const ids = target.getPlaylist ? target.getPlaylist() : [];
-        const seedIndex = ids ? ids.indexOf(next.seed.id) : -1;
-        if (seedIndex >= 0 && ids.length > 1) {
-          target.playVideoAt((seedIndex + 1) % ids.length);
-        } else if (Number.isInteger(next.listIndex) && ids && ids.length) {
-          const nextIndex = Math.min(next.listIndex + 1, ids.length - 1);
-          target.playVideoAt(nextIndex);
-        }
-      } catch (_) {}
-    }, 900);
+    if (bridged) {
+      target.loadPlaylist(bridgeIds, bridgeNextIndex, 0);
+    } else {
+      target.loadPlaylist({ listType: 'playlist', list: listId, index: 0, startSeconds: 0 });
+      setTimeout(() => {
+        try {
+          const ids = target.getPlaylist ? target.getPlaylist() : [];
+          const liveSeedIndex = ids ? ids.indexOf(next.seed.id) : -1;
+          if (liveSeedIndex >= 0 && ids.length > 1) {
+            target.playVideoAt((liveSeedIndex + 1) % ids.length);
+          } else if (Number.isInteger(next.listIndex) && ids && ids.length) {
+            const nextIndex = Math.min(next.listIndex + 1, ids.length - 1);
+            target.playVideoAt(nextIndex);
+          }
+        } catch (_) {}
+      }, 900);
+    }
     try { target.setLoop(state.repeat === 'queue'); } catch (_) {}
     try { target.setShuffle(state.shuffle); } catch (_) {}
   };
@@ -828,10 +955,12 @@ function continueAfterManualVideo() {
   else whenReady(() => action(player));
 
   setMessage(
-    next.listId
-      ? 'Requested video finished. Continuing with the playlist/Radio from the pasted URL.'
-      : 'Requested video finished. Continuing with its generated YouTube Radio.',
-    'ok'
+    bridged
+      ? 'Continuing with the exact personalized Mix captured from youtube.com (' + bridgeIds.length + ' tracks).'
+      : next.listId
+        ? 'No matching Mix Bridge snapshot was available, so Aero is using YouTube\'s embedded playlist/Radio.'
+        : 'Requested video finished. Continuing with its generated YouTube Radio.',
+    bridged ? 'ok' : undefined
   );
   return true;
 }
@@ -1372,6 +1501,8 @@ async function bootstrap() {
     renderVideoHistory();
     renderResumeVideo();
     renderResumePlaylist();
+    renderMixBridgeStatus();
+    requestMixBridgeSnapshot();
 
     if (els.startupUrl) els.startupUrl.focus();
   } catch (error) {

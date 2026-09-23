@@ -19,7 +19,7 @@ AGENTS.md contains the standing repository instruction for this rule.
 - Product name: Aero × IVE
 - Product role: lightweight YouTube player / unofficial IVE fan edition
 - Production: https://aero-x-ive.pages.dev
-- Current app version: v0.10.9
+- Current app version: v0.11.0
 - Deployment: Cloudflare Pages from main
 - D1 database: youtube-super-lite
 - D1 binding: DB
@@ -49,7 +49,7 @@ Before media is loaded, the player, controls, history and queue layout remain hi
 ### Playback
 
 - Exact pasted video plays first.
-- If a pasted watch URL contains `list=` context, Aero v0.10.9 always loads the exact pasted `v=` directly first. The pasted playlist/radio is retained only as continuation context, preventing YouTube's dynamic RD list from replacing the requested first track. The standard `youtube.com` embed remains in use so signed-in session/history behavior can still occur when supported by the browser.
+- If a pasted watch URL contains `list=` context, Aero always loads the exact pasted `v=` directly first. When the optional Aero Mix Bridge has captured a matching youtube.com Mix, Aero uses the captured video-ID array for 2nd track onward, preserving the exact visible personalized queue instead of regenerating the RD list in the embed. Without a matching snapshot it falls back to the embedded YouTube playlist/Radio.
 - A plain watch URL falls back to that video's generated `RD<videoId>` YouTube Radio after the exact video; pressing Next early also enters that generated radio rather than Personalized mode.
 - Only one YouTube iframe is kept.
 - Low-memory mode periodically rebuilds the iframe; default is every 8 videos.
@@ -63,6 +63,28 @@ Before media is loaded, the player, controls, history and queue layout remain hi
 - History limit is 200.
 - Queue, playback settings, last video/timestamp and last playlist/radio are persisted through the Cloudflare state API.
 - Adding items only to the queue does not reveal the hidden media layout until media is actually played.
+
+
+## Aero Mix Bridge
+
+v0.11.0 adds an optional Chrome/Edge Manifest V3 companion extension under `extension/`.
+
+Purpose:
+- capture the personalized Mix queue from the actual signed-in youtube.com watch page;
+- store the latest queue locally in extension storage;
+- bridge the ordered video IDs into `aero-x-ive.pages.dev`;
+- let Aero play the captured queue as a fixed video-ID array after the exact pasted seed.
+
+Files:
+- `extension/manifest.json`
+- `extension/background.js`
+- `extension/youtube.js`
+- `extension/aero.js`
+- `extension/README.md`
+
+The web app listens for the extension bridge through same-page `window.postMessage`. A matching snapshot is used only when its `listId` matches the pasted URL and contains the pasted seed video.
+
+The extension does not force YouTube Watch History entries. Actual Watch History remains best-effort through the standard signed-in YouTube embed; do not add hidden/background playback hacks unless explicitly requested and carefully reassessed.
 
 ## Storage and backend
 
@@ -149,7 +171,7 @@ Important: the user later explicitly asked to stop using the logo skill for the 
 
 ## Versioning
 
-Current version: v0.10.9
+Current version: v0.11.0
 
 When bumping the visible app version, keep these aligned:
 - application-version meta
@@ -201,4 +223,4 @@ Once the user approves a new logo:
 
 2026-09-23 ICT
 
-v0.10.9 removes the failed v0.10.8 list-at-player-creation experiment because YouTube's dynamic RD context could still override the requested first track. Aero now deterministically loads the exact pasted `v=` with `loadVideoById()` first and keeps any pasted `list=` only as continuation context. The player still uses the standard `youtube.com` host with page origin for best-effort signed-in YouTube session/history behavior. Renamed the misleading “YouTube account” link to “Open YouTube” and clarified that Aero cannot guarantee the exact personalized RD/Mix continuation shown on youtube.com.
+Added Aero Mix Bridge and bumped the app to v0.11.0. The new optional Chrome/Edge extension under `extension/` captures the personalized Mix queue from the visible youtube.com playlist panel and sends the ordered video IDs to Aero. When a matching pasted `list=RD...` URL is played, Aero still forces the exact seed first, then uses the captured fixed ID array for the second track onward. Bridged snapshots are also persisted with the last-playlist state for resume. The header now shows Mix Bridge connection/track count. Without the extension or a matching snapshot, Aero falls back to the previous embedded YouTube Radio behavior. Watch-history recording remains best-effort through the normal YouTube embed; the extension does not fake/background-play videos.

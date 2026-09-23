@@ -19,6 +19,7 @@ Aero keeps one YouTube iframe player and avoids the normal YouTube feed, comment
 - YouTube video / video ID / playlist input
 - exact pasted video plays first
 - playlist/Radio context preservation when present
+- optional Aero Mix Bridge extension for capturing the exact personalized Mix queue from youtube.com
 - generated YouTube Radio fallback for plain watch URLs
 - custom queue
 - previous / next, shuffle, repeat and playback speed
@@ -28,6 +29,12 @@ Aero keeps one YouTube iframe player and avoids the normal YouTube feed, comment
 - persistent video history
 - Cloudflare D1 persistence
 - anonymous HttpOnly browser session cookie
+
+## Exact personalized YouTube Mixes
+
+The optional Chrome/Edge extension in `extension/` captures the visible personalized Mix queue from your signed-in youtube.com watch page and passes the ordered video IDs to Aero. Aero then plays that fixed queue instead of independently regenerating the `RD...` radio.
+
+See `extension/README.md` for installation and usage.
 
 ## Cloudflare storage
 
