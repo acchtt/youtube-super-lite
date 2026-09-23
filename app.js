@@ -193,7 +193,9 @@ function playLoadedMix() {
     listId: snap.listId,
     seedId: snap.seedId || ids[0],
     ids: ids.slice(0, 120),
-    index: 0
+    index: 0,
+    transitioning: true,
+    correctionCount: 0
   };
 
   els.nowTitle.textContent = first.title || 'Loaded YouTube Mix';
@@ -321,7 +323,7 @@ function renderTabTitle() {
   const author = cleanTabText(currentTabTrack.author);
 
   if (!title) {
-    document.title = 'Aero × IVE · v0.12.2';
+    document.title = 'Aero × IVE · v0.12.3';
     return;
   }
 
@@ -671,7 +673,9 @@ function resumeLastPlaylist() {
       listId: lastPlaylist.id,
       seedId: lastPlaylist.seedId || ids[0] || '',
       ids,
-      index: preferredIndex
+      index: preferredIndex,
+      transitioning: true,
+      correctionCount: 0
     };
     renderQueue();
 
@@ -1048,6 +1052,8 @@ function playBridgeIndex(index) {
   if (!/^[A-Za-z0-9_-]{11}$/.test(id)) return false;
 
   bridgePlayback.index = nextIndex;
+  bridgePlayback.transitioning = true;
+  bridgePlayback.correctionCount = 0;
   state.index = -1;
   renderQueue();
 
@@ -1083,7 +1089,9 @@ function continueAfterManualVideo() {
       listId,
       seedId: next.seed.id,
       ids: bridgeIds.slice(0, 120),
-      index: nextIndex
+      index: nextIndex,
+      transitioning: true,
+      correctionCount: 0
     };
     renderQueue();
 
@@ -1385,6 +1393,17 @@ function onPlayerStateChange(event) {
     if (!state.autoplay) return;
 
     if (bridgePlayback) {
+      if (bridgePlayback.transitioning) return;
+
+      let currentId = '';
+      try {
+        const data = player.getVideoData ? player.getVideoData() : null;
+        currentId = data && data.video_id || '';
+      } catch (_) {}
+
+      const expectedId = bridgePlayback.ids[bridgePlayback.index] || '';
+      if (currentId && expectedId && currentId !== expectedId) return;
+
       playBridgeIndex(bridgePlayback.index + 1);
       return;
     }
@@ -1469,10 +1488,39 @@ function updateVideoData() {
   try { data = player.getVideoData() || {}; } catch (_) {}
   if (data.title) els.nowTitle.textContent = data.title;
   const id = data.video_id || '';
+
+  if (bridgePlayback && id) {
+    const expectedId = bridgePlayback.ids[bridgePlayback.index] || '';
+    if (expectedId && id === expectedId) {
+      bridgePlayback.transitioning = false;
+      bridgePlayback.correctionCount = 0;
+    } else if (
+      expectedId &&
+      id !== expectedId &&
+      (bridgePlayback.correctionCount || 0) < 2
+    ) {
+      bridgePlayback.transitioning = true;
+      bridgePlayback.correctionCount = (bridgePlayback.correctionCount || 0) + 1;
+      setMessage(
+        'YouTube started a different video. Correcting to captured track ' +
+        (bridgePlayback.index + 1) + '/' + bridgePlayback.ids.length + '.',
+        'error'
+      );
+      player.loadVideoById(expectedId);
+      return;
+    }
+  }
+
   if (data.author) state.lastChannel = data.author;
   if (data.title) setTabTrack(data.title, data.author || '', 'playing');
-  els.nowMeta.textContent = [data.author, id].filter(Boolean).join(' · ') ||
-    (bridgePlayback ? bridgePlayback.listId : (state.playlistMode ? state.playlistMode.id : ''));
+  els.nowMeta.textContent = bridgePlayback
+    ? [
+        data.author,
+        id,
+        'Captured ' + (bridgePlayback.index + 1) + '/' + bridgePlayback.ids.length
+      ].filter(Boolean).join(' · ')
+    : ([data.author, id].filter(Boolean).join(' · ') ||
+      (state.playlistMode ? state.playlistMode.id : ''));
 
   if (id && manualContinuation && id === manualContinuation.seed.id) {
     manualContinuation.started = true;

@@ -19,7 +19,7 @@ AGENTS.md contains the standing repository instruction for this rule.
 - Product name: Aero × IVE
 - Product role: lightweight YouTube player / unofficial IVE fan edition
 - Production: https://aero-x-ive.pages.dev
-- Current app version: v0.12.2
+- Current app version: v0.12.3
 - Deployment: Cloudflare Pages from main
 - D1 database: youtube-super-lite
 - D1 binding: DB
@@ -170,7 +170,7 @@ Important: the user later explicitly asked to stop using the logo skill for the 
 
 ## Versioning
 
-Current version: v0.12.2
+Current version: v0.12.3
 
 When bumping the visible app version, keep these aligned:
 - application-version meta
@@ -222,4 +222,4 @@ Once the user approves a new logo:
 
 2026-09-23 ICT
 
-v0.12.2 / Mix Bridge v0.3.1 fixes the captured-order mismatch where track 1 could be correct but track 2 onward differed from the visible YouTube Mix. Root cause: v0.3.0 captured the active panel but then sorted rows by each watch link's ?index= value; dynamic RD/Mix pages do not reliably expose those values in the same order as the rendered panel. Capture now preserves the active visible playlist panel's DOM row sequence exactly. Aero also no longer re-sorts incoming snapshots. Duplicate video IDs are no longer removed, because exact playback must preserve repeated entries too. The zero-runtime bridge architecture and pre-bridge player lifecycle remain unchanged. Reload extension v0.3.1 and recapture the Mix once.
+v0.12.3 adds an exact-ID playback guard for captured Mixes. The capture order from v0.12.2 remains unchanged. Bridge playback now marks each load as a transition, ignores stale ENDED events until the expected captured video has actually reached PLAYING, verifies the iframe's reported video_id against the expected captured ID, and immediately reloads the expected ID if YouTube starts a different one. This prevents double-advance/stale-player events from making track 2+ diverge even when the captured queue itself is correct. The now-playing metadata shows Captured N/total for verification. Extension remains v0.3.1; no extension reload is needed for this site-only fix.
