@@ -22,9 +22,6 @@ const state = {
 
 let player = null;
 let playerReady = false;
-let youtubeApiReady = false;
-let creatingPlayer = false;
-let rebuildToken = 0;
 let pending = [];
 let draggedIndex = null;
 let profile = null;
@@ -112,7 +109,6 @@ function syncSettings() {
   els.lowMemory.checked = state.lowMemory;
   els.cinema.checked = state.cinema;
   document.body.classList.toggle('cinema', state.cinema);
-  document.body.classList.toggle('low-memory-player', state.lowMemory);
   els.shuffle.checked = state.shuffle;
   els.tasteGate.value = state.tasteGate;
   els.repeat.value = state.repeat;
@@ -335,7 +331,7 @@ function renderTabTitle() {
   const author = cleanTabText(currentTabTrack.author);
 
   if (!title) {
-    document.title = 'Aero × IVE · v0.11.7';
+    document.title = 'Aero × IVE · v0.11.8';
     return;
   }
 
@@ -913,16 +909,6 @@ function captureAudioPrefs() {
 }
 
 function createPlayer(onReadyAction) {
-  if (creatingPlayer || player) {
-    if (onReadyAction) whenReady(onReadyAction);
-    return;
-  }
-  if (!youtubeApiReady || !window.YT || !YT.Player) {
-    if (onReadyAction) pending.push(onReadyAction);
-    return;
-  }
-
-  creatingPlayer = true;
   playerReady = false;
   player = new YT.Player('player', {
     width: '100%',
@@ -931,14 +917,13 @@ function createPlayer(onReadyAction) {
     playerVars: {
       autoplay: 0,
       controls: 1,
-      rel: 0,
+      rel: 1,
       playsinline: 1,
       iv_load_policy: 3,
       origin: window.location.origin
     },
     events: {
       onReady: event => {
-        creatingPlayer = false;
         playerReady = true;
         try { event.target.setPlaybackRate(state.speed); } catch (_) {}
         applyAudioPrefs(event.target);
@@ -951,54 +936,28 @@ function createPlayer(onReadyAction) {
     }
   });
 }
-
-window.onYouTubeIframeAPIReady = () => {
-  youtubeApiReady = true;
-  if (pending.length && !player && !creatingPlayer) createPlayer();
-};
+window.onYouTubeIframeAPIReady = () => createPlayer();
 
 function whenReady(fn) {
-  if (playerReady && player) {
-    fn(player);
-    return;
-  }
-  pending.push(fn);
-  if (youtubeApiReady && !player && !creatingPlayer) createPlayer();
+  if (playerReady && player) fn();
+  else pending.push(fn);
 }
 
 function rebuildPlayer(action) {
   captureAudioPrefs();
-
-  const token = ++rebuildToken;
-  const oldPlayer = player;
-
   playerReady = false;
-  creatingPlayer = false;
   pending = [];
+  try { if (player) player.destroy(); } catch (_) {}
   player = null;
   state.playsSinceRefresh = 0;
-
-  // Stop decoding/buffering before destroying the iframe. Creating the new
-  // iframe immediately after destroy() can leave old and new renderer/video
-  // resources alive at the same time for a while in Chromium.
-  if (oldPlayer) {
-    try { oldPlayer.stopVideo(); } catch (_) {}
-    try { oldPlayer.destroy(); } catch (_) {}
-  }
-
   const aspect = document.querySelector('.aspect');
-  aspect.replaceChildren();
+  aspect.textContent = '';
   const container = document.createElement('div');
   container.id = 'player';
   aspect.appendChild(container);
-
-  // Small gap lets Chromium release the previous YouTube renderer/decoder
-  // before a replacement iframe is created.
-  setTimeout(() => {
-    if (token !== rebuildToken) return;
-    createPlayer(action);
-  }, 300);
+  createPlayer(action);
 }
+
 function loadVideoInto(target, item) {
   state.playlistMode = null;
   target.loadVideoById(item.id);
@@ -1061,7 +1020,7 @@ function playExactManual(item) {
   });
 }
 
-function playBridgeIndex(index, useFreshPlayer = false) {
+function playBridgeIndex(index) {
   const mode = state.playlistMode;
   if (!mode || !mode.bridged || !Array.isArray(mode.bridgeIds) || !mode.bridgeIds.length) return false;
 
@@ -1084,18 +1043,11 @@ function playBridgeIndex(index, useFreshPlayer = false) {
   rememberPlaylist(mode, { index: nextIndex, currentVideoId:id });
   renderQueue();
 
-  const action = target => {
-    target.loadVideoById(id);
-    try { target.setPlaybackRate(state.speed); } catch (_) {}
-    applyAudioPrefs(target);
-  };
-
-  // Bridged queues intentionally never use YouTube's playlist loader.
-  // In Low-memory mode, hard-recycle the iframe between every bridged song.
-  // This trades a short transition gap for much lower renderer/decoder buildup.
-  const fresh = useFreshPlayer || state.lowMemory;
-  if (fresh && player) rebuildPlayer(action);
-  else whenReady(() => action(player));
+  whenReady(() => {
+    player.loadVideoById(id);
+    try { player.setPlaybackRate(state.speed); } catch (_) {}
+    applyAudioPrefs(player);
+  });
 
   return true;
 }
@@ -1171,11 +1123,13 @@ function continueAfterManualVideo() {
     try { target.setShuffle(state.shuffle); } catch (_) {}
   };
 
-  const fresh = state.lowMemory && bridged
-    ? true
-    : (state.lowMemory && state.playsSinceRefresh >= state.refreshEvery);
-  if (fresh && player) rebuildPlayer(action);
-  else whenReady(() => action(player));
+  if (bridged) {
+    whenReady(() => action(player));
+  } else {
+    const fresh = state.lowMemory && state.playsSinceRefresh >= state.refreshEvery;
+    if (fresh) rebuildPlayer(action);
+    else whenReady(() => action(player));
+  }
 
   setMessage(
     bridged
@@ -1716,7 +1670,6 @@ els.autoplay.addEventListener('change', e => { state.autoplay = e.target.checked
 els.lowMemory.addEventListener('change', e => {
   state.lowMemory = e.target.checked;
   els.memoryLabel.textContent = state.lowMemory ? 'Low-memory mode on' : 'Low-memory mode off';
-  document.body.classList.toggle('low-memory-player', state.lowMemory);
   saveState();
 });
 els.cinema.addEventListener('change', e => {

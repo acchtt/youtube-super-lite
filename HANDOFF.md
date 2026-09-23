@@ -19,7 +19,7 @@ AGENTS.md contains the standing repository instruction for this rule.
 - Product name: Aero × IVE
 - Product role: lightweight YouTube player / unofficial IVE fan edition
 - Production: https://aero-x-ive.pages.dev
-- Current app version: v0.11.7
+- Current app version: v0.11.8
 - Deployment: Cloudflare Pages from main
 - D1 database: youtube-super-lite
 - D1 binding: DB
@@ -51,8 +51,8 @@ Before media is loaded, the player, controls, history and queue layout remain hi
 - Exact pasted video plays first.
 - If a pasted watch URL contains `list=` context, Aero always loads the exact pasted `v=` directly first. When the optional Aero Mix Bridge has captured a matching youtube.com Mix, Aero uses the captured video-ID array for 2nd track onward, preserving the exact visible personalized queue instead of regenerating the RD list in the embed. Without a matching snapshot it falls back to the embedded YouTube playlist/Radio.
 - A plain watch URL falls back to that video's generated `RD<videoId>` YouTube Radio after the exact video; pressing Next early also enters that generated radio rather than Personalized mode.
-- Only one YouTube iframe is kept, and it is now created lazily only when playback is actually requested.
-- Low-memory mode hard-recycles the iframe between every bridged Mix song. On desktop it also gives the YouTube iframe a half-size internal viewport and scales it back to the same visible size, reducing player-surface pressure. Non-bridged playback still uses the configured periodic refresh interval.
+- Only one YouTube iframe is kept.
+- v0.11.8 restores the known-good pre-bridge v0.10.9 player lifecycle for all playback. Bridged Mixes no longer alter iframe creation, viewport size, or rebuild cadence; they only feed the next captured video ID into the same player. Normal Low-memory periodic rebuild behavior remains unchanged.
 - Cinema mode is CSS-only.
 - Volume and mute survive player rebuilds.
 - Browser tab title reflects playing/paused state and the current title/channel.
@@ -171,7 +171,7 @@ Important: the user later explicitly asked to stop using the logo skill for the 
 
 ## Versioning
 
-Current version: v0.11.7
+Current version: v0.11.8
 
 When bumping the visible app version, keep these aligned:
 - application-version meta
@@ -223,4 +223,4 @@ Once the user approves a new logo:
 
 2026-09-23 ICT
 
-v0.11.7 targets the remaining ~550 MB playback footprint without changing the exact bridged queue. Low-memory mode now uses a reduced internal YouTube iframe viewport on desktop (50% width/height, composited back to the same visible 16:9 size) so YouTube sees a smaller player surface while Aero keeps the same layout. The hidden Takeout personalization profile is no longer fetched into memory during ordinary startup; it loads lazily only if Personalized mode is explicitly invoked. Volume/progress polling was also relaxed to 5 s / 15 s. Hard iframe recycling and exact-order bridge behavior remain unchanged. Extension remains v0.2.1.
+v0.11.8 rolls back the bridge-era player-lifecycle experiments after confirming the original player could sustain Full HD below ~200 MB before Mix Bridge integration. The YouTube player creation/rebuild path is restored to the v0.10.9 known-good implementation: normal full-size iframe, rel=1, immediate IFrame API player creation, and the original periodic rebuild behavior. Removed bridge-specific hard recycling, 300 ms destroy/recreate delays, lazy-player machinery, and the half-size/scaled iframe viewport experiment. Mix Bridge remains, but it is now only a lightweight ordered-queue layer: captured IDs stay in Aero state and Next/Previous/ENDED simply call loadVideoById() on the same original player. Exact order from v0.11.5 is preserved. The lazy loading of the hidden Takeout profile remains because it is unrelated to playback and only reduces memory. Extension remains v0.2.1.
