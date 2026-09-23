@@ -135,8 +135,10 @@ There is currently no approved logo direction, no active concept set, and no des
 The existing CSS Aero mark in the live production header is only a temporary legacy placeholder until a new logo is approved.
 
 Project-local skills:
-- .agents/skills/ui-ux-pro-max
+- .agents/skills/impeccable
 - .agents/skills/logo-generator
+
+Impeccable replaced UI/UX Pro Max as the project's active UI/design skill on 2026-09-23. Use Impeccable for future UI audit, critique, polish, layout, responsive, accessibility, and design-system work. This repository install includes the skill payload but does not auto-enable the optional Codex edit hook.
 
 Do not use the logo-generator skill unless the user explicitly asks to use it again.
 
@@ -173,4 +175,4 @@ When GitHub access is available and the user asks for a repo change:
 
 2026-09-23 ICT
 
-v0.14.2 fixes the large black side bars visible in Cinema mode after the title/control consolidation. The cause was the old `max-height:82vh` rule on a full-width 16:9 aspect box: once the width became large, the height cap forced the iframe viewport away from 16:9 and YouTube letterboxed/pillarboxed the video inside it. Cinema now keeps the video viewport at a true full-width 16:9 with no height-only cap. The merged v0.14.1 title/control bar remains unchanged. This is CSS/UI-only; player lifecycle, Mix Bridge v0.3.3, exact-order playback, D1, and memory behavior are unchanged.
+Impeccable was installed project-locally from `pbakaus/impeccable` at upstream commit `e0881d2de397d5e9761d7b35ff5017d8f5ebf69b`, replacing the previous UI/UX Pro Max skill. The full project-local skill payload lives under `.agents/skills/impeccable/`, and recommended Impeccable runtime/cache paths are ignored in `.gitignore`. The optional automatic Codex hook was intentionally not enabled by this repository install. Logo Generator remains installed separately. No website runtime, playback, Mix Bridge, D1, or UI code changed. Aero remains v0.14.2 and Mix Bridge remains v0.3.3.

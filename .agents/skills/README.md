@@ -4,10 +4,12 @@ These are development-time skills for Aero × IVE. They are not runtime website 
 
 ## Installed skills
 
-- UI/UX Pro Max
-  - Source: https://github.com/nextlevelbuilder/ui-ux-pro-max-skill
-  - Upstream commit: `dcc40ff5133ef78276117db0cc34e7b83cc8aeba`
-  - Installed to: `.agents/skills/ui-ux-pro-max`
+- Impeccable
+  - Source: https://github.com/pbakaus/impeccable
+  - Upstream commit: `e0881d2de397d5e9761d7b35ff5017d8f5ebf69b`
+  - Installed to: `.agents/skills/impeccable`
+  - Start with: `$impeccable` / `/impeccable init`
+  - Automatic Codex hook is not enabled in this repository install.
 
 - Logo Generator
   - Source: https://github.com/op7418/logo-generator-skill
