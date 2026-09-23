@@ -126,7 +126,7 @@ function renderTabTitle() {
   const author = cleanTabText(currentTabTrack.author);
 
   if (!title) {
-    document.title = 'Aero × IVE · v0.10.6';
+    document.title = 'Aero × IVE · v0.10.7';
     return;
   }
 
@@ -721,14 +721,20 @@ function playExactManual(item) {
   tasteGateSkips = 0;
   personalizedMixPlays = 0;
 
-  // A watch URL with list= must enter that exact playlist/radio context
-  // immediately. Keeping the seed outside playlist mode until it ended meant
-  // the Next button could fall through to Personalized mode and ignore the
-  // user's pasted Radio/playlist.
+  // Always make the pasted v= video the actual player target first.
+  // RD/radio URLs are dynamic lists; asking YouTube to load the list first can
+  // make the iframe choose another generated item before we can correct it.
+  // Keep the pasted list as continuation context instead.
+  manualContinuation = {
+    seed: item,
+    started: false,
+    listId: item.listId || null,
+    listIndex: Number.isInteger(item.listIndex) ? item.listIndex : null
+  };
+
   if (item.listId) {
-    manualContinuation = null;
     const isRadio = /^RD/.test(item.listId);
-    state.playlistMode = {
+    rememberPlaylist({
       id: item.listId,
       seedId: item.id,
       personalized: false,
@@ -737,59 +743,13 @@ function playExactManual(item) {
       manualRadio: isRadio,
       sourceList: true,
       preserveSequence: true
-    };
-    state.index = -1;
-
-    rememberPlaylist(state.playlistMode, {
-      index: Number.isInteger(item.listIndex) ? item.listIndex : 0,
+    }, {
+      index: Number.isInteger(item.listIndex) ? item.listIndex : null,
       currentVideoId: item.id,
       title: item.title || ''
     });
-
-    els.nowTitle.textContent = 'Loading requested playlist/Radio…';
-    els.nowMeta.textContent = item.listId;
-    renderQueue();
-
-    whenReady(() => {
-      try { player.stopVideo(); } catch (_) {}
-      const requestedIndex = Number.isInteger(item.listIndex) ? item.listIndex : 0;
-      const startSeconds = Number(item.startSeconds) || 0;
-
-      player.loadPlaylist({
-        listType: 'playlist',
-        list: item.listId,
-        index: requestedIndex,
-        startSeconds
-      });
-
-      // For watch URLs without index=, radio seeds are normally first, but
-      // ordinary playlists may not be. Once YouTube exposes the list, force the
-      // exact pasted video if it is present so the user's v= always wins.
-      setTimeout(() => {
-        try {
-          const ids = player.getPlaylist ? player.getPlaylist() : [];
-          const seedIndex = ids && ids.length ? ids.indexOf(item.id) : -1;
-          const currentIndex = player.getPlaylistIndex ? player.getPlaylistIndex() : -1;
-          if (seedIndex >= 0 && seedIndex !== currentIndex) player.playVideoAt(seedIndex);
-        } catch (_) {}
-      }, 900);
-
-      try { player.setLoop(state.repeat === 'queue'); } catch (_) {}
-      try { player.setShuffle(state.shuffle); } catch (_) {}
-      try { player.setPlaybackRate(state.speed); } catch (_) {}
-      applyAudioPrefs(player);
-    });
-    return;
   }
 
-  // Plain watch URLs still play the exact requested video first, then continue
-  // into that video's generated RD<videoId> Radio after it ends.
-  manualContinuation = {
-    seed: item,
-    started: false,
-    listId: null,
-    listIndex: null
-  };
   state.playlistMode = null;
   state.index = -1;
   els.nowTitle.textContent = 'Loading requested video…';

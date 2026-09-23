@@ -19,7 +19,7 @@ AGENTS.md contains the standing repository instruction for this rule.
 - Product name: Aero × IVE
 - Product role: lightweight YouTube player / unofficial IVE fan edition
 - Production: https://aero-x-ive.pages.dev
-- Current app version: v0.10.6
+- Current app version: v0.10.7
 - Deployment: Cloudflare Pages from main
 - D1 database: youtube-super-lite
 - D1 binding: DB
@@ -49,7 +49,7 @@ Before media is loaded, the player, controls, history and queue layout remain hi
 ### Playback
 
 - Exact pasted video plays first.
-- If a pasted watch URL contains `list=` context, Aero loads that playlist/radio context immediately and forces the pasted `v=` video inside it. Next/Previous therefore stay inside the pasted list instead of falling through to Personalized mode.
+- If a pasted watch URL contains `list=` context, Aero now loads the exact pasted `v=` as a standalone player target first and holds the pasted playlist/radio as continuation context. This guarantees the first track is the requested video; Next or natural completion then enters the pasted list without falling through to Personalized mode.
 - A plain watch URL falls back to that video's generated `RD<videoId>` YouTube Radio after the exact video; pressing Next early also enters that generated radio rather than Personalized mode.
 - Only one YouTube iframe is kept.
 - Low-memory mode periodically rebuilds the iframe; default is every 8 videos.
@@ -149,7 +149,7 @@ Important: the user later explicitly asked to stop using the logo skill for the 
 
 ## Versioning
 
-Current version: v0.10.6
+Current version: v0.10.7
 
 When bumping the visible app version, keep these aligned:
 - application-version meta
@@ -201,4 +201,4 @@ Once the user approves a new logo:
 
 2026-09-23 ICT
 
-Fixed pasted YouTube playlist/Radio handling in v0.10.6. Watch URLs containing `list=` now enter that exact list context immediately while still forcing the pasted `v=` video to play first. This fixes Next incorrectly falling through to Takeout-based Personalized playback. For plain watch URLs, pressing Next before the seed ends now enters the seed's generated YouTube Radio. Updated the visible version and cache-busting strings to v0.10.6.
+Fixed the remaining pasted Radio first-track bug in v0.10.7. v0.10.6 still let YouTube's dynamic RD playlist choose the initial iframe item before the app could force the pasted `v=` seed. Aero now always loads the pasted video ID directly first, while retaining any pasted `list=` as manual continuation context. Pressing Next or letting the seed finish enters that pasted list, and Personalized mode cannot take over that transition. Updated visible version/cache busting to v0.10.7.
