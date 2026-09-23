@@ -25,7 +25,7 @@ Aero keeps one YouTube iframe player and avoids the normal YouTube feed, comment
 - generated YouTube Radio fallback for plain watch URLs
 - custom queue
 - previous / next, shuffle, repeat and playback speed
-- low-memory periodic player rebuild
+- aggressive low-memory iframe recycling between bridged Mix songs
 - CSS-only Cinema mode
 - startup resume for last video and last playlist/radio
 - persistent video history

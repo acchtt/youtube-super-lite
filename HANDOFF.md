@@ -19,7 +19,7 @@ AGENTS.md contains the standing repository instruction for this rule.
 - Product name: Aero × IVE
 - Product role: lightweight YouTube player / unofficial IVE fan edition
 - Production: https://aero-x-ive.pages.dev
-- Current app version: v0.11.5
+- Current app version: v0.11.6
 - Deployment: Cloudflare Pages from main
 - D1 database: youtube-super-lite
 - D1 binding: DB
@@ -52,7 +52,7 @@ Before media is loaded, the player, controls, history and queue layout remain hi
 - If a pasted watch URL contains `list=` context, Aero always loads the exact pasted `v=` directly first. When the optional Aero Mix Bridge has captured a matching youtube.com Mix, Aero uses the captured video-ID array for 2nd track onward, preserving the exact visible personalized queue instead of regenerating the RD list in the embed. Without a matching snapshot it falls back to the embedded YouTube playlist/Radio.
 - A plain watch URL falls back to that video's generated `RD<videoId>` YouTube Radio after the exact video; pressing Next early also enters that generated radio rather than Personalized mode.
 - Only one YouTube iframe is kept, and it is now created lazily only when playback is actually requested.
-- Low-memory mode periodically rebuilds the iframe; default is every 8 videos.
+- Low-memory mode hard-recycles the iframe between every bridged Mix song. Non-bridged playback still uses the configured periodic refresh interval.
 - Cinema mode is CSS-only.
 - Volume and mute survive player rebuilds.
 - Browser tab title reflects playing/paused state and the current title/channel.
@@ -171,7 +171,7 @@ Important: the user later explicitly asked to stop using the logo skill for the 
 
 ## Versioning
 
-Current version: v0.11.5
+Current version: v0.11.6
 
 When bumping the visible app version, keep these aligned:
 - application-version meta
@@ -223,4 +223,4 @@ Once the user approves a new logo:
 
 2026-09-23 ICT
 
-Fixed bridged Mix sequence order in site v0.11.5 / extension v0.2.1. The one-shot scraper previously enumerated every playlist-row node in document DOM order; YouTube's SPA can retain hidden/stale playlist panels or nodes, so that order could differ from the visible Mix. Capture now targets only the active visible playlist panel and sorts songs by YouTube's own watch-link `?index=` value, falling back stably to visible DOM order. Aero also defensively re-sorts incoming snapshots by saved index, so older snapshots with valid index metadata can be repaired on load. Bridged playback explicitly remains exact-order and does not honor the general Shuffle setting. Users upgrading from extension 0.2.0 should reload the extension and recapture the Mix once.
+v0.11.6 targets continued ~700 MB Aero-tab memory usage during bridged playback. In Low-memory mode, Aero now hard-recycles the YouTube iframe between every bridged Mix song instead of reusing it for several songs. Recycling explicitly stops video decoding/buffering, destroys the old player, removes the iframe node, waits 300 ms for Chromium to release renderer/decoder resources, then creates the replacement player for the next exact video ID. Manual seed -> bridged continuation uses the same hard recycle. This intentionally trades a short song-transition gap for lower RAM. The embed also uses rel=0 to avoid unconstrained related-video UI. Exact captured order behavior from v0.11.5 is preserved. Extension remains v0.2.1.

@@ -24,6 +24,7 @@ let player = null;
 let playerReady = false;
 let youtubeApiReady = false;
 let creatingPlayer = false;
+let rebuildToken = 0;
 let pending = [];
 let draggedIndex = null;
 let profile = null;
@@ -331,7 +332,7 @@ function renderTabTitle() {
   const author = cleanTabText(currentTabTrack.author);
 
   if (!title) {
-    document.title = 'Aero × IVE · v0.11.5';
+    document.title = 'Aero × IVE · v0.11.6';
     return;
   }
 
@@ -917,7 +918,7 @@ function createPlayer(onReadyAction) {
     playerVars: {
       autoplay: 0,
       controls: 1,
-      rel: 1,
+      rel: 0,
       playsinline: 1,
       iv_load_policy: 3,
       origin: window.location.origin
@@ -954,18 +955,36 @@ function whenReady(fn) {
 
 function rebuildPlayer(action) {
   captureAudioPrefs();
+
+  const token = ++rebuildToken;
+  const oldPlayer = player;
+
   playerReady = false;
   creatingPlayer = false;
   pending = [];
-  try { if (player) player.destroy(); } catch (_) {}
   player = null;
   state.playsSinceRefresh = 0;
+
+  // Stop decoding/buffering before destroying the iframe. Creating the new
+  // iframe immediately after destroy() can leave old and new renderer/video
+  // resources alive at the same time for a while in Chromium.
+  if (oldPlayer) {
+    try { oldPlayer.stopVideo(); } catch (_) {}
+    try { oldPlayer.destroy(); } catch (_) {}
+  }
+
   const aspect = document.querySelector('.aspect');
-  aspect.textContent = '';
+  aspect.replaceChildren();
   const container = document.createElement('div');
   container.id = 'player';
   aspect.appendChild(container);
-  createPlayer(action);
+
+  // Small gap lets Chromium release the previous YouTube renderer/decoder
+  // before a replacement iframe is created.
+  setTimeout(() => {
+    if (token !== rebuildToken) return;
+    createPlayer(action);
+  }, 300);
 }
 function loadVideoInto(target, item) {
   state.playlistMode = null;
@@ -1059,11 +1078,10 @@ function playBridgeIndex(index, useFreshPlayer = false) {
   };
 
   // Bridged queues intentionally never use YouTube's playlist loader.
-  // Rebuild a little more aggressively because one-video-at-a-time playback
-  // is cheap to restore and this app prioritizes low RAM over seamless caching.
-  const bridgeRefreshEvery = Math.min(state.refreshEvery, 3);
-  const fresh = useFreshPlayer || (state.lowMemory && state.playsSinceRefresh >= bridgeRefreshEvery);
-  if (fresh) rebuildPlayer(action);
+  // In Low-memory mode, hard-recycle the iframe between every bridged song.
+  // This trades a short transition gap for much lower renderer/decoder buildup.
+  const fresh = useFreshPlayer || state.lowMemory;
+  if (fresh && player) rebuildPlayer(action);
   else whenReady(() => action(player));
 
   return true;
@@ -1140,8 +1158,10 @@ function continueAfterManualVideo() {
     try { target.setShuffle(state.shuffle); } catch (_) {}
   };
 
-  const fresh = state.lowMemory && state.playsSinceRefresh >= state.refreshEvery;
-  if (fresh) rebuildPlayer(action);
+  const fresh = state.lowMemory && bridged
+    ? true
+    : (state.lowMemory && state.playsSinceRefresh >= state.refreshEvery);
+  if (fresh && player) rebuildPlayer(action);
   else whenReady(() => action(player));
 
   setMessage(
