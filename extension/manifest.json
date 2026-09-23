@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Aero Mix Bridge",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "One-click capture of your personalized YouTube Mix queue for Aero × IVE.",
   "permissions": ["activeTab", "scripting"],
   "action": {

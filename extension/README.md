@@ -21,7 +21,7 @@ It captures the visible personalized Mix order from youtube.com and hands only t
 5. Aero opens automatically with the captured order.
 6. Close the YouTube tab and use **Play loaded songs** in Aero.
 
-## v0.3.2 low-memory architecture
+## v0.3.3 low-memory architecture
 
 The extension has no content script, storage listener, background service worker, MutationObserver, or polling loop.
 

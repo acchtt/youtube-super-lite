@@ -20,7 +20,7 @@ AGENTS.md contains the standing repository instruction for this rule.
 - Product role: lightweight YouTube Mix player / unofficial IVE fan edition
 - Production: https://aero-x-ive.pages.dev
 - Current app version: v0.13.0
-- Mix Bridge extension: v0.3.2
+- Mix Bridge extension: v0.3.3
 - Deployment: Cloudflare Pages from main
 - D1 database: youtube-super-lite
 - D1 binding: DB
@@ -60,7 +60,7 @@ There is no manual YouTube URL/video/playlist input anymore.
 
 ### Mix Bridge
 
-Extension v0.3.2:
+Extension v0.3.3:
 - has only `activeTab` + `scripting` permissions;
 - has no Aero content script, storage listener, background service worker, observer, or polling loop;
 - captures the active visible YouTube Mix panel once;
@@ -168,4 +168,4 @@ When GitHub access is available and the user asks for a repo change:
 
 2026-09-23 ICT
 
-v0.13.0 is a deliberate product cleanup after Mix Bridge became the only active content-loading workflow. Manual YouTube-link playback, custom queue/Radio fallback, Takeout personalization, profile API/storage, old playlist-resume state, Shuffle, and ineffective low-memory/refresh controls were removed. The runtime is now focused on captured Mix playback, resume, history, and four relevant settings. Mix Bridge v0.3.2 was also simplified to capture/transfer ordered video IDs only. Exact-ID playback guards from v0.12.3 remain.
+v0.13.0 remains the current app. Mix Bridge is now v0.3.3. The v0.13.0 cleanup removed manual YouTube-link playback, custom queue/Radio fallback, Takeout personalization/profile code, old playlist-resume state, Shuffle, and ineffective low-memory/refresh controls. The extension scraper is also fully minimal now: it captures only ordered video IDs from the active visible Mix panel, preserving repeated IDs, and transfers only those IDs plus list/seed IDs to Aero. No titles, channels, source URL, index metadata, extension storage, or Aero content script remain. Exact-ID playback guards from v0.12.3 remain.

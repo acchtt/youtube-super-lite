@@ -37,7 +37,7 @@ Removed as obsolete in v0.13.0:
 
 ## Mix Bridge
 
-Extension v0.3.2 has no content script or runtime attached to Aero. It performs one explicit capture on the active YouTube Mix page, preserves the visible row order, and transfers only the ordered IDs through a short URL fragment.
+Extension v0.3.3 has no content script or runtime attached to Aero. It performs one explicit capture on the active YouTube Mix page, preserves the visible row order, and transfers only the ordered IDs through a short URL fragment.
 
 See `extension/README.md`.
 
