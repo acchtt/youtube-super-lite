@@ -1,21 +1,11 @@
 {
   "manifest_version": 3,
   "name": "Aero Mix Bridge",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "One-click capture of your personalized YouTube Mix queue for Aero × IVE.",
-  "permissions": ["storage", "activeTab", "scripting"],
-  "host_permissions": [
-    "https://aero-x-ive.pages.dev/*"
-  ],
+  "permissions": ["activeTab", "scripting"],
   "action": {
     "default_title": "Capture YouTube Mix",
     "default_popup": "popup.html"
-  },
-  "content_scripts": [
-    {
-      "matches": ["https://aero-x-ive.pages.dev/*"],
-      "js": ["aero.js"],
-      "run_at": "document_start"
-    }
-  ]
+  }
 }

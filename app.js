@@ -36,7 +36,8 @@ let videoHistory = [];
 let lastPlaylist = null;
 let lastVideo = null;
 let currentTabTrack = { title:'', author:'', state:'idle' };
-let mixBridge = { connected:false, snapshot:null, receivedAt:0 };
+let mixBridge = { snapshot:null, receivedAt:0 };
+let bridgePlayback = null;
 
 const $ = id => document.getElementById(id);
 const els = {
@@ -81,6 +82,10 @@ async function loadState() {
   if ([5,8,12,20].includes(Number(saved.refreshEvery))) state.refreshEvery = Number(saved.refreshEvery);
   if (Number.isFinite(saved.volume) && saved.volume >= 0 && saved.volume <= 100) state.volume = saved.volume;
   if (typeof saved.muted === 'boolean') state.muted = saved.muted;
+  if (saved.bridgeSnapshot) {
+    const restoredBridge = sanitizeBridgeSnapshot(saved.bridgeSnapshot);
+    if (restoredBridge) mixBridge.snapshot = restoredBridge;
+  }
 
   lastVideo = remote.lastVideo || null;
   lastPlaylist = remote.lastPlaylist || null;
@@ -99,7 +104,16 @@ function saveState() {
     speed: state.speed,
     refreshEvery: state.refreshEvery,
     volume: state.volume,
-    muted: state.muted
+    muted: state.muted,
+    bridgeSnapshot: mixBridge.snapshot ? {
+      listId: mixBridge.snapshot.listId,
+      seedId: mixBridge.snapshot.seedId || '',
+      capturedAt: mixBridge.snapshot.capturedAt || Date.now(),
+      items: mixBridge.snapshot.items.map(item => ({
+        id:item.id,
+        index:Number.isInteger(item.index) ? item.index : null
+      }))
+    } : null
   });
 }
 
@@ -125,19 +139,16 @@ function setMessage(text, kind) {
 
 function renderMixBridgeStatus() {
   if (!els.mixBridgeStatus) return;
-  if (!mixBridge.connected) {
-    els.mixBridgeStatus.textContent = 'Mix Bridge: not connected';
-    els.mixBridgeStatus.title = 'Install/load the Aero Mix Bridge extension to capture your exact youtube.com Mix queue.';
-    return;
-  }
-
   const count = mixBridge.snapshot && Array.isArray(mixBridge.snapshot.items)
     ? mixBridge.snapshot.items.length
     : 0;
-  els.mixBridgeStatus.textContent = count ? ('Mix Bridge: ' + count + ' tracks') : 'Mix Bridge: connected';
+
+  els.mixBridgeStatus.textContent = count
+    ? ('Mix loaded: ' + count + ' tracks')
+    : 'Mix Bridge: capture a Mix';
   els.mixBridgeStatus.title = count
-    ? 'Captured from youtube.com: ' + (mixBridge.snapshot.listId || 'Mix queue')
-    : 'Aero Mix Bridge is connected. Open the personalized Mix on youtube.com so it can capture the queue.';
+    ? 'Captured Mix is stored with Aero state. No extension code is running in this tab.'
+    : 'Open a YouTube Mix and use the Aero Mix Bridge extension to capture and open it in Aero.';
 }
 
 
@@ -170,35 +181,20 @@ function playLoadedMix() {
     return;
   }
 
-  const first = snap.items.find(item => item.id === ids[0]) || snap.items[0] || {};
-  const isRadio = /^RD/.test(snap.listId);
-
+  const first = snap.items[0] || {};
   closeStartupGate();
   showMediaLayout();
   manualContinuation = null;
   personalizedMixPlays = 0;
   tasteGateSkips = 0;
   state.index = -1;
-  state.playlistMode = {
-    id: snap.listId,
+  state.playlistMode = null;
+  bridgePlayback = {
+    listId: snap.listId,
     seedId: snap.seedId || ids[0],
-    personalized: false,
-    mix: isRadio,
-    radio: isRadio,
-    manualRadio: isRadio,
-    sourceList: true,
-    preserveSequence: true,
-    bridged: true,
-    bridgeIds: ids.slice(0, 120),
-    bridgeIndex: 0
+    ids: ids.slice(0, 120),
+    index: 0
   };
-
-  rememberPlaylist(state.playlistMode, {
-    index: 0,
-    currentVideoId: ids[0],
-    title: first.title || '',
-    channel: first.channel || ''
-  });
 
   els.nowTitle.textContent = first.title || 'Loaded YouTube Mix';
   els.nowMeta.textContent = 'Mix Bridge · ' + ids.length + ' loaded songs · exact order';
@@ -210,8 +206,9 @@ function playLoadedMix() {
     applyAudioPrefs(player);
   });
 
-  setMessage('Playing ' + ids.length + ' songs loaded from your youtube.com Mix.', 'ok');
+  setMessage('Playing ' + ids.length + ' captured songs through the original Aero player.', 'ok');
 }
+
 
 function sanitizeBridgeSnapshot(payload) {
   if (!payload || typeof payload !== 'object') return null;
@@ -265,11 +262,11 @@ function bridgeSnapshotFor(item) {
 function applyBridgeSnapshot(payload) {
   const snap = sanitizeBridgeSnapshot(payload);
   if (!snap) return;
-  mixBridge.connected = true;
   mixBridge.snapshot = snap;
   mixBridge.receivedAt = Date.now();
   renderMixBridgeStatus();
   renderLoadedMixOption();
+  saveState();
 
   if (manualContinuation && manualContinuation.listId === snap.listId) {
     manualContinuation.bridgeIds = snap.items.map(x => x.id);
@@ -277,32 +274,37 @@ function applyBridgeSnapshot(payload) {
   }
 
   setMessage(
-    'Captured ' + snap.items.length + ' tracks from your youtube.com Mix. Aero will use this exact order for continuation.',
+    'Loaded ' + snap.items.length + ' captured Mix tracks in exact order.',
     'ok'
   );
 }
 
-window.addEventListener('message', event => {
-  if (event.source !== window || !event.data || typeof event.data !== 'object') return;
-  if (event.data.source !== 'aero-mix-bridge') return;
+function importMixFromHash() {
+  const prefix = '#aeroMix=';
+  if (!location.hash.startsWith(prefix)) return false;
 
-  if (event.data.type === 'AERO_BRIDGE_READY') {
-    mixBridge.connected = true;
-    renderMixBridgeStatus();
-    renderLoadedMixOption();
-    window.postMessage({ source:'aero-web', type:'AERO_BRIDGE_REQUEST' }, window.location.origin);
-    return;
+  try {
+    let encoded = location.hash.slice(prefix.length).replace(/-/g, '+').replace(/_/g, '/');
+    while (encoded.length % 4) encoded += '=';
+    const payload = JSON.parse(atob(encoded));
+    if (!payload || payload.v !== 1 || !Array.isArray(payload.ids)) return false;
+
+    const snapshot = sanitizeBridgeSnapshot({
+      listId: payload.listId || '',
+      seedId: payload.seedId || '',
+      capturedAt: Date.now(),
+      items: payload.ids.map((id, index) => ({ id, index }))
+    });
+    if (!snapshot) return false;
+
+    applyBridgeSnapshot(snapshot);
+    history.replaceState(null, '', location.pathname + location.search);
+    return true;
+  } catch (_) {
+    return false;
   }
-
-  if (event.data.type === 'AERO_MIX_SNAPSHOT') {
-    mixBridge.connected = true;
-    applyBridgeSnapshot(event.data.payload);
-  }
-});
-
-function requestMixBridgeSnapshot() {
-  window.postMessage({ source:'aero-web', type:'AERO_BRIDGE_REQUEST' }, window.location.origin);
 }
+
 
 function updateOpenYouTubeLink(value) {
   if (!els.openYouTubeLink) return;
@@ -331,7 +333,7 @@ function renderTabTitle() {
   const author = cleanTabText(currentTabTrack.author);
 
   if (!title) {
-    document.title = 'Aero × IVE · v0.11.8';
+    document.title = 'Aero × IVE · v0.12.0';
     return;
   }
 
@@ -558,13 +560,11 @@ function capturePlaybackProgress(force = false) {
   try {
     data = player.getVideoData() || {};
     seconds = Number(player.getCurrentTime()) || 0;
-    if (state.playlistMode) {
-      if (state.playlistMode.bridged && Number.isInteger(state.playlistMode.bridgeIndex)) {
-        listIndex = state.playlistMode.bridgeIndex;
-      } else {
-        const index = player.getPlaylistIndex();
-        if (Number.isInteger(index) && index >= 0) listIndex = index;
-      }
+    if (bridgePlayback && Number.isInteger(bridgePlayback.index)) {
+      listIndex = bridgePlayback.index;
+    } else if (state.playlistMode) {
+      const index = player.getPlaylistIndex();
+      if (Number.isInteger(index) && index >= 0) listIndex = index;
     }
   } catch (_) {
     return;
@@ -576,7 +576,7 @@ function capturePlaybackProgress(force = false) {
     title: data.title || '',
     channel: data.author || '',
     seconds,
-    listId: state.playlistMode && state.playlistMode.id || null,
+    listId: bridgePlayback ? bridgePlayback.listId : (state.playlistMode && state.playlistMode.id || null),
     listIndex
   }, force);
 }
@@ -740,7 +740,7 @@ function saveVideoHistory() {
 }
 
 function historySource() {
-  if (state.playlistMode && state.playlistMode.bridged) return 'YouTube Mix Bridge';
+  if (bridgePlayback) return 'YouTube Mix Bridge';
   if (manualContinuation) return 'Manual';
   if (state.playlistMode && state.playlistMode.sourceList) {
     return state.playlistMode.radio ? 'Pasted radio' : 'Pasted playlist';
@@ -760,7 +760,7 @@ function recordVideoHistory(id, title, channel) {
     channel: channel || '',
     at: Date.now(),
     source: historySource(),
-    listId: state.playlistMode && state.playlistMode.id || null
+    listId: bridgePlayback ? bridgePlayback.listId : (state.playlistMode && state.playlistMode.id || null)
   };
 
   // Collapse only immediate duplicate state events; later replays remain visible.
@@ -823,11 +823,14 @@ function renderVideoHistory() {
 function renderQueue() {
   els.queueList.textContent = '';
   els.queueCount.textContent = state.queue.length + (state.queue.length === 1 ? ' video' : ' videos');
-  els.emptyQueue.classList.toggle('hidden', state.queue.length > 0 || !!state.playlistMode);
-  els.playlistMode.classList.toggle('hidden', !state.playlistMode);
-  if (state.playlistMode) {
-    const label = state.playlistMode.bridged ? 'YouTube Mix Bridge · exact order' :
-      state.playlistMode.personalized ? 'Personalized Mix' :
+  els.emptyQueue.classList.toggle('hidden', state.queue.length > 0 || !!state.playlistMode || !!bridgePlayback);
+  els.playlistMode.classList.toggle('hidden', !state.playlistMode && !bridgePlayback);
+  if (bridgePlayback) {
+    els.playlistMode.textContent =
+      'YouTube Mix Bridge · exact order · ' +
+      (bridgePlayback.index + 1) + '/' + bridgePlayback.ids.length;
+  } else if (state.playlistMode) {
+    const label = state.playlistMode.personalized ? 'Personalized Mix' :
       state.playlistMode.mix ? 'YouTube Mix' : 'Playlist mode';
     els.playlistMode.textContent = label + ' · ' + state.playlistMode.id;
   }
@@ -967,6 +970,7 @@ function loadVideoInto(target, item) {
 
 function playExactManual(item) {
   if (!item || !item.id) return;
+  bridgePlayback = null;
   showMediaLayout();
   tasteGateSkips = 0;
   personalizedMixPlays = 0;
@@ -1021,26 +1025,24 @@ function playExactManual(item) {
 }
 
 function playBridgeIndex(index) {
-  const mode = state.playlistMode;
-  if (!mode || !mode.bridged || !Array.isArray(mode.bridgeIds) || !mode.bridgeIds.length) return false;
+  if (!bridgePlayback || !Array.isArray(bridgePlayback.ids) || !bridgePlayback.ids.length) return false;
 
   let nextIndex = Number(index);
   if (!Number.isInteger(nextIndex)) return false;
 
   if (nextIndex < 0) {
-    nextIndex = state.repeat === 'queue' ? mode.bridgeIds.length - 1 : 0;
+    nextIndex = state.repeat === 'queue' ? bridgePlayback.ids.length - 1 : 0;
   }
-  if (nextIndex >= mode.bridgeIds.length) {
+  if (nextIndex >= bridgePlayback.ids.length) {
     if (state.repeat === 'queue') nextIndex = 0;
     else return false;
   }
 
-  const id = mode.bridgeIds[nextIndex];
+  const id = bridgePlayback.ids[nextIndex];
   if (!/^[A-Za-z0-9_-]{11}$/.test(id)) return false;
 
-  mode.bridgeIndex = nextIndex;
+  bridgePlayback.index = nextIndex;
   state.index = -1;
-  rememberPlaylist(mode, { index: nextIndex, currentVideoId:id });
   renderQueue();
 
   whenReady(() => {
@@ -1048,16 +1050,12 @@ function playBridgeIndex(index) {
     try { player.setPlaybackRate(state.speed); } catch (_) {}
     applyAudioPrefs(player);
   });
-
   return true;
 }
 
 function continueAfterManualVideo() {
   if (!manualContinuation) return false;
   tasteGateSkips = 0;
-
-  // Ignore a stale ENDED event from the previously loaded playlist/video.
-  // Only start continuation after the exact requested seed actually played.
   if (!manualContinuation.started) return true;
 
   const next = manualContinuation;
@@ -1065,12 +1063,39 @@ function continueAfterManualVideo() {
   personalizedMixPlays = 0;
 
   const listId = next.listId || ('RD' + next.seed.id);
-  const isRadio = /^RD/.test(listId);
   const bridgeIds = Array.isArray(next.bridgeIds)
     ? next.bridgeIds.filter(id => /^[A-Za-z0-9_-]{11}$/.test(id))
     : [];
   const bridged = bridgeIds.length > 1 && bridgeIds.includes(next.seed.id);
 
+  if (bridged) {
+    const seedIndex = bridgeIds.indexOf(next.seed.id);
+    const nextIndex = Math.min(seedIndex + 1, bridgeIds.length - 1);
+    state.playlistMode = null;
+    state.index = -1;
+    bridgePlayback = {
+      listId,
+      seedId: next.seed.id,
+      ids: bridgeIds.slice(0, 120),
+      index: nextIndex
+    };
+    renderQueue();
+
+    whenReady(() => {
+      player.loadVideoById(bridgePlayback.ids[bridgePlayback.index]);
+      try { player.setPlaybackRate(state.speed); } catch (_) {}
+      applyAudioPrefs(player);
+    });
+
+    setMessage(
+      'Continuing with the captured personalized Mix (' + bridgePlayback.ids.length + ' tracks, exact order).',
+      'ok'
+    );
+    return true;
+  }
+
+  const isRadio = /^RD/.test(listId);
+  bridgePlayback = null;
   state.playlistMode = {
     id: listId,
     seedId: next.seed.id,
@@ -1079,70 +1104,49 @@ function continueAfterManualVideo() {
     radio: isRadio,
     manualRadio: isRadio,
     sourceList: !!next.listId,
-    preserveSequence: !!next.listId,
-    bridged,
-    bridgeIds: bridged ? bridgeIds.slice(0, 120) : null,
-    bridgeIndex: null
+    preserveSequence: !!next.listId
   };
   state.index = -1;
 
-  const seedIndex = bridged ? bridgeIds.indexOf(next.seed.id) : -1;
-  const bridgeNextIndex = bridged
-    ? Math.min(seedIndex + 1, bridgeIds.length - 1)
-    : 0;
-  if (bridged) state.playlistMode.bridgeIndex = bridgeNextIndex;
-
   rememberPlaylist(state.playlistMode, {
-    index: bridged ? bridgeNextIndex : (Number.isInteger(next.listIndex) ? next.listIndex : 0),
+    index: Number.isInteger(next.listIndex) ? next.listIndex : 0,
     currentVideoId: next.seed.id,
     title: next.seed.title || ''
   });
   renderQueue();
 
   const action = target => {
-    if (bridged) {
-      target.loadVideoById(bridgeIds[bridgeNextIndex]);
-      try { target.setPlaybackRate(state.speed); } catch (_) {}
-      applyAudioPrefs(target);
-    } else {
-      target.loadPlaylist({ listType: 'playlist', list: listId, index: 0, startSeconds: 0 });
-      setTimeout(() => {
-        try {
-          const ids = target.getPlaylist ? target.getPlaylist() : [];
-          const liveSeedIndex = ids ? ids.indexOf(next.seed.id) : -1;
-          if (liveSeedIndex >= 0 && ids.length > 1) {
-            target.playVideoAt((liveSeedIndex + 1) % ids.length);
-          } else if (Number.isInteger(next.listIndex) && ids && ids.length) {
-            const nextIndex = Math.min(next.listIndex + 1, ids.length - 1);
-            target.playVideoAt(nextIndex);
-          }
-        } catch (_) {}
-      }, 900);
-    }
+    target.loadPlaylist({ listType: 'playlist', list: listId, index: 0, startSeconds: 0 });
+    setTimeout(() => {
+      try {
+        const ids = target.getPlaylist ? target.getPlaylist() : [];
+        const seedIndex = ids ? ids.indexOf(next.seed.id) : -1;
+        if (seedIndex >= 0 && ids.length > 1) {
+          target.playVideoAt((seedIndex + 1) % ids.length);
+        } else if (Number.isInteger(next.listIndex) && ids && ids.length) {
+          const fallbackIndex = Math.min(next.listIndex + 1, ids.length - 1);
+          target.playVideoAt(fallbackIndex);
+        }
+      } catch (_) {}
+    }, 900);
     try { target.setLoop(state.repeat === 'queue'); } catch (_) {}
     try { target.setShuffle(state.shuffle); } catch (_) {}
   };
 
-  if (bridged) {
-    whenReady(() => action(player));
-  } else {
-    const fresh = state.lowMemory && state.playsSinceRefresh >= state.refreshEvery;
-    if (fresh) rebuildPlayer(action);
-    else whenReady(() => action(player));
-  }
+  const fresh = state.lowMemory && state.playsSinceRefresh >= state.refreshEvery;
+  if (fresh) rebuildPlayer(action);
+  else whenReady(() => action(player));
 
   setMessage(
-    bridged
-      ? 'Continuing with the exact personalized Mix captured from youtube.com (' + bridgeIds.length + ' tracks).'
-      : next.listId
-        ? 'No matching Mix Bridge snapshot was available, so Aero is using YouTube\'s embedded playlist/Radio.'
-        : 'Requested video finished. Continuing with its generated YouTube Radio.',
-    bridged ? 'ok' : undefined
+    next.listId
+      ? 'No matching captured Mix was available, so Aero is using YouTube\'s embedded playlist/Radio.'
+      : 'Requested video finished. Continuing with its generated YouTube Radio.'
   );
   return true;
 }
 
 function playQueueIndex(i, useFreshPlayer) {
+  bridgePlayback = null;
   manualContinuation = null;
   if (!state.queue[i]) return;
   showMediaLayout();
@@ -1173,6 +1177,7 @@ function loadPlaylistInto(target, listId, videoId) {
 }
 
 function playPlaylist(listId, videoId) {
+  bridgePlayback = null;
   showMediaLayout();
   manualContinuation = null;
   state.playlistMode = {
@@ -1192,6 +1197,7 @@ function playPlaylist(listId, videoId) {
 }
 
 function playMixFromSeed(item, personalized, fresh) {
+  bridgePlayback = null;
   manualContinuation = null;
   personalizedMixPlays = 0;
   if (!item || !item.id) return;
@@ -1250,7 +1256,6 @@ async function startPersonalized(fresh) {
 
 function applyPlaylistOptions() {
   if (!playerReady || !player || !state.playlistMode) return;
-  if (state.playlistMode.bridged) return;
   try { player.setLoop(state.repeat === 'queue'); } catch (_) {}
   try { player.setShuffle(state.shuffle); } catch (_) {}
 }
@@ -1289,9 +1294,8 @@ function nextQueueIndex() {
 }
 
 function next() {
-  if (state.playlistMode && state.playlistMode.bridged) {
-    const current = Number.isInteger(state.playlistMode.bridgeIndex) ? state.playlistMode.bridgeIndex : 0;
-    playBridgeIndex(current + 1);
+  if (bridgePlayback) {
+    playBridgeIndex(bridgePlayback.index + 1);
     return;
   }
   if (state.playlistMode) {
@@ -1313,9 +1317,8 @@ function next() {
 }
 
 function previous() {
-  if (state.playlistMode && state.playlistMode.bridged) {
-    const current = Number.isInteger(state.playlistMode.bridgeIndex) ? state.playlistMode.bridgeIndex : 0;
-    playBridgeIndex(current - 1);
+  if (bridgePlayback) {
+    playBridgeIndex(bridgePlayback.index - 1);
     return;
   }
   if (state.playlistMode) {
@@ -1329,7 +1332,6 @@ function previous() {
 
 function refreshCurrentPlaylist() {
   if (!playerReady || !player || !state.playlistMode) return false;
-  if (state.playlistMode.bridged) return false;
   if (!(state.lowMemory && state.playsSinceRefresh >= state.refreshEvery)) return false;
 
   if (state.playlistMode.personalized && profile) {
@@ -1376,9 +1378,8 @@ function onPlayerStateChange(event) {
     }
     if (!state.autoplay) return;
 
-    if (state.playlistMode && state.playlistMode.bridged) {
-      const current = Number.isInteger(state.playlistMode.bridgeIndex) ? state.playlistMode.bridgeIndex : 0;
-      playBridgeIndex(current + 1);
+    if (bridgePlayback) {
+      playBridgeIndex(bridgePlayback.index + 1);
       return;
     }
 
@@ -1465,7 +1466,7 @@ function updateVideoData() {
   if (data.author) state.lastChannel = data.author;
   if (data.title) setTabTrack(data.title, data.author || '', 'playing');
   els.nowMeta.textContent = [data.author, id].filter(Boolean).join(' · ') ||
-    (state.playlistMode ? state.playlistMode.id : '');
+    (bridgePlayback ? bridgePlayback.listId : (state.playlistMode ? state.playlistMode.id : ''));
 
   if (id && manualContinuation && id === manualContinuation.seed.id) {
     manualContinuation.started = true;
@@ -1474,8 +1475,10 @@ function updateVideoData() {
   if (id && id !== lastObservedVideoId) {
     lastObservedVideoId = id;
 
-    let currentListIndex = null;
-    if (state.playlistMode && playerReady && player) {
+    let currentListIndex = bridgePlayback && Number.isInteger(bridgePlayback.index)
+      ? bridgePlayback.index
+      : null;
+    if (currentListIndex == null && state.playlistMode && playerReady && player) {
       try {
         const idx = player.getPlaylistIndex();
         if (Number.isInteger(idx) && idx >= 0) currentListIndex = idx;
@@ -1487,7 +1490,7 @@ function updateVideoData() {
       title: data.title || '',
       channel: data.author || '',
       seconds: 0,
-      listId: state.playlistMode && state.playlistMode.id || null,
+      listId: bridgePlayback ? bridgePlayback.listId : (state.playlistMode && state.playlistMode.id || null),
       listIndex: currentListIndex
     });
 
@@ -1524,10 +1527,9 @@ function updateVideoData() {
 
 function handlePlayerError(e) {
   const code = e && e.data;
-  if (state.playlistMode && state.playlistMode.bridged) {
-    const current = Number.isInteger(state.playlistMode.bridgeIndex) ? state.playlistMode.bridgeIndex : 0;
-    if (playBridgeIndex(current + 1)) {
-      setMessage('Skipped an unavailable bridged video (YouTube error ' + code + ').', 'error');
+  if (bridgePlayback) {
+    if (playBridgeIndex(bridgePlayback.index + 1)) {
+      setMessage('Skipped an unavailable captured video (YouTube error ' + code + ').', 'error');
       return;
     }
   }
@@ -1660,6 +1662,7 @@ els.clear.addEventListener('click', () => {
   state.queue = [];
   state.index = -1;
   state.playlistMode = null;
+  bridgePlayback = null;
   manualContinuation = null;
   saveState();
   renderQueue();
@@ -1712,9 +1715,9 @@ async function bootstrap() {
     renderVideoHistory();
     renderResumeVideo();
     renderResumePlaylist();
+    importMixFromHash();
     renderMixBridgeStatus();
     renderLoadedMixOption();
-    requestMixBridgeSnapshot();
     updateOpenYouTubeLink((els.startupUrl && els.startupUrl.value) || (els.input && els.input.value) || '');
 
     if (els.startupUrl) els.startupUrl.focus();

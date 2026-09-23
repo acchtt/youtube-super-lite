@@ -19,7 +19,7 @@ AGENTS.md contains the standing repository instruction for this rule.
 - Product name: Aero × IVE
 - Product role: lightweight YouTube player / unofficial IVE fan edition
 - Production: https://aero-x-ive.pages.dev
-- Current app version: v0.11.8
+- Current app version: v0.12.0
 - Deployment: Cloudflare Pages from main
 - D1 database: youtube-super-lite
 - D1 binding: DB
@@ -52,7 +52,7 @@ Before media is loaded, the player, controls, history and queue layout remain hi
 - If a pasted watch URL contains `list=` context, Aero always loads the exact pasted `v=` directly first. When the optional Aero Mix Bridge has captured a matching youtube.com Mix, Aero uses the captured video-ID array for 2nd track onward, preserving the exact visible personalized queue instead of regenerating the RD list in the embed. Without a matching snapshot it falls back to the embedded YouTube playlist/Radio.
 - A plain watch URL falls back to that video's generated `RD<videoId>` YouTube Radio after the exact video; pressing Next early also enters that generated radio rather than Personalized mode.
 - Only one YouTube iframe is kept.
-- v0.11.8 restores the known-good pre-bridge v0.10.9 player lifecycle for all playback. Bridged Mixes no longer alter iframe creation, viewport size, or rebuild cadence; they only feed the next captured video ID into the same player. Normal Low-memory periodic rebuild behavior remains unchanged.
+- v0.12.0 keeps the known-good pre-bridge v0.10.9 player lifecycle. Captured Mix playback no longer uses `state.playlistMode`; it is an isolated local queue that feeds one video ID at a time into the same original player. Normal Low-memory periodic rebuild behavior remains unchanged.
 - Cinema mode is CSS-only.
 - Volume and mute survive player rebuilds.
 - Browser tab title reflects playing/paused state and the current title/channel.
@@ -67,7 +67,7 @@ Before media is loaded, the player, controls, history and queue layout remain hi
 
 ## Aero Mix Bridge
 
-Aero has an optional Chrome/Edge Manifest V3 companion extension under `extension/`. Extension v0.2.1 uses explicit one-click capture only and preserves YouTube's canonical playlist order.
+Aero has an optional Chrome/Edge Manifest V3 companion extension under `extension/`. Extension v0.3.0 uses explicit one-click capture only, preserves YouTube's canonical order, and has no content script/runtime attached to Aero.
 
 Purpose:
 - capture the personalized Mix queue from the actual signed-in youtube.com watch page;
@@ -79,10 +79,9 @@ Files:
 - `extension/manifest.json`
 - `extension/popup.html`
 - `extension/popup.js`
-- `extension/aero.js`
 - `extension/README.md`
 
-Extension v0.2.1 runs no persistent script, observer, timer, or polling loop on youtube.com. Capture is restricted to the active visible playlist panel, and captured items are sorted by YouTube's own `?index=` values with DOM order only as fallback. The user opens the desired Mix, clicks the extension icon, and presses “Capture current Mix”. The popup injects a one-shot scraper into the active YouTube tab, stores up to 100 visible playlist items in chrome.storage.local, then stops. The YouTube tab can be closed immediately afterward. On Aero, the content script forwards the saved snapshot through same-page `window.postMessage`. A matching snapshot is used when its `listId` matches the pasted URL and contains the pasted seed video. The startup gate exposes a “Play loaded songs” card whenever a captured snapshot is available.
+Extension v0.3.0 runs no persistent script, observer, timer, polling loop, storage listener, or content script on Aero. Capture is restricted to the active visible YouTube playlist panel and sorted by YouTube's playlist index. The popup opens Aero with a compact `#aeroMix=` URL fragment containing only list/seed IDs and ordered video IDs. Aero imports it into its existing D1-backed state and immediately removes the fragment from the address bar. The extension is therefore completely absent from the Aero tab after transfer. The startup gate exposes “Play loaded songs” whenever a captured snapshot is available.
 
 The extension does not force YouTube Watch History entries. Actual Watch History remains best-effort through the standard signed-in YouTube embed; do not add hidden/background playback hacks unless explicitly requested and carefully reassessed.
 
@@ -171,7 +170,7 @@ Important: the user later explicitly asked to stop using the logo skill for the 
 
 ## Versioning
 
-Current version: v0.11.8
+Current version: v0.12.0
 
 When bumping the visible app version, keep these aligned:
 - application-version meta
@@ -223,4 +222,4 @@ Once the user approves a new logo:
 
 2026-09-23 ICT
 
-v0.11.8 rolls back the bridge-era player-lifecycle experiments after confirming the original player could sustain Full HD below ~200 MB before Mix Bridge integration. The YouTube player creation/rebuild path is restored to the v0.10.9 known-good implementation: normal full-size iframe, rel=1, immediate IFrame API player creation, and the original periodic rebuild behavior. Removed bridge-specific hard recycling, 300 ms destroy/recreate delays, lazy-player machinery, and the half-size/scaled iframe viewport experiment. Mix Bridge remains, but it is now only a lightweight ordered-queue layer: captured IDs stay in Aero state and Next/Previous/ENDED simply call loadVideoById() on the same original player. Exact order from v0.11.5 is preserved. The lazy loading of the hidden Takeout profile remains because it is unrelated to playback and only reduces memory. Extension remains v0.2.1.
+v0.12.0 isolates Mix Bridge completely from the player and from the Aero browser tab. The extension is now v0.3.0 with only activeTab + scripting permissions: there is no Aero content script, chrome.storage bridge, storage listener, or window.postMessage handshake. After one-shot capture, the popup opens Aero with a compact URL fragment containing ordered video IDs; Aero imports it into D1-backed state and removes the fragment. Captured playback is also no longer represented as YouTube playlistMode. It uses a separate bridgePlayback queue, while the iframe sees the same simple loadVideoById() calls as pre-bridge manual/queue playback. This is intended to get memory behavior as close as possible to the pre-bridge ~190–220 MB baseline while preserving exact captured order. Extension v0.3.0 must be reloaded after git pull and the Mix must be captured once again.

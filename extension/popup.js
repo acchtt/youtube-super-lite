@@ -1,6 +1,5 @@
 'use strict';
 
-const STORAGE_KEY = 'latestAeroMix';
 const button = document.getElementById('capture');
 const status = document.getElementById('status');
 
@@ -134,11 +133,23 @@ button.addEventListener('click', async () => {
     if (!result) throw new Error('The Mix could not be read.');
     if (result.error) throw new Error(result.error);
 
-    await chrome.storage.local.set({ [STORAGE_KEY]: result.snapshot });
+    const compact = {
+      v: 1,
+      listId: result.snapshot.listId,
+      seedId: result.snapshot.seedId,
+      ids: result.snapshot.items.map(item => item.id)
+    };
+    const encoded = btoa(JSON.stringify(compact))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/g, '');
+    const aeroUrl = 'https://aero-x-ive.pages.dev/#aeroMix=' + encoded;
+
     setStatus(
-      'Captured ' + result.snapshot.items.length + ' songs in playlist order. You can close the YouTube tab now.',
+      'Captured ' + result.snapshot.items.length + ' songs in playlist order. Opening Aero…',
       'ok'
     );
+    await chrome.tabs.create({ url: aeroUrl });
   } catch (error) {
     setStatus(error && error.message ? error.message : 'Capture failed.', 'err');
   } finally {

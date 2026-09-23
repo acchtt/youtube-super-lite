@@ -20,7 +20,8 @@ Aero keeps one YouTube iframe player and avoids the normal YouTube feed, comment
 - exact pasted video plays first
 - playlist/Radio context preservation when present
 - optional Aero Mix Bridge extension for capturing the exact personalized Mix queue from youtube.com
-- bridged Mixes are a lightweight queue layer: Aero feeds one video ID at a time into the original player
+- Mix Bridge v0.3.0 has no content script or runtime attached to Aero
+- captured Mixes are a separate lightweight queue that feeds one video ID at a time into the original player
 - startup “Play loaded songs” option when a Mix Bridge snapshot is available
 - generated YouTube Radio fallback for plain watch URLs
 - custom queue
@@ -35,7 +36,7 @@ Aero keeps one YouTube iframe player and avoids the normal YouTube feed, comment
 
 ## Exact personalized YouTube Mixes
 
-The optional Chrome/Edge extension in `extension/` uses a manual one-click capture. Open your personalized Mix on youtube.com, click the extension, choose **Capture current Mix**, then close YouTube. The extension stores only the captured ordered video IDs and Aero plays that fixed queue instead of independently regenerating the `RD...` radio.
+The optional Chrome/Edge extension in `extension/` uses one-click capture. It reads the visible Mix once and opens Aero with a compact URL fragment containing only the ordered video IDs. Aero imports the queue into its normal state and removes the fragment. No extension content script runs on the Aero page.
 
 See `extension/README.md` for installation and usage.
 
