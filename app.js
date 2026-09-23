@@ -126,7 +126,7 @@ function renderTabTitle() {
   const author = cleanTabText(currentTabTrack.author);
 
   if (!title) {
-    document.title = 'Aero × IVE · v0.10.7';
+    document.title = 'Aero × IVE · v0.10.8';
     return;
   }
 
@@ -665,12 +665,32 @@ function captureAudioPrefs() {
   } catch (_) {}
 }
 
-function createPlayer(onReadyAction) {
+function createPlayer(onReadyAction, bootstrapContext) {
   playerReady = false;
-  player = new YT.Player('player', {
+
+  const playerVars = {
+    autoplay: bootstrapContext ? 1 : 0,
+    controls: 1,
+    rel: 1,
+    playsinline: 1,
+    iv_load_policy: 3,
+    origin: window.location.origin
+  };
+
+  // For a pasted watch URL with list=, construct the iframe as close as
+  // possible to YouTube's own watch context: exact VIDEO_ID plus the list.
+  // Using the normal youtube.com host (not youtube-nocookie.com) also gives
+  // YouTube the opportunity to use the browser's signed-in YouTube session.
+  if (bootstrapContext && bootstrapContext.listId) {
+    playerVars.listType = 'playlist';
+    playerVars.list = bootstrapContext.listId;
+  }
+
+  const config = {
     width: '100%',
     height: '100%',
-    playerVars: { autoplay: 0, controls: 1, rel: 1, playsinline: 1, iv_load_policy: 3 },
+    host: 'https://www.youtube.com',
+    playerVars,
     events: {
       onReady: event => {
         playerReady = true;
@@ -683,9 +703,11 @@ function createPlayer(onReadyAction) {
       onStateChange: onPlayerStateChange,
       onError: handlePlayerError
     }
-  });
-}
+  };
 
+  if (bootstrapContext && bootstrapContext.id) config.videoId = bootstrapContext.id;
+  player = new YT.Player('player', config);
+}
 window.onYouTubeIframeAPIReady = () => createPlayer();
 
 function whenReady(fn) {
@@ -693,7 +715,7 @@ function whenReady(fn) {
   else pending.push(fn);
 }
 
-function rebuildPlayer(action) {
+function rebuildPlayer(action, bootstrapContext) {
   captureAudioPrefs();
   playerReady = false;
   pending = [];
@@ -705,7 +727,7 @@ function rebuildPlayer(action) {
   const container = document.createElement('div');
   container.id = 'player';
   aspect.appendChild(container);
-  createPlayer(action);
+  createPlayer(action, bootstrapContext || null);
 }
 
 function loadVideoInto(target, item) {
@@ -721,20 +743,13 @@ function playExactManual(item) {
   tasteGateSkips = 0;
   personalizedMixPlays = 0;
 
-  // Always make the pasted v= video the actual player target first.
-  // RD/radio URLs are dynamic lists; asking YouTube to load the list first can
-  // make the iframe choose another generated item before we can correct it.
-  // Keep the pasted list as continuation context instead.
-  manualContinuation = {
-    seed: item,
-    started: false,
-    listId: item.listId || null,
-    listIndex: Number.isInteger(item.listIndex) ? item.listIndex : null
-  };
-
   if (item.listId) {
+    // Account-aware experiment: create the iframe with the exact video and
+    // pasted list at the same time, matching YouTube's own watch URL more
+    // closely than a later loadPlaylist() call.
+    manualContinuation = null;
     const isRadio = /^RD/.test(item.listId);
-    rememberPlaylist({
+    state.playlistMode = {
       id: item.listId,
       seedId: item.id,
       personalized: false,
@@ -742,14 +757,41 @@ function playExactManual(item) {
       radio: isRadio,
       manualRadio: isRadio,
       sourceList: true,
-      preserveSequence: true
-    }, {
-      index: Number.isInteger(item.listIndex) ? item.listIndex : null,
+      preserveSequence: true,
+      accountAware: true
+    };
+    state.index = -1;
+
+    rememberPlaylist(state.playlistMode, {
+      index: Number.isInteger(item.listIndex) ? item.listIndex : 0,
       currentVideoId: item.id,
       title: item.title || ''
     });
+
+    els.nowTitle.textContent = 'Loading requested YouTube context…';
+    els.nowMeta.textContent = item.listId;
+    renderQueue();
+
+    rebuildPlayer(target => {
+      const startSeconds = Number(item.startSeconds) || 0;
+      if (startSeconds > 0) {
+        try { target.seekTo(startSeconds, true); } catch (_) {}
+      }
+      try { target.setLoop(state.repeat === 'queue'); } catch (_) {}
+      try { target.setShuffle(state.shuffle); } catch (_) {}
+      try { target.setPlaybackRate(state.speed); } catch (_) {}
+      applyAudioPrefs(target);
+    }, item);
+    return;
   }
 
+  // Plain watch URLs: exact seed first, then generated RD<videoId> Radio.
+  manualContinuation = {
+    seed: item,
+    started: false,
+    listId: null,
+    listIndex: null
+  };
   state.playlistMode = null;
   state.index = -1;
   els.nowTitle.textContent = 'Loading requested video…';

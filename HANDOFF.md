@@ -19,7 +19,7 @@ AGENTS.md contains the standing repository instruction for this rule.
 - Product name: Aero × IVE
 - Product role: lightweight YouTube player / unofficial IVE fan edition
 - Production: https://aero-x-ive.pages.dev
-- Current app version: v0.10.7
+- Current app version: v0.10.8
 - Deployment: Cloudflare Pages from main
 - D1 database: youtube-super-lite
 - D1 binding: DB
@@ -49,7 +49,7 @@ Before media is loaded, the player, controls, history and queue layout remain hi
 ### Playback
 
 - Exact pasted video plays first.
-- If a pasted watch URL contains `list=` context, Aero now loads the exact pasted `v=` as a standalone player target first and holds the pasted playlist/radio as continuation context. This guarantees the first track is the requested video; Next or natural completion then enters the pasted list without falling through to Personalized mode.
+- If a pasted watch URL contains `list=` context, Aero v0.10.8 rebuilds a standard `youtube.com` iframe with both the exact pasted `v=` video and the pasted list present at player creation time. This is an account-aware experiment intended to match YouTube's own watch-context behavior more closely and allow signed-in YouTube cookies/history to participate when the browser permits them.
 - A plain watch URL falls back to that video's generated `RD<videoId>` YouTube Radio after the exact video; pressing Next early also enters that generated radio rather than Personalized mode.
 - Only one YouTube iframe is kept.
 - Low-memory mode periodically rebuilds the iframe; default is every 8 videos.
@@ -149,7 +149,7 @@ Important: the user later explicitly asked to stop using the logo skill for the 
 
 ## Versioning
 
-Current version: v0.10.7
+Current version: v0.10.8
 
 When bumping the visible app version, keep these aligned:
 - application-version meta
@@ -201,4 +201,4 @@ Once the user approves a new logo:
 
 2026-09-23 ICT
 
-Fixed the remaining pasted Radio first-track bug in v0.10.7. v0.10.6 still let YouTube's dynamic RD playlist choose the initial iframe item before the app could force the pasted `v=` seed. Aero now always loads the pasted video ID directly first, while retaining any pasted `list=` as manual continuation context. Pressing Next or letting the seed finish enters that pasted list, and Personalized mode cannot take over that transition. Updated visible version/cache busting to v0.10.7.
+Added the v0.10.8 account-aware YouTube playback experiment. Pasted watch URLs with `list=` now rebuild the standard `youtube.com` IFrame Player with both the exact `videoId` and the pasted list present at creation time, rather than loading the RD list later. The player explicitly uses the normal YouTube host and page origin so an existing signed-in YouTube browser session can participate when browser cookie/privacy rules allow it. Added a visible “YouTube account” link and startup note explaining that users should be signed into youtube.com in the same browser. This is best-effort: Google OAuth tokens do not sign the embedded player into YouTube, and YouTube Data API support for writing Watch History was deprecated in 2016, so Aero cannot force history insertion through the API.
