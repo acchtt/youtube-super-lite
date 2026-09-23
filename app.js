@@ -433,7 +433,7 @@ function playHistoryItem(item) {
 
   whenReady(() => loadVideoInto(player, item.id, 0));
   setMessage('Playing from video history.', 'ok');
-  window.scrollTo({ top:0, behavior:'smooth' });
+  window.scrollTo({ top:0, behavior:'auto' });
 }
 
 function renderVideoHistory() {

@@ -30,7 +30,7 @@ Current features:
 - Cloudflare D1 persistence;
 - anonymous HttpOnly browser session cookie.
 
-Removed as obsolete in v0.14.0:
+Removed as obsolete in v0.13.0:
 - manual YouTube URL/video/playlist input;
 - custom queue and generated Radio fallback;
 - Takeout personalization/import/profile code and API;
