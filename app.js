@@ -317,7 +317,7 @@ function renderTabTitle() {
   const author = cleanTabText(currentTabTrack.author);
 
   if (!title) {
-    document.title = 'Aero × IVE · v0.11.2';
+    document.title = 'Aero × IVE · v0.11.3';
     return;
   }
 

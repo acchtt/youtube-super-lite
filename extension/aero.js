@@ -22,7 +22,7 @@ async function sendLatest() {
 window.addEventListener('message', event => {
   if (event.source !== window || !event.data || typeof event.data !== 'object') return;
   if (event.data.source !== 'aero-web' || event.data.type !== 'AERO_BRIDGE_REQUEST') return;
-  postToAero('AERO_BRIDGE_READY', { version: '0.1.1' });
+  postToAero('AERO_BRIDGE_READY', { version: '0.2.0' });
   sendLatest();
 });
 
@@ -31,5 +31,5 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
   postToAero('AERO_MIX_SNAPSHOT', changes[STORAGE_KEY].newValue);
 });
 
-postToAero('AERO_BRIDGE_READY', { version: '0.1.1' });
+postToAero('AERO_BRIDGE_READY', { version: '0.2.0' });
 sendLatest();

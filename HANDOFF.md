@@ -19,7 +19,7 @@ AGENTS.md contains the standing repository instruction for this rule.
 - Product name: Aero × IVE
 - Product role: lightweight YouTube player / unofficial IVE fan edition
 - Production: https://aero-x-ive.pages.dev
-- Current app version: v0.11.2
+- Current app version: v0.11.3
 - Deployment: Cloudflare Pages from main
 - D1 database: youtube-super-lite
 - D1 binding: DB
@@ -67,7 +67,7 @@ Before media is loaded, the player, controls, history and queue layout remain hi
 
 ## Aero Mix Bridge
 
-v0.11.0 adds an optional Chrome/Edge Manifest V3 companion extension under `extension/`.
+Aero has an optional Chrome/Edge Manifest V3 companion extension under `extension/`. Extension v0.2.0 uses explicit one-click capture only.
 
 Purpose:
 - capture the personalized Mix queue from the actual signed-in youtube.com watch page;
@@ -77,11 +77,12 @@ Purpose:
 
 Files:
 - `extension/manifest.json`
-- `extension/youtube.js`
+- `extension/popup.html`
+- `extension/popup.js`
 - `extension/aero.js`
 - `extension/README.md`
 
-The web app listens for the extension bridge through same-page `window.postMessage`. A matching snapshot is used when its `listId` matches the pasted URL and contains the pasted seed video. The startup gate also exposes a “Play loaded songs” card whenever a captured snapshot is available, allowing the fixed bridged queue to start directly without repasting the URL.
+Extension v0.2.0 no longer runs any script, observer, timer, or polling loop on youtube.com. The user opens the desired Mix, clicks the extension icon, and presses “Capture current Mix”. The popup injects a one-shot scraper into the active YouTube tab, stores up to 100 visible playlist items in chrome.storage.local, then stops. The YouTube tab can be closed immediately afterward. On Aero, the content script forwards the saved snapshot through same-page `window.postMessage`. A matching snapshot is used when its `listId` matches the pasted URL and contains the pasted seed video. The startup gate exposes a “Play loaded songs” card whenever a captured snapshot is available.
 
 The extension does not force YouTube Watch History entries. Actual Watch History remains best-effort through the standard signed-in YouTube embed; do not add hidden/background playback hacks unless explicitly requested and carefully reassessed.
 
@@ -170,7 +171,7 @@ Important: the user later explicitly asked to stop using the logo skill for the 
 
 ## Versioning
 
-Current version: v0.11.2
+Current version: v0.11.3
 
 When bumping the visible app version, keep these aligned:
 - application-version meta
@@ -222,4 +223,4 @@ Once the user approves a new logo:
 
 2026-09-23 ICT
 
-Added v0.11.2 startup playback for captured Mix Bridge songs. When the extension has a valid captured youtube.com Mix snapshot, the startup gate now shows a LOADED MIX card with track count and a “Play loaded songs” button. Clicking it starts the captured fixed video-ID array directly from its first item, marks playback as bridged, and persists that bridged queue for resume. This removes the need to repaste the same Mix URL after capture. Extension remains v0.1.1.
+Reworked Aero Mix Bridge for severe browser-memory usage. Extension is now v0.2.0 and has zero persistent code running on youtube.com: removed the YouTube content script/polling path entirely. Capture is manual via the extension popup’s “Capture current Mix” button, which injects a one-shot scraper into the active YouTube Mix tab, stores up to 100 visible items, and exits. The YouTube tab can then be closed, preserving Aero's low-memory goal. Permissions are now storage + activeTab + scripting; no tabs permission, service worker, MutationObserver, or timers. Aero site instructions were updated and site version bumped to v0.11.3.

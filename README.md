@@ -33,7 +33,7 @@ Aero keeps one YouTube iframe player and avoids the normal YouTube feed, comment
 
 ## Exact personalized YouTube Mixes
 
-The optional Chrome/Edge extension in `extension/` captures the visible personalized Mix queue from your signed-in youtube.com watch page and passes the ordered video IDs to Aero. Aero then plays that fixed queue instead of independently regenerating the `RD...` radio.
+The optional Chrome/Edge extension in `extension/` uses a manual one-click capture. Open your personalized Mix on youtube.com, click the extension, choose **Capture current Mix**, then close YouTube. The extension stores only the captured ordered video IDs and Aero plays that fixed queue instead of independently regenerating the `RD...` radio.
 
 See `extension/README.md` for installation and usage.
 
