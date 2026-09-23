@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-labelledby="title">
-  <title id="title">Aero logo concept 04 — Flight Path</title>
-  <g fill="none" stroke="currentColor" stroke-linecap="round">
-    <path d="M22 67c13-22 28-34 46-34 6 0 10 3 12 8" stroke-width="4"/>
-    <path d="M29 73c16-14 31-21 49-20" stroke-width="3"/>
-  </g>
-  <circle cx="79" cy="53" r="4.5" fill="currentColor"/>
-</svg>

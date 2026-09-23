@@ -124,35 +124,15 @@ The pink star formerly placed in the IVE SVG was removed in v0.10.5.
 
 ## Logo work — critical current status
 
-No new Aero symbol has been approved yet.
+All previous Aero logo explorations have been explicitly discarded.
 
-The user explicitly discarded the earlier logo directions and asked to explore a symbol-only logo.
+There is currently no approved logo direction, no active concept set, and no design preference that should be inherited from the discarded work. Start the next logo exploration from a blank slate and use only requirements the user gives from this point forward.
 
-Current logo preference:
-- symbol only;
-- no Aero wordmark inside the logo;
-- geometric/angular rather than soft ribbon forms;
-- avoid the earlier curved/swooping direction;
-- must work as a compact app/site icon on the dark Aero UI.
+The old exploration directories `branding/aero-logo/` and `branding/aero-symbol-round2/` have been removed from `main`.
 
-The old committed explorations under branding/aero-logo are obsolete/discarded design experiments. Do not treat them as selected branding and do not resurrect them unless the user explicitly asks.
+Do not recreate, reference, refine, or use geometry from any earlier Aero logo concepts unless the user explicitly asks to revisit them.
 
-The latest symbol concepts were generated only as chat image explorations and were not integrated into the production site.
-
-
-### Fresh symbol exploration — round 2
-
-A new from-scratch angular symbol set is committed under `branding/aero-symbol-round2/`.
-
-It contains six unapproved directions plus a comparison page:
-- 01 Vector Notch
-- 02 Twin Wing
-- 03 Prism Cut
-- 04 Flight Core
-- 05 Crosswind
-- 06 Delta Frame
-
-These were created without using the logo-generator skill and without reusing the discarded curved/swooping explorations. They are exploration assets only and are not integrated into the live header.
+The existing CSS Aero mark in the live production header is only a temporary legacy placeholder until a new logo is approved. Do not treat it as a design direction for the new exploration.
 
 ## Installed development skills
 
@@ -204,12 +184,14 @@ For visual experiments, do not push branding into the production header until th
 
 ## Current next step
 
-Review the fresh round-2 symbol set in `branding/aero-symbol-round2/` and select a direction or request another round.
+Start a completely new Aero logo exploration from a blank slate.
 
-No round-2 symbol is approved yet. Do not integrate one into production until the user explicitly selects it.
+Do not inherit the previous symbol-only, angular, curved, wing, flight, letterform, palette, or other logo assumptions unless the user states them again.
 
-Once the user approves a symbol:
-1. refine the selected geometry into the production asset;
+Do not integrate a new logo into production until the user explicitly approves a direction.
+
+Once the user approves a new logo:
+1. produce/refine the production asset;
 2. integrate it into the Aero header/startup lockup;
 3. preserve the separate IVE fan-edition treatment/disclaimer as appropriate;
 4. bump the app version;
@@ -219,4 +201,4 @@ Once the user approves a symbol:
 
 2026-09-23 ICT
 
-Added a fresh, from-scratch round-2 Aero symbol exploration under `branding/aero-symbol-round2/`: six angular symbol-only concepts and a comparison page. No concept is approved or integrated into production. The logo-generator skill was not used.
+Discarded all prior Aero logo explorations and reset logo work to a blank slate. Removed both committed exploration sets (`branding/aero-logo/` and `branding/aero-symbol-round2/`) from `main`. The existing live CSS Aero mark remains only as a temporary legacy placeholder until a new logo is approved.
