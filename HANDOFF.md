@@ -19,7 +19,7 @@ AGENTS.md contains the standing repository instruction for this rule.
 - Product name: Aero × IVE
 - Product role: lightweight YouTube player / unofficial IVE fan edition
 - Production: https://aero-x-ive.pages.dev
-- Current app version: v0.11.0
+- Current app version: v0.11.1
 - Deployment: Cloudflare Pages from main
 - D1 database: youtube-super-lite
 - D1 binding: DB
@@ -171,7 +171,7 @@ Important: the user later explicitly asked to stop using the logo skill for the 
 
 ## Versioning
 
-Current version: v0.11.0
+Current version: v0.11.1
 
 When bumping the visible app version, keep these aligned:
 - application-version meta
@@ -223,4 +223,4 @@ Once the user approves a new logo:
 
 2026-09-23 ICT
 
-Added Aero Mix Bridge and bumped the app to v0.11.0. The new optional Chrome/Edge extension under `extension/` captures the personalized Mix queue from the visible youtube.com playlist panel and sends the ordered video IDs to Aero. When a matching pasted `list=RD...` URL is played, Aero still forces the exact seed first, then uses the captured fixed ID array for the second track onward. Bridged snapshots are also persisted with the last-playlist state for resume. The header now shows Mix Bridge connection/track count. Without the extension or a matching snapshot, Aero falls back to the previous embedded YouTube Radio behavior. Watch-history recording remains best-effort through the normal YouTube embed; the extension does not fake/background-play videos.
+v0.11.1 finishes the first Aero Mix Bridge workflow. The Chrome/Edge extension under `extension/` captures the visible personalized Mix queue from youtube.com and bridges it to Aero; matching RD URLs use that fixed queue from the second track onward and persist the captured IDs for resume. The header reports bridge connection/track count. The YouTube link is now context-aware: after the user pastes a YouTube/Mix URL, it becomes “Open Mix in YouTube” and opens that exact URL so the extension can capture it. Without a matching bridge snapshot Aero falls back to embedded YouTube Radio. YouTube Watch History remains best-effort through the standard embed only.

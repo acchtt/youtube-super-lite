@@ -59,7 +59,7 @@ const els = {
   resumeVideoMeta: $('resumeVideoMeta'), resumeVideoBtn: $('resumeVideoBtn'),
   resumePlaylistBox: $('resumePlaylistBox'), resumePlaylistTitle: $('resumePlaylistTitle'),
   resumePlaylistMeta: $('resumePlaylistMeta'), resumePlaylistBtn: $('resumePlaylistBtn'),
-  mixBridgeStatus: $('mixBridgeStatus')
+  mixBridgeStatus: $('mixBridgeStatus'), openYouTubeLink: $('openYouTubeLink')
 };
 
 async function loadState() {
@@ -212,6 +212,22 @@ function requestMixBridgeSnapshot() {
   window.postMessage({ source:'aero-web', type:'AERO_BRIDGE_REQUEST' }, window.location.origin);
 }
 
+function updateOpenYouTubeLink(value) {
+  if (!els.openYouTubeLink) return;
+  const raw = String(value || '').trim().split(/\n|\s+(?=https?:\/\/)/)[0] || '';
+  try {
+    const url = new URL(raw);
+    const host = url.hostname.replace(/^www\./, '');
+    if (host === 'youtu.be' || host.endsWith('youtube.com')) {
+      els.openYouTubeLink.href = url.href;
+      els.openYouTubeLink.textContent = url.searchParams.get('list') ? 'Open Mix in YouTube' : 'Open in YouTube';
+      return;
+    }
+  } catch (_) {}
+  els.openYouTubeLink.href = 'https://www.youtube.com/';
+  els.openYouTubeLink.textContent = 'Open YouTube';
+}
+
 
 
 function cleanTabText(value) {
@@ -223,7 +239,7 @@ function renderTabTitle() {
   const author = cleanTabText(currentTabTrack.author);
 
   if (!title) {
-    document.title = 'Aero × IVE · v0.11.0';
+    document.title = 'Aero × IVE · v0.11.1';
     return;
   }
 
@@ -1429,6 +1445,8 @@ if (els.importTakeout && els.takeoutInput && els.startPersonalized && els.forget
   
 }
 
+if (els.input) els.input.addEventListener('input', () => updateOpenYouTubeLink(els.input.value));
+if (els.startupUrl) els.startupUrl.addEventListener('input', () => updateOpenYouTubeLink(els.startupUrl.value));
 els.playNow.addEventListener('click', playFromInput);
 els.add.addEventListener('click', addFromInput);
 els.prev.addEventListener('click', previous);
@@ -1503,6 +1521,7 @@ async function bootstrap() {
     renderResumePlaylist();
     renderMixBridgeStatus();
     requestMixBridgeSnapshot();
+    updateOpenYouTubeLink((els.startupUrl && els.startupUrl.value) || (els.input && els.input.value) || '');
 
     if (els.startupUrl) els.startupUrl.focus();
   } catch (error) {
