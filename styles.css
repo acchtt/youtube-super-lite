@@ -194,7 +194,7 @@ body.startup-locked .app{filter:blur(3px);pointer-events:none;user-select:none}
 .resume-playlist-copy strong{
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.86rem
 }
-#resumePlaylistMeta{
+#resumePlaylistMeta,#loadedMixMeta{
   color:#6f7b89;font-size:.69rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis
 }
 .resume-playlist button{white-space:nowrap;padding:.55rem .7rem}

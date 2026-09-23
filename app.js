@@ -59,6 +59,8 @@ const els = {
   resumeVideoMeta: $('resumeVideoMeta'), resumeVideoBtn: $('resumeVideoBtn'),
   resumePlaylistBox: $('resumePlaylistBox'), resumePlaylistTitle: $('resumePlaylistTitle'),
   resumePlaylistMeta: $('resumePlaylistMeta'), resumePlaylistBtn: $('resumePlaylistBtn'),
+  loadedMixBox: $('loadedMixBox'), loadedMixTitle: $('loadedMixTitle'),
+  loadedMixMeta: $('loadedMixMeta'), loadedMixBtn: $('loadedMixBtn'),
   mixBridgeStatus: $('mixBridgeStatus'), openYouTubeLink: $('openYouTubeLink')
 };
 
@@ -136,6 +138,80 @@ function renderMixBridgeStatus() {
     : 'Aero Mix Bridge is connected. Open the personalized Mix on youtube.com so it can capture the queue.';
 }
 
+
+function renderLoadedMixOption() {
+  if (!els.loadedMixBox) return;
+  const snap = mixBridge.snapshot;
+  const available = !!(snap && Array.isArray(snap.items) && snap.items.length > 1);
+  els.loadedMixBox.classList.toggle('hidden', !available);
+  if (!available) return;
+
+  const first = snap.items[0] || {};
+  els.loadedMixTitle.textContent = first.title || 'Captured YouTube Mix';
+  els.loadedMixMeta.textContent = [
+    snap.items.length + ' loaded songs',
+    first.channel || '',
+    snap.listId
+  ].filter(Boolean).join(' · ');
+}
+
+function playLoadedMix() {
+  const snap = mixBridge.snapshot;
+  if (!snap || !Array.isArray(snap.items) || snap.items.length < 2) {
+    setMessage('No captured YouTube Mix is loaded yet.', 'error');
+    return;
+  }
+
+  const ids = snap.items.map(item => item.id).filter(id => /^[A-Za-z0-9_-]{11}$/.test(id));
+  if (ids.length < 2) {
+    setMessage('The captured Mix does not contain enough playable videos.', 'error');
+    return;
+  }
+
+  const first = snap.items.find(item => item.id === ids[0]) || snap.items[0] || {};
+  const isRadio = /^RD/.test(snap.listId);
+
+  closeStartupGate();
+  showMediaLayout();
+  manualContinuation = null;
+  personalizedMixPlays = 0;
+  tasteGateSkips = 0;
+  state.index = -1;
+  state.playlistMode = {
+    id: snap.listId,
+    seedId: snap.seedId || ids[0],
+    personalized: false,
+    mix: isRadio,
+    radio: isRadio,
+    manualRadio: isRadio,
+    sourceList: true,
+    preserveSequence: true,
+    bridged: true,
+    bridgeIds: ids.slice(0, 120)
+  };
+
+  rememberPlaylist(state.playlistMode, {
+    index: 0,
+    currentVideoId: ids[0],
+    title: first.title || '',
+    channel: first.channel || ''
+  });
+
+  els.nowTitle.textContent = first.title || 'Loaded YouTube Mix';
+  els.nowMeta.textContent = 'Mix Bridge · ' + ids.length + ' loaded songs';
+  renderQueue();
+
+  whenReady(() => {
+    player.loadPlaylist(ids, 0, 0);
+    try { player.setLoop(state.repeat === 'queue'); } catch (_) {}
+    try { player.setShuffle(state.shuffle); } catch (_) {}
+    try { player.setPlaybackRate(state.speed); } catch (_) {}
+    applyAudioPrefs(player);
+  });
+
+  setMessage('Playing ' + ids.length + ' songs loaded from your youtube.com Mix.', 'ok');
+}
+
 function sanitizeBridgeSnapshot(payload) {
   if (!payload || typeof payload !== 'object') return null;
   const listId = String(payload.listId || '').trim();
@@ -179,6 +255,7 @@ function applyBridgeSnapshot(payload) {
   mixBridge.snapshot = snap;
   mixBridge.receivedAt = Date.now();
   renderMixBridgeStatus();
+  renderLoadedMixOption();
 
   if (manualContinuation && manualContinuation.listId === snap.listId) {
     manualContinuation.bridgeIds = snap.items.map(x => x.id);
@@ -198,6 +275,7 @@ window.addEventListener('message', event => {
   if (event.data.type === 'AERO_BRIDGE_READY') {
     mixBridge.connected = true;
     renderMixBridgeStatus();
+    renderLoadedMixOption();
     window.postMessage({ source:'aero-web', type:'AERO_BRIDGE_REQUEST' }, window.location.origin);
     return;
   }
@@ -239,7 +317,7 @@ function renderTabTitle() {
   const author = cleanTabText(currentTabTrack.author);
 
   if (!title) {
-    document.title = 'Aero × IVE · v0.11.1';
+    document.title = 'Aero × IVE · v0.11.2';
     return;
   }
 
@@ -1414,6 +1492,9 @@ if (els.resumeVideoBtn) {
 if (els.resumePlaylistBtn) {
   els.resumePlaylistBtn.addEventListener('click', resumeLastPlaylist);
 }
+if (els.loadedMixBtn) {
+  els.loadedMixBtn.addEventListener('click', playLoadedMix);
+}
 
 if (els.importTakeout && els.takeoutInput && els.startPersonalized && els.forgetProfile) {
   els.importTakeout.addEventListener('click', () => els.takeoutInput.click());
@@ -1520,6 +1601,7 @@ async function bootstrap() {
     renderResumeVideo();
     renderResumePlaylist();
     renderMixBridgeStatus();
+    renderLoadedMixOption();
     requestMixBridgeSnapshot();
     updateOpenYouTubeLink((els.startupUrl && els.startupUrl.value) || (els.input && els.input.value) || '');
 

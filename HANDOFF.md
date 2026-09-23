@@ -19,7 +19,7 @@ AGENTS.md contains the standing repository instruction for this rule.
 - Product name: Aero × IVE
 - Product role: lightweight YouTube player / unofficial IVE fan edition
 - Production: https://aero-x-ive.pages.dev
-- Current app version: v0.11.1
+- Current app version: v0.11.2
 - Deployment: Cloudflare Pages from main
 - D1 database: youtube-super-lite
 - D1 binding: DB
@@ -40,7 +40,7 @@ Keep runtime additions small. Prefer plain HTML/CSS/JS and lightweight assets ov
 
 A startup gate appears on every load.
 
-The user can paste a YouTube video, resume the previous video, resume the previous playlist/radio, or choose Skip for now.
+The user can paste a YouTube video, play the currently captured Mix Bridge songs, resume the previous video, resume the previous playlist/radio, or choose Skip for now.
 
 Skip for now closes the startup gate without loading media and does not clear resume/history state.
 
@@ -81,7 +81,7 @@ Files:
 - `extension/aero.js`
 - `extension/README.md`
 
-The web app listens for the extension bridge through same-page `window.postMessage`. A matching snapshot is used only when its `listId` matches the pasted URL and contains the pasted seed video.
+The web app listens for the extension bridge through same-page `window.postMessage`. A matching snapshot is used when its `listId` matches the pasted URL and contains the pasted seed video. The startup gate also exposes a “Play loaded songs” card whenever a captured snapshot is available, allowing the fixed bridged queue to start directly without repasting the URL.
 
 The extension does not force YouTube Watch History entries. Actual Watch History remains best-effort through the standard signed-in YouTube embed; do not add hidden/background playback hacks unless explicitly requested and carefully reassessed.
 
@@ -170,7 +170,7 @@ Important: the user later explicitly asked to stop using the logo skill for the 
 
 ## Versioning
 
-Current version: v0.11.1
+Current version: v0.11.2
 
 When bumping the visible app version, keep these aligned:
 - application-version meta
@@ -222,4 +222,4 @@ Once the user approves a new logo:
 
 2026-09-23 ICT
 
-Optimized Aero Mix Bridge extension to v0.1.1 after the initial version caused severe browser RAM usage. Removed the document-wide MutationObserver, background service worker, tabs permission, and tab-broadcast messaging. YouTube and Aero content scripts now communicate through chrome.storage.local directly. Queue capture runs on YouTube navigation/data events plus one lightweight 15-second check only while the YouTube tab is visible, and caps captured queue processing at 100 items. The web app itself remains v0.11.1.
+Added v0.11.2 startup playback for captured Mix Bridge songs. When the extension has a valid captured youtube.com Mix snapshot, the startup gate now shows a LOADED MIX card with track count and a “Play loaded songs” button. Clicking it starts the captured fixed video-ID array directly from its first item, marks playback as bridged, and persists that bridged queue for resume. This removes the need to repaste the same Mix URL after capture. Extension remains v0.1.1.
