@@ -5,36 +5,36 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#0d0b12">
-  <meta name="application-version" content="0.12.3">
-  <title>Aero × IVE · v0.12.3</title>
-  <link rel="stylesheet" href="styles.css?v=0.12.3">
+  <meta name="application-version" content="0.13.0">
+  <title>Aero × IVE · v0.13.0</title>
+  <link rel="stylesheet" href="styles.css?v=0.13.0">
 </head>
 <body class="startup-locked">
   <div id="startupGate" class="startup-gate" role="dialog" aria-modal="true" aria-labelledby="startupTitle">
-    <form id="startupForm" class="startup-card">
+    <div class="startup-card">
       <div class="brand-lockup brand-lockup--gate" aria-label="Aero × IVE fan edition">
         <span class="aero-mark" aria-hidden="true"><span class="aero-mark-core"></span></span>
-        <span class="brand-wordmark"><span class="brand-aero">Aero</span><span class="brand-x">×</span><span class="brand-ive-logo" role="img" aria-label="IVE">
-              <svg viewBox="0 0 242 296" aria-hidden="true" focusable="false">
-                <g class="ive-logo-letters">
-                  <polygon points="1,1 1,295 33,295 37,294 37,1"></polygon>
-                  <polygon points="47,0 60,128 64,154 84,142 81,131 76,121 77,119 80,119 92,127 83,3 82,1"></polygon>
-                  <polygon points="155,0 119,1 110,127 117,122 125,119 126,120 117,142 138,154 141,136 142,116"></polygon>
-                  <polygon points="64,157 79,295 123,295 138,157 111,157 104,210 102,213 98,211 91,157"></polygon>
-                  <polygon points="165,0 165,295 239,295 241,287 241,265 201,264 201,154 229,153 229,125 203,125 201,123 201,31 240,30 240,0"></polygon>
-                </g>
-              </svg>
-            </span></span>
+        <span class="brand-wordmark">
+          <span class="brand-aero">Aero</span>
+          <span class="brand-x">×</span>
+          <span class="brand-ive-logo" role="img" aria-label="IVE">
+            <svg viewBox="0 0 242 296" aria-hidden="true" focusable="false">
+              <g class="ive-logo-letters">
+                <polygon points="1,1 1,295 33,295 37,294 37,1"></polygon>
+                <polygon points="47,0 60,128 64,154 84,142 81,131 76,121 77,119 80,119 92,127 83,3 82,1"></polygon>
+                <polygon points="155,0 119,1 110,127 117,122 125,119 126,120 117,142 138,154 141,136 142,116"></polygon>
+                <polygon points="64,157 79,295 123,295 138,157 111,157 104,210 102,213 98,211 91,157"></polygon>
+                <polygon points="165,0 165,295 239,295 241,287 241,265 201,264 201,154 229,153 229,125 203,125 201,123 201,31 240,30 240,0"></polygon>
+              </g>
+            </svg>
+          </span>
+        </span>
         <span class="fan-badge">FAN EDITION</span>
       </div>
-      <span class="eyebrow">START HERE</span>
-      <h2 id="startupTitle">Paste a YouTube video</h2>
-      <p>Choose the first video for this session. If your link contains a YouTube playlist or Radio ID, Aero keeps that list context and still plays your chosen video first.</p>
-      <input id="startupUrl" type="text" inputmode="url" autocomplete="off" spellcheck="false"
-        placeholder="https://www.youtube.com/watch?v=..." autofocus>
-      <button id="startupPlay" class="primary" type="submit">Play video</button>
-      <button id="startupSkip" class="startup-skip" type="button">Skip for now</button>
-      <span id="startupError" class="startup-error" aria-live="polite"></span>
+
+      <span class="eyebrow">AERO MIX BRIDGE</span>
+      <h2 id="startupTitle">Choose what to play</h2>
+      <p>Captured Mixes arrive from the companion extension and are stored with Aero state.</p>
 
       <div class="resume-options">
         <div id="loadedMixBox" class="resume-playlist hidden">
@@ -43,7 +43,7 @@
             <strong id="loadedMixTitle">Captured YouTube Mix</strong>
             <span id="loadedMixMeta"></span>
           </div>
-          <button id="loadedMixBtn" type="button">Play loaded songs</button>
+          <button id="loadedMixBtn" class="primary" type="button">Play loaded songs</button>
         </div>
 
         <div id="resumeVideoBox" class="resume-playlist hidden">
@@ -54,28 +54,24 @@
           </div>
           <button id="resumeVideoBtn" type="button">Resume video</button>
         </div>
-
-        <div id="resumePlaylistBox" class="resume-playlist hidden">
-          <div class="resume-playlist-copy">
-            <span class="eyebrow">LAST PLAYLIST / RADIO</span>
-            <strong id="resumePlaylistTitle">Previous playlist</strong>
-            <span id="resumePlaylistMeta"></span>
-          </div>
-          <button id="resumePlaylistBtn" type="button">Resume playlist</button>
-        </div>
       </div>
 
-      <small>You’ll see this prompt every time the site is loaded. Resume state is read from Cloudflare D1.</small>
-      <small>To reproduce the exact personalized Mix, open it on youtube.com and use Aero Mix Bridge → “Capture current Mix”. The extension opens Aero with the captured order, then stops completely.</small>
-    </form>
+      <button id="startupSkip" class="startup-skip" type="button">Open player</button>
+      <small>To load a new Mix, open it on youtube.com and use Aero Mix Bridge → Capture current Mix.</small>
+    </div>
   </div>
 
-  <main class="app">
+  <main id="appShell" class="app" inert>
+    <h1 class="sr-only">Aero × IVE</h1>
+
     <header class="topbar">
       <div class="brand-block">
         <div class="brand-lockup">
           <span class="aero-mark" aria-hidden="true"><span class="aero-mark-core"></span></span>
-          <span class="brand-wordmark"><span class="brand-aero">Aero</span><span class="brand-x">×</span><span class="brand-ive-logo" role="img" aria-label="IVE">
+          <span class="brand-wordmark">
+            <span class="brand-aero">Aero</span>
+            <span class="brand-x">×</span>
+            <span class="brand-ive-logo" role="img" aria-label="IVE">
               <svg viewBox="0 0 242 296" aria-hidden="true" focusable="false">
                 <g class="ive-logo-letters">
                   <polygon points="1,1 1,295 33,295 37,294 37,1"></polygon>
@@ -85,33 +81,16 @@
                   <polygon points="165,0 165,295 239,295 241,287 241,265 201,264 201,154 229,153 229,125 203,125 201,123 201,31 240,30 240,0"></polygon>
                 </g>
               </svg>
-            </span></span>
+            </span>
+          </span>
           <span class="fan-badge">FAN EDITION</span>
-          <span class="version-badge" title="Site version">v0.12.3</span>
+          <span class="version-badge" title="Site version">v0.13.0</span>
         </div>
-        <p class="muted">A super-light YouTube player: your videos without the feed, comments, Shorts, or page bloat.</p>
+        <p class="muted">A lightweight player for captured YouTube Mixes.</p>
       </div>
-      <div class="top-links">
-        <a id="openYouTubeLink" class="deploy-link" href="https://www.youtube.com/" target="_blank" rel="noopener">Open YouTube</a>
-        <span id="mixBridgeStatus" class="version-badge" title="Aero Mix Bridge status">Mix Bridge: capture a Mix</span>
-        <a class="deploy-link" href="deployments/">Deployments</a>
-        <div class="memory-pill" title="Player is periodically rebuilt in Low-memory mode">
-        <span class="dot"></span><span id="memoryLabel">Low-memory mode on</span>
-        </div>
-      </div>
-    </header>
 
-    <section class="input-card card">
-      <label for="urlInput">YouTube video URL, video ID, or playlist URL</label>
-      <div class="input-row">
-        <textarea id="urlInput" rows="2" spellcheck="false" placeholder="Paste one or multiple YouTube links (one per line)"></textarea>
-        <div class="input-actions">
-          <button id="playNowBtn" class="primary">Play now</button>
-          <button id="addBtn">Add to queue</button>
-        </div>
-      </div>
-      <p id="message" class="message" aria-live="polite"></p>
-    </section>
+      <span id="mixBridgeStatus" class="version-badge" title="Captured Mix status">No Mix loaded</span>
+    </header>
 
     <section id="mediaLayout" class="layout hidden">
       <div class="player-column">
@@ -121,64 +100,50 @@
             <div class="now-text">
               <span class="eyebrow">NOW PLAYING</span>
               <strong id="nowTitle">Nothing loaded</strong>
-              <span id="nowMeta" class="muted">Paste a YouTube link to start.</span>
+              <span id="nowMeta" class="muted">Choose a captured Mix or resume a video.</span>
             </div>
           </div>
         </div>
 
         <div class="controls card">
-          <div class="transport">
-            <button id="prevBtn" aria-label="Previous">⏮</button>
-            <button id="toggleBtn" class="primary round" aria-label="Play or pause">▶</button>
-            <button id="nextBtn" aria-label="Next">⏭</button>
+          <div class="transport" aria-label="Playback controls">
+            <button id="prevBtn" class="icon-btn" aria-label="Previous captured track" disabled>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 5h2v14H6zM9.5 12 19 5v14z"/>
+              </svg>
+            </button>
+            <button id="toggleBtn" class="primary icon-btn play-toggle" aria-label="Play">
+              <svg class="icon-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+              <svg class="icon-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>
+            </button>
+            <button id="nextBtn" class="icon-btn" aria-label="Next captured track" disabled>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M16 5h2v14h-2zM5 5l9.5 7L5 19z"/>
+              </svg>
+            </button>
           </div>
 
           <div class="quick-settings">
-            <label class="setting compact-setting"><span>Mode</span>
-              <select id="autoplayModeSelect">
-                <option value="personalized">Personalized</option>
-                <option value="mix">YouTube Mix</option>
-                <option value="queue">Queue only</option>
-              </select>
-            </label>
-
-            <label class="setting compact-setting"><span>Taste</span>
-              <select id="tasteGateSelect">
+            <label class="setting"><span>Autoplay</span><input id="autoplayToggle" type="checkbox" checked></label>
+            <label class="setting"><span>Cinema</span><input id="cinemaToggle" type="checkbox" checked></label>
+            <label class="setting"><span>Repeat</span>
+              <select id="repeatSelect">
                 <option value="off">Off</option>
-                <option value="balanced" selected>Balanced</option>
-                <option value="strict">Strict</option>
+                <option value="one">One</option>
+                <option value="queue">Mix</option>
               </select>
             </label>
-
-            <details class="more-settings">
-              <summary>More</summary>
-              <div class="more-settings-panel">
-                <label class="setting"><span>Autoplay</span><input id="autoplayToggle" type="checkbox" checked></label>
-                <label class="setting"><span>Low-memory</span><input id="lowMemoryToggle" type="checkbox" checked></label>
-                <label class="setting"><span>Cinema</span><input id="cinemaToggle" type="checkbox" checked></label>
-                <label class="setting"><span>Shuffle</span><input id="shuffleToggle" type="checkbox"></label>
-                <label class="setting"><span>Repeat</span>
-                  <select id="repeatSelect">
-                    <option value="off">Off</option>
-                    <option value="one">One</option>
-                    <option value="queue">Queue</option>
-                  </select>
-                </label>
-                <label class="setting"><span>Speed</span>
-                  <select id="speedSelect">
-                    <option value="0.5">0.5×</option><option value="0.75">0.75×</option>
-                    <option value="1" selected>1×</option><option value="1.25">1.25×</option>
-                    <option value="1.5">1.5×</option><option value="1.75">1.75×</option><option value="2">2×</option>
-                  </select>
-                </label>
-                <label class="setting"><span>Refresh player</span>
-                  <select id="refreshSelect">
-                    <option value="5">5 videos</option><option value="8" selected>8 videos</option>
-                    <option value="12">12 videos</option><option value="20">20 videos</option>
-                  </select>
-                </label>
-              </div>
-            </details>
+            <label class="setting"><span>Speed</span>
+              <select id="speedSelect">
+                <option value="0.5">0.5×</option>
+                <option value="0.75">0.75×</option>
+                <option value="1" selected>1×</option>
+                <option value="1.25">1.25×</option>
+                <option value="1.5">1.5×</option>
+                <option value="1.75">1.75×</option>
+                <option value="2">2×</option>
+              </select>
+            </label>
           </div>
 
           <div class="tips-inline">
@@ -188,6 +153,8 @@
             <span><kbd>←</kbd>/<kbd>→</kbd> seek 5s</span>
           </div>
         </div>
+
+        <p id="message" class="message" aria-live="polite"></p>
 
         <section class="history-card card">
           <div class="history-head">
@@ -201,28 +168,16 @@
           <div id="emptyHistory" class="history-empty">Videos you play will appear here.</div>
         </section>
       </div>
-
-      <aside class="queue card">
-        <div class="queue-head">
-          <div><span class="eyebrow">QUEUE</span><strong id="queueCount">0 videos</strong></div>
-          <button id="clearBtn" class="ghost danger">Clear</button>
-        </div>
-        <div id="playlistMode" class="playlist-mode hidden"></div>
-        <ol id="queueList"></ol>
-        <div id="emptyQueue" class="empty">Your queue is empty.</div>
-      </aside>
     </section>
 
     <footer>
-      <span>Pasted watch links keep their playlist/Radio context when present; plain video links fall back to that video's RD radio.</span>
-      <span>Persistent app data is stored in Cloudflare D1. The browser keeps only an anonymous HttpOnly session cookie.</span>
+      <span>Captured Mix order and playback state are stored in Cloudflare D1.</span>
       <span class="fan-note">Aero × IVE is an unofficial fan-made edition and is not affiliated with IVE or Starship Entertainment.</span>
     </footer>
   </main>
 
-  <script src="cloud-state.js?v=0.12.3"></script>
-  <script src="personalization.js?v=0.12.3"></script>
-  <script src="app.js?v=0.12.3"></script>
+  <script src="cloud-state.js?v=0.13.0"></script>
+  <script src="app.js?v=0.13.0"></script>
   <script src="https://www.youtube.com/iframe_api"></script>
 </body>
 </html>

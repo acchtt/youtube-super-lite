@@ -2,7 +2,7 @@
 
 A tiny Chrome / Edge Manifest V3 companion extension for Aero × IVE.
 
-It captures the visible personalized Mix order from youtube.com without leaving any extension code attached to Aero.
+It captures the visible personalized Mix order from youtube.com and hands only the ordered video IDs to Aero.
 
 ## Install locally
 
@@ -21,23 +21,15 @@ It captures the visible personalized Mix order from youtube.com without leaving 
 5. Aero opens automatically with the captured order.
 6. Close the YouTube tab and use **Play loaded songs** in Aero.
 
-## v0.3.1 low-memory architecture
+## v0.3.2 low-memory architecture
 
-The extension has no content script on Aero and no storage listener.
+The extension has no content script, storage listener, background service worker, MutationObserver, or polling loop.
 
 It uses only:
 - `activeTab` while you click the extension;
-- one `scripting.executeScript` call to read the visible YouTube Mix;
-- one compact URL fragment containing only the ordered video IDs.
+- one `scripting.executeScript` call to read the visible Mix;
+- one compact URL fragment containing the ordered video IDs.
 
-Aero imports that fragment, stores the compact snapshot through its existing D1 state, then removes the fragment from the address bar. The extension is no longer present in the Aero tab at all.
+Capture preserves the active visible playlist panel's rendered row order exactly and keeps repeated video IDs when YouTube shows them.
 
-There is no YouTube MutationObserver, polling timer, service worker, continuous scanning, or Aero extension execution.
-
-## Exact order
-
-Capture uses only the active visible playlist panel and preserves its rendered row order exactly. It intentionally does not sort by YouTube's `?index=` parameter and does not deduplicate repeated video IDs, because either can change the sequence shown in a dynamic Mix. Aero treats the result as a fixed ordered queue and ignores the general Shuffle option for that captured Mix.
-
-## YouTube watch history
-
-Aero still uses the standard YouTube embedded player. Watch-history recording remains dependent on YouTube recognizing the browser session.
+Aero imports the fragment into its D1-backed state and removes the fragment from the address bar. The extension is not present in the Aero tab after transfer.

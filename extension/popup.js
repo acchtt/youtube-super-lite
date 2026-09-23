@@ -127,7 +127,7 @@ button.addEventListener('click', async () => {
       v: 1,
       listId: result.snapshot.listId,
       seedId: result.snapshot.seedId,
-      ids: result.snapshot.items.map(item => item.id)
+      ids: result.snapshot.items
     };
     const encoded = btoa(JSON.stringify(compact))
       .replace(/\+/g, '-')

@@ -2,13 +2,6 @@ CREATE TABLE IF NOT EXISTS app_state (
   client_id TEXT PRIMARY KEY,
   settings_json TEXT,
   last_video_json TEXT,
-  last_playlist_json TEXT,
-  updated_at INTEGER NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS profiles (
-  client_id TEXT PRIMARY KEY,
-  profile_json TEXT NOT NULL,
   updated_at INTEGER NOT NULL
 );
 
