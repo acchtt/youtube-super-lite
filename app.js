@@ -201,7 +201,7 @@ function playLoadedMix() {
   });
 
   els.nowTitle.textContent = first.title || 'Loaded YouTube Mix';
-  els.nowMeta.textContent = 'Mix Bridge · ' + ids.length + ' loaded songs';
+  els.nowMeta.textContent = 'Mix Bridge · ' + ids.length + ' loaded songs · exact order';
   renderQueue();
 
   whenReady(() => {
@@ -232,6 +232,19 @@ function sanitizeBridgeSnapshot(payload) {
     });
   }
   if (items.length < 2) return null;
+
+  // Preserve the exact YouTube playlist sequence. The extension stores each
+  // row's ?index= value; sorting here also repairs snapshots captured by older
+  // bridge versions whose DOM enumeration order was not canonical.
+  const indexed = items.filter(item => Number.isInteger(item.index));
+  if (indexed.length >= 2) {
+    const originalOrder = new Map(items.map((item, position) => [item.id, position]));
+    items.sort((a, b) => {
+      const ai = Number.isInteger(a.index) ? a.index : Number.MAX_SAFE_INTEGER;
+      const bi = Number.isInteger(b.index) ? b.index : Number.MAX_SAFE_INTEGER;
+      return ai - bi || (originalOrder.get(a.id) - originalOrder.get(b.id));
+    });
+  }
 
   return {
     listId,
@@ -318,7 +331,7 @@ function renderTabTitle() {
   const author = cleanTabText(currentTabTrack.author);
 
   if (!title) {
-    document.title = 'Aero × IVE · v0.11.4';
+    document.title = 'Aero × IVE · v0.11.5';
     return;
   }
 
@@ -803,7 +816,7 @@ function renderQueue() {
   els.emptyQueue.classList.toggle('hidden', state.queue.length > 0 || !!state.playlistMode);
   els.playlistMode.classList.toggle('hidden', !state.playlistMode);
   if (state.playlistMode) {
-    const label = state.playlistMode.bridged ? 'YouTube Mix Bridge' :
+    const label = state.playlistMode.bridged ? 'YouTube Mix Bridge · exact order' :
       state.playlistMode.personalized ? 'Personalized Mix' :
       state.playlistMode.mix ? 'YouTube Mix' : 'Playlist mode';
     els.playlistMode.textContent = label + ' · ' + state.playlistMode.id;

@@ -34,13 +34,21 @@ function scrapeCurrentMix() {
     return { error:'This YouTube page does not contain a Mix/playlist.' };
   }
 
-  const rows = document.querySelectorAll('ytd-playlist-panel-video-renderer');
-  if (!rows || rows.length < 2) {
-    return { error:'The Mix panel is not loaded yet. Wait for the playlist to appear, then try again.' };
+  const panels = Array.from(document.querySelectorAll('ytd-playlist-panel-renderer'))
+    .filter(panel => panel.offsetParent !== null && panel.querySelector('ytd-playlist-panel-video-renderer'));
+  const panel =
+    panels.find(candidate => candidate.querySelector('ytd-playlist-panel-video-renderer[selected]')) ||
+    panels[0] ||
+    null;
+  const rows = panel ? Array.from(panel.querySelectorAll('ytd-playlist-panel-video-renderer')) : [];
+
+  if (rows.length < 2) {
+    return { error:'The visible Mix panel is not loaded yet. Wait for the playlist to appear, then try again.' };
   }
 
   const seen = new Set();
   const items = [];
+  let domOrder = 0;
 
   for (const row of rows) {
     const anchor =
@@ -71,11 +79,22 @@ function scrapeCurrentMix() {
       id,
       title: clean(titleNode && (titleNode.getAttribute('title') || titleNode.textContent)),
       channel: clean(channelNode && channelNode.textContent),
-      index: Number.isInteger(indexRaw) && indexRaw > 0 ? indexRaw - 1 : null
+      index: Number.isInteger(indexRaw) && indexRaw > 0 ? indexRaw - 1 : null,
+      domOrder: domOrder++
     });
 
     if (items.length >= 100) break;
   }
+
+  // YouTube's SPA can keep DOM nodes around in an order that is not the
+  // playlist's actual sequence. Prefer the explicit ?index= value from each
+  // watch URL and use DOM position only as a stable fallback.
+  items.sort((a, b) => {
+    const ai = Number.isInteger(a.index) ? a.index : Number.MAX_SAFE_INTEGER;
+    const bi = Number.isInteger(b.index) ? b.index : Number.MAX_SAFE_INTEGER;
+    return ai - bi || a.domOrder - b.domOrder;
+  });
+  items.forEach(item => { delete item.domOrder; });
 
   if (items.length < 2) {
     return { error:'Aero could not read enough songs from the visible Mix panel.' };
@@ -117,7 +136,7 @@ button.addEventListener('click', async () => {
 
     await chrome.storage.local.set({ [STORAGE_KEY]: result.snapshot });
     setStatus(
-      'Captured ' + result.snapshot.items.length + ' songs. You can close the YouTube tab now.',
+      'Captured ' + result.snapshot.items.length + ' songs in playlist order. You can close the YouTube tab now.',
       'ok'
     );
   } catch (error) {

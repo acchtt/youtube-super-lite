@@ -25,7 +25,7 @@ It solves one specific limitation of the YouTube IFrame API: an `RD...` Mix ID d
 
 ## Low-memory design
 
-Version 0.2.0 does **no background monitoring on YouTube**.
+Version 0.2.1 does **no background monitoring on YouTube**. It also captures only the active visible playlist panel and sorts captured songs by YouTube's own playlist `index`, preventing stale SPA DOM nodes from scrambling the queue.
 
 There is:
 - no YouTube content script;
@@ -47,3 +47,7 @@ It does not read passwords or Google cookies and does not send the queue to a th
 ## YouTube watch history
 
 Aero still uses the standard YouTube embedded player. If YouTube recognizes your signed-in session and records embed playback, those plays may appear in YouTube Watch History. The extension does not fabricate background plays or call unofficial Watch History endpoints.
+
+## Exact order
+
+Aero Mix Bridge treats a captured Mix as a fixed sequence. Aero's general Shuffle setting is ignored for bridged Mix playback. After upgrading from 0.2.0 to 0.2.1, recapture the Mix once so the saved snapshot comes from the active visible playlist panel.

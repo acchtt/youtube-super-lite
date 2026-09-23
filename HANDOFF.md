@@ -19,7 +19,7 @@ AGENTS.md contains the standing repository instruction for this rule.
 - Product name: Aero × IVE
 - Product role: lightweight YouTube player / unofficial IVE fan edition
 - Production: https://aero-x-ive.pages.dev
-- Current app version: v0.11.4
+- Current app version: v0.11.5
 - Deployment: Cloudflare Pages from main
 - D1 database: youtube-super-lite
 - D1 binding: DB
@@ -67,7 +67,7 @@ Before media is loaded, the player, controls, history and queue layout remain hi
 
 ## Aero Mix Bridge
 
-Aero has an optional Chrome/Edge Manifest V3 companion extension under `extension/`. Extension v0.2.0 uses explicit one-click capture only.
+Aero has an optional Chrome/Edge Manifest V3 companion extension under `extension/`. Extension v0.2.1 uses explicit one-click capture only and preserves YouTube's canonical playlist order.
 
 Purpose:
 - capture the personalized Mix queue from the actual signed-in youtube.com watch page;
@@ -82,7 +82,7 @@ Files:
 - `extension/aero.js`
 - `extension/README.md`
 
-Extension v0.2.0 no longer runs any script, observer, timer, or polling loop on youtube.com. The user opens the desired Mix, clicks the extension icon, and presses “Capture current Mix”. The popup injects a one-shot scraper into the active YouTube tab, stores up to 100 visible playlist items in chrome.storage.local, then stops. The YouTube tab can be closed immediately afterward. On Aero, the content script forwards the saved snapshot through same-page `window.postMessage`. A matching snapshot is used when its `listId` matches the pasted URL and contains the pasted seed video. The startup gate exposes a “Play loaded songs” card whenever a captured snapshot is available.
+Extension v0.2.1 runs no persistent script, observer, timer, or polling loop on youtube.com. Capture is restricted to the active visible playlist panel, and captured items are sorted by YouTube's own `?index=` values with DOM order only as fallback. The user opens the desired Mix, clicks the extension icon, and presses “Capture current Mix”. The popup injects a one-shot scraper into the active YouTube tab, stores up to 100 visible playlist items in chrome.storage.local, then stops. The YouTube tab can be closed immediately afterward. On Aero, the content script forwards the saved snapshot through same-page `window.postMessage`. A matching snapshot is used when its `listId` matches the pasted URL and contains the pasted seed video. The startup gate exposes a “Play loaded songs” card whenever a captured snapshot is available.
 
 The extension does not force YouTube Watch History entries. Actual Watch History remains best-effort through the standard signed-in YouTube embed; do not add hidden/background playback hacks unless explicitly requested and carefully reassessed.
 
@@ -171,7 +171,7 @@ Important: the user later explicitly asked to stop using the logo skill for the 
 
 ## Versioning
 
-Current version: v0.11.4
+Current version: v0.11.5
 
 When bumping the visible app version, keep these aligned:
 - application-version meta
@@ -223,4 +223,4 @@ Once the user approves a new logo:
 
 2026-09-23 ICT
 
-v0.11.4 targets the remaining ~500 MB Aero-tab memory use. The captured Mix is no longer passed to YouTube with `loadPlaylist(ids)`, which gave the iframe the entire 100-item queue and could retain/preload extra playlist state. Bridged playback now keeps the queue only in lightweight Aero JS state and calls `loadVideoById()` for exactly one item at a time. Next/Previous/ENDED/resume/error handling were updated for this local bridge index. In low-memory mode bridged playback rebuilds the iframe at most every 3 completed videos (or the user's smaller refresh setting). The YouTube iframe is also created lazily only when playback is first requested, rather than on every page load. Extension remains v0.2.0 one-shot capture.
+Fixed bridged Mix sequence order in site v0.11.5 / extension v0.2.1. The one-shot scraper previously enumerated every playlist-row node in document DOM order; YouTube's SPA can retain hidden/stale playlist panels or nodes, so that order could differ from the visible Mix. Capture now targets only the active visible playlist panel and sorts songs by YouTube's own watch-link `?index=` value, falling back stably to visible DOM order. Aero also defensively re-sorts incoming snapshots by saved index, so older snapshots with valid index metadata can be repaired on load. Bridged playback explicitly remains exact-order and does not honor the general Shuffle setting. Users upgrading from extension 0.2.0 should reload the extension and recapture the Mix once.
