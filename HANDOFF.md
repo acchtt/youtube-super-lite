@@ -19,7 +19,7 @@ AGENTS.md contains the standing repository instruction for this rule.
 - Product name: Aero × IVE
 - Product role: lightweight YouTube Mix player / unofficial IVE fan edition
 - Production: https://aero-x-ive.pages.dev
-- Current app version: v0.13.0
+- Current app version: v0.14.0
 - Mix Bridge extension: v0.3.3
 - Deployment: Cloudflare Pages from main
 - D1 database: youtube-super-lite
@@ -37,16 +37,17 @@ Keep runtime additions small. Prefer plain HTML/CSS/JS and lightweight assets ov
 
 ## Current application behavior
 
-### Startup
+### Startup / home
 
-A startup gate appears on every load.
+The old blocking startup modal was removed in v0.14.0.
 
-The user can:
-- play/resume the currently captured Mix Bridge queue;
-- resume the last played video at its saved timestamp;
-- open the player without starting media.
-
-There is no manual YouTube URL/video/playlist input anymore.
+The normal page is now the landing state:
+- while D1 is loading, a visible static “Loading Aero…” state is shown;
+- when a captured Mix exists, Aero shows a prominent Mix card with track count, exact-order status, and Play/Resume Mix;
+- a capture opened from Mix Bridge is explicitly labeled “MIX CAPTURED” and resets playback to track 1;
+- when no Mix exists, Aero shows a simple instruction to capture one with the extension;
+- the last played video remains available as a secondary Continue Watching action;
+- history remains accessible below the home/player area.
 
 ### Playback
 
@@ -108,18 +109,21 @@ The UI remains dark, lightweight and IVE-inspired:
 - lilac, pink and ice-blue accent treatment;
 - CSS Aero mark as the temporary legacy placeholder;
 - inline SVG IVE treatment;
-- FAN EDITION badge;
-- version badge.
+- FAN EDITION badge.
 
-v0.13.0 also applies the UI/UX Pro Max audit recommendations relevant to the cleanup:
-- transport/history icons use inline SVG instead of font glyphs;
-- primary controls use >=44px hit areas;
-- visible `:focus-visible` rings;
-- higher-contrast metadata text;
-- reduced-motion handling;
-- semantic page H1;
-- startup app shell uses `inert` while the dialog is active;
-- mobile header/settings layout is simplified.
+v0.14.0 applies the second UI/UX Pro Max pass:
+- no blocking startup modal;
+- D1 loading feedback is visible in the normal page;
+- new captures have a clear primary Play Mix state;
+- Mix progress is first-class in the header and player (for example 12 / 43);
+- dynamic Mix state uses a dedicated accessible `role="status"` component instead of the version badge;
+- the visible version moved to the footer;
+- history rows are full-row accessible play buttons;
+- transport remains primary while only Cinema is exposed as a quick setting;
+- Autoplay, Repeat and Speed moved into a compact Settings disclosure;
+- transport/history icons remain inline SVG with >=44px targets;
+- visible `:focus-visible` rings and reduced-motion handling remain;
+- the dark palette and static lightweight background remain; no heavy glass/animation effects were added.
 
 ## Logo work — critical current status
 
@@ -137,7 +141,7 @@ Do not use the logo-generator skill unless the user explicitly asks to use it ag
 
 ## Versioning
 
-Current version: v0.13.0
+Current version: v0.14.0
 
 When bumping the visible app version, keep these aligned:
 - application-version meta
@@ -168,4 +172,4 @@ When GitHub access is available and the user asks for a repo change:
 
 2026-09-23 ICT
 
-v0.13.0 remains the current app. Mix Bridge is now v0.3.3. The v0.13.0 cleanup removed manual YouTube-link playback, custom queue/Radio fallback, Takeout personalization/profile code, old playlist-resume state, Shuffle, and ineffective low-memory/refresh controls. The extension scraper is also fully minimal now: it captures only ordered video IDs from the active visible Mix panel, preserving repeated IDs, and transfers only those IDs plus list/seed IDs to Aero. No titles, channels, source URL, index metadata, extension storage, or Aero content script remain. Exact-ID playback guards from v0.12.3 remain.
+v0.14.0 applies the UI Pro Max re-inspection without changing Mix Bridge v0.3.3 or the core YouTube player lifecycle. The blocking startup modal is removed. Aero now opens directly to a lightweight home state with explicit D1 loading feedback, a prominent captured-Mix Play/Resume card, a no-Mix instruction state, and Continue Watching. A newly captured Mix is labeled clearly and starts from track 1. Mix position is shown as N / total both in the header status and beside Now Playing. The header version badge moved to the footer. Cinema remains a quick control; Autoplay, Repeat and Speed moved under Settings. History rows are now full-row accessible play targets. Exact-ID playback correction, one-ID-at-a-time bridge playback, static dark palette, and the low-overhead player implementation are preserved.

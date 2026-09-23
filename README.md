@@ -18,16 +18,19 @@ The companion **Aero Mix Bridge** extension captures the visible personalized Yo
 
 Current features:
 - exact captured Mix order;
+- direct non-modal home state with Mix-ready / empty / resume states;
+- first-class captured Mix position (for example 12 / 43);
 - previous / next / play-pause;
-- autoplay, repeat and playback speed;
+- compact settings for autoplay, repeat and playback speed, with Cinema kept as a quick control;
 - CSS-only Cinema mode;
 - resume last captured Mix position;
 - resume last played video and timestamp;
+- fully clickable video-history rows;
 - persistent video history;
 - Cloudflare D1 persistence;
 - anonymous HttpOnly browser session cookie.
 
-Removed as obsolete in v0.13.0:
+Removed as obsolete in v0.14.0:
 - manual YouTube URL/video/playlist input;
 - custom queue and generated Radio fallback;
 - Takeout personalization/import/profile code and API;

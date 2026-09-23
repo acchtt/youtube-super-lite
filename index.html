@@ -5,63 +5,12 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#0d0b12">
-  <meta name="application-version" content="0.13.0">
-  <title>Aero × IVE · v0.13.0</title>
-  <link rel="stylesheet" href="styles.css?v=0.13.0">
+  <meta name="application-version" content="0.14.0">
+  <title>Aero × IVE · v0.14.0</title>
+  <link rel="stylesheet" href="styles.css?v=0.14.0">
 </head>
-<body class="startup-locked">
-  <div id="startupGate" class="startup-gate" role="dialog" aria-modal="true" aria-labelledby="startupTitle">
-    <div class="startup-card">
-      <div class="brand-lockup brand-lockup--gate" aria-label="Aero × IVE fan edition">
-        <span class="aero-mark" aria-hidden="true"><span class="aero-mark-core"></span></span>
-        <span class="brand-wordmark">
-          <span class="brand-aero">Aero</span>
-          <span class="brand-x">×</span>
-          <span class="brand-ive-logo" role="img" aria-label="IVE">
-            <svg viewBox="0 0 242 296" aria-hidden="true" focusable="false">
-              <g class="ive-logo-letters">
-                <polygon points="1,1 1,295 33,295 37,294 37,1"></polygon>
-                <polygon points="47,0 60,128 64,154 84,142 81,131 76,121 77,119 80,119 92,127 83,3 82,1"></polygon>
-                <polygon points="155,0 119,1 110,127 117,122 125,119 126,120 117,142 138,154 141,136 142,116"></polygon>
-                <polygon points="64,157 79,295 123,295 138,157 111,157 104,210 102,213 98,211 91,157"></polygon>
-                <polygon points="165,0 165,295 239,295 241,287 241,265 201,264 201,154 229,153 229,125 203,125 201,123 201,31 240,30 240,0"></polygon>
-              </g>
-            </svg>
-          </span>
-        </span>
-        <span class="fan-badge">FAN EDITION</span>
-      </div>
-
-      <span class="eyebrow">AERO MIX BRIDGE</span>
-      <h2 id="startupTitle">Choose what to play</h2>
-      <p>Captured Mixes arrive from the companion extension and are stored with Aero state.</p>
-
-      <div class="resume-options">
-        <div id="loadedMixBox" class="resume-playlist hidden">
-          <div class="resume-playlist-copy">
-            <span class="eyebrow">LOADED MIX</span>
-            <strong id="loadedMixTitle">Captured YouTube Mix</strong>
-            <span id="loadedMixMeta"></span>
-          </div>
-          <button id="loadedMixBtn" class="primary" type="button">Play loaded songs</button>
-        </div>
-
-        <div id="resumeVideoBox" class="resume-playlist hidden">
-          <div class="resume-playlist-copy">
-            <span class="eyebrow">LAST VIDEO</span>
-            <strong id="resumeVideoTitle">Previous video</strong>
-            <span id="resumeVideoMeta"></span>
-          </div>
-          <button id="resumeVideoBtn" type="button">Resume video</button>
-        </div>
-      </div>
-
-      <button id="startupSkip" class="startup-skip" type="button">Open player</button>
-      <small>To load a new Mix, open it on youtube.com and use Aero Mix Bridge → Capture current Mix.</small>
-    </div>
-  </div>
-
-  <main id="appShell" class="app" inert>
+<body>
+  <main class="app">
     <h1 class="sr-only">Aero × IVE</h1>
 
     <header class="topbar">
@@ -84,100 +33,140 @@
             </span>
           </span>
           <span class="fan-badge">FAN EDITION</span>
-          <span class="version-badge" title="Site version">v0.13.0</span>
         </div>
         <p class="muted">A lightweight player for captured YouTube Mixes.</p>
       </div>
 
-      <span id="mixBridgeStatus" class="version-badge" title="Captured Mix status">No Mix loaded</span>
+      <span id="mixStatus" class="mix-status" role="status" aria-live="polite" aria-atomic="true">Loading Mix state…</span>
     </header>
 
-    <section id="mediaLayout" class="layout hidden">
-      <div class="player-column">
-        <div class="player-shell card">
-          <div class="aspect"><div id="player"></div></div>
-          <div class="now-playing">
-            <div class="now-text">
-              <span class="eyebrow">NOW PLAYING</span>
-              <strong id="nowTitle">Nothing loaded</strong>
-              <span id="nowMeta" class="muted">Choose a captured Mix or resume a video.</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="controls card">
-          <div class="transport" aria-label="Playback controls">
-            <button id="prevBtn" class="icon-btn" aria-label="Previous captured track" disabled>
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M6 5h2v14H6zM9.5 12 19 5v14z"/>
-              </svg>
-            </button>
-            <button id="toggleBtn" class="primary icon-btn play-toggle" aria-label="Play">
-              <svg class="icon-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
-              <svg class="icon-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>
-            </button>
-            <button id="nextBtn" class="icon-btn" aria-label="Next captured track" disabled>
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M16 5h2v14h-2zM5 5l9.5 7L5 19z"/>
-              </svg>
-            </button>
-          </div>
-
-          <div class="quick-settings">
-            <label class="setting"><span>Autoplay</span><input id="autoplayToggle" type="checkbox" checked></label>
-            <label class="setting"><span>Cinema</span><input id="cinemaToggle" type="checkbox" checked></label>
-            <label class="setting"><span>Repeat</span>
-              <select id="repeatSelect">
-                <option value="off">Off</option>
-                <option value="one">One</option>
-                <option value="queue">Mix</option>
-              </select>
-            </label>
-            <label class="setting"><span>Speed</span>
-              <select id="speedSelect">
-                <option value="0.5">0.5×</option>
-                <option value="0.75">0.75×</option>
-                <option value="1" selected>1×</option>
-                <option value="1.25">1.25×</option>
-                <option value="1.5">1.5×</option>
-                <option value="1.75">1.75×</option>
-                <option value="2">2×</option>
-              </select>
-            </label>
-          </div>
-
-          <div class="tips-inline">
-            <span><kbd>Space</kbd> play/pause</span>
-            <span><kbd>N</kbd> next</span>
-            <span><kbd>P</kbd> previous</span>
-            <span><kbd>←</kbd>/<kbd>→</kbd> seek 5s</span>
-          </div>
-        </div>
-
-        <p id="message" class="message" aria-live="polite"></p>
-
-        <section class="history-card card">
-          <div class="history-head">
-            <div>
-              <span class="eyebrow">VIDEO HISTORY</span>
-              <strong id="historyCount">0 videos</strong>
-            </div>
-            <button id="clearHistoryBtn" class="ghost danger" type="button">Clear</button>
-          </div>
-          <ol id="historyList" class="history-list"></ol>
-          <div id="emptyHistory" class="history-empty">Videos you play will appear here.</div>
-        </section>
+    <section id="homePanel" class="home-panel" aria-labelledby="homeTitle" aria-busy="true">
+      <div id="loadingCard" class="launch-card card">
+        <span class="eyebrow">AERO</span>
+        <h2 id="homeTitle">Loading Aero…</h2>
+        <p>Restoring your captured Mix, playback position, and history.</p>
       </div>
+
+      <div id="mixReadyCard" class="launch-card mix-ready-card card hidden">
+        <div class="launch-copy">
+          <span id="mixEyebrow" class="eyebrow">CAPTURED MIX</span>
+          <h2 id="mixReadyTitle">Captured YouTube Mix</h2>
+          <p id="mixReadyMeta">Exact order ready.</p>
+        </div>
+        <button id="playMixBtn" class="primary launch-primary" type="button">Play Mix</button>
+      </div>
+
+      <div id="emptyMixCard" class="launch-card empty-mix-card card hidden">
+        <div class="launch-copy">
+          <span class="eyebrow">AERO MIX BRIDGE</span>
+          <h2>No Mix loaded</h2>
+          <p>Open a personalized Mix on youtube.com, then use <strong>Aero Mix Bridge → Capture current Mix</strong>. Aero will open with the exact visible order.</p>
+        </div>
+      </div>
+
+      <div id="resumeVideoBox" class="resume-card card hidden">
+        <div class="resume-copy">
+          <span class="eyebrow">CONTINUE WATCHING</span>
+          <strong id="resumeVideoTitle">Last played video</strong>
+          <span id="resumeVideoMeta"></span>
+        </div>
+        <button id="resumeVideoBtn" type="button">Resume video</button>
+      </div>
+    </section>
+
+    <section id="mediaLayout" class="media-layout hidden" aria-label="Player">
+      <div class="player-shell card">
+        <div class="aspect"><div id="player"></div></div>
+        <div class="now-playing">
+          <div class="now-text">
+            <span class="eyebrow">NOW PLAYING</span>
+            <strong id="nowTitle">Nothing loaded</strong>
+            <span id="nowMeta" class="muted">Choose a captured Mix or a video from history.</span>
+          </div>
+          <span id="mixProgress" class="mix-progress hidden" aria-label="Captured Mix position"></span>
+        </div>
+      </div>
+
+      <div class="controls card">
+        <div class="transport" aria-label="Playback controls">
+          <button id="prevBtn" class="icon-btn" aria-label="Previous captured track" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 5h2v14H6zM9.5 12 19 5v14z"/>
+            </svg>
+          </button>
+          <button id="toggleBtn" class="primary icon-btn play-toggle" aria-label="Play">
+            <svg class="icon-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+            <svg class="icon-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>
+          </button>
+          <button id="nextBtn" class="icon-btn" aria-label="Next captured track" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M16 5h2v14h-2zM5 5l9.5 7L5 19z"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="control-actions">
+          <label class="setting cinema-setting"><span>Cinema</span><input id="cinemaToggle" type="checkbox" checked></label>
+
+          <details id="settingsMenu" class="more-settings">
+            <summary>Settings</summary>
+            <div class="more-settings-panel">
+              <label class="setting"><span>Autoplay</span><input id="autoplayToggle" type="checkbox" checked></label>
+              <label class="setting"><span>Repeat</span>
+                <select id="repeatSelect">
+                  <option value="off">Off</option>
+                  <option value="one">One</option>
+                  <option value="queue">Mix</option>
+                </select>
+              </label>
+              <label class="setting"><span>Speed</span>
+                <select id="speedSelect">
+                  <option value="0.5">0.5×</option>
+                  <option value="0.75">0.75×</option>
+                  <option value="1" selected>1×</option>
+                  <option value="1.25">1.25×</option>
+                  <option value="1.5">1.5×</option>
+                  <option value="1.75">1.75×</option>
+                  <option value="2">2×</option>
+                </select>
+              </label>
+            </div>
+          </details>
+        </div>
+
+        <div class="tips-inline">
+          <span><kbd>Space</kbd> play/pause</span>
+          <span><kbd>N</kbd> next</span>
+          <span><kbd>P</kbd> previous</span>
+          <span><kbd>←</kbd>/<kbd>→</kbd> seek 5s</span>
+        </div>
+      </div>
+    </section>
+
+    <p id="message" class="message" aria-live="polite"></p>
+
+    <section id="historyCard" class="history-card card" aria-labelledby="historyTitle" aria-busy="true">
+      <div class="history-head">
+        <div>
+          <span class="eyebrow">VIDEO HISTORY</span>
+          <strong id="historyTitle">Recent videos</strong>
+          <span id="historyCount" class="history-count">Loading…</span>
+        </div>
+        <button id="clearHistoryBtn" class="ghost danger" type="button">Clear</button>
+      </div>
+      <ol id="historyList" class="history-list"></ol>
+      <div id="emptyHistory" class="history-empty hidden">Videos you play will appear here.</div>
     </section>
 
     <footer>
       <span>Captured Mix order and playback state are stored in Cloudflare D1.</span>
+      <span class="footer-version">v0.14.0</span>
       <span class="fan-note">Aero × IVE is an unofficial fan-made edition and is not affiliated with IVE or Starship Entertainment.</span>
     </footer>
   </main>
 
-  <script src="cloud-state.js?v=0.13.0"></script>
-  <script src="app.js?v=0.13.0"></script>
+  <script src="cloud-state.js?v=0.14.0"></script>
+  <script src="app.js?v=0.14.0"></script>
   <script src="https://www.youtube.com/iframe_api"></script>
 </body>
 </html>
