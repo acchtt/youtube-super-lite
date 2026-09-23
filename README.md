@@ -1,47 +1,61 @@
-# YouTube Super Lite
+# Aero × IVE
 
-A lightweight YouTube player for long sessions on low-memory PCs, with local personalization from a Google Takeout export.
+A lightweight YouTube player designed for long listening/viewing sessions with less page overhead than the normal YouTube interface.
 
-## Personalized mode
+Aero × IVE is an unofficial fan-made edition and is not affiliated with IVE or Starship Entertainment.
 
-Import a YouTube Takeout ZIP containing History, Subscriptions and optionally Playlists. The archive is processed inside a Web Worker in the browser. The raw Takeout data is discarded after import and **never uploaded**.
+Production: https://aero-x-ive.pages.dev
 
-The importer builds a compact local taste profile from:
+## Development handoff
 
-- watch frequency and recency
-- channel affinity
-- search-history topics
-- subscriptions
-- playlist membership
-
-Personalized autoplay chooses a seed from that profile, then starts a YouTube-generated Mix from the seed. Every few videos (configurable), Low-memory mode destroys the old iframe and Personalized mode chooses a new profile-aware seed.
-
-This is intentionally an approximation of the YouTube home/Up Next algorithm. A third-party static site cannot access Google's private account recommendation ranking. The Takeout profile gives the site your taste signals without scraping or uploading your signed-in account.
+Before continuing development in a new chat/session, read HANDOFF.md. It is the canonical project state and must be updated whenever the project changes.
 
 ## Why it is lighter
 
-Only one YouTube iframe player is kept. The site avoids the normal youtube.com feed, comments, Shorts, notifications, infinite recommendations UI, and large application state.
+Aero keeps one YouTube iframe player and avoids the normal YouTube feed, comments, Shorts, notifications, infinite recommendation UI, and other page shell overhead.
 
-## Features
+## Current features
 
-- Local Takeout ZIP importer
-- Personalized / YouTube Mix / Queue-only autoplay modes
-- One iframe at a time
-- Periodic player rebuild in Low-memory mode
-- Video URL / ID / playlist input
-- Custom queue with drag ordering
-- Previous / next, shuffle, repeat, playback speed
-- Queue/preferences in localStorage
-- Taste profile in IndexedDB
-- No analytics or build framework
+- YouTube video / video ID / playlist input
+- exact pasted video plays first
+- playlist/Radio context preservation when present
+- generated YouTube Radio fallback for plain watch URLs
+- custom queue
+- previous / next, shuffle, repeat and playback speed
+- low-memory periodic player rebuild
+- CSS-only Cinema mode
+- startup resume for last video and last playlist/radio
+- persistent video history
+- Cloudflare D1 persistence
+- anonymous HttpOnly browser session cookie
 
-## Takeout privacy
+## Cloudflare storage
 
-Takeout parsing happens in a Web Worker. JSZip is loaded on demand only while importing. The raw archive is not committed to this repository and is not sent to the site owner.
+Persistent Aero app data is stored in Cloudflare D1 through Pages Functions.
 
-## Limitation
+The browser keeps an opaque anonymous HttpOnly session cookie so D1 can associate records with that browser. This is anonymous browser-scoped persistence, not cross-device account sync.
 
-YouTube's actual signed-in Home and Up Next ranking is not exposed to the iframe API, so exact account-level recommendation parity is impossible without using unsupported account scraping. Super Lite instead combines your local history profile with YouTube Mix.
+API endpoints:
+- GET/PATCH /api/state
+- GET/POST/PUT/DELETE /api/history
+- GET/PUT/DELETE /api/profile
+
+D1 binding: DB
+Database: youtube-super-lite
+
+See CLOUDFLARE_SETUP.md.
+
+## Personalization
+
+The Takeout personalization backend/client code remains in the project, but its visible import/profile UI is currently hidden. Refer to HANDOFF.md for current behavior.
+
+## Tech
+
+- plain HTML/CSS/JavaScript
+- YouTube IFrame API
+- Cloudflare Pages Functions
+- Cloudflare D1
+- no frontend build framework
 
 ## License
 
