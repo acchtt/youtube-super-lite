@@ -22,6 +22,8 @@ const state = {
 
 let player = null;
 let playerReady = false;
+let youtubeApiReady = false;
+let creatingPlayer = false;
 let pending = [];
 let draggedIndex = null;
 let profile = null;
@@ -187,7 +189,8 @@ function playLoadedMix() {
     sourceList: true,
     preserveSequence: true,
     bridged: true,
-    bridgeIds: ids.slice(0, 120)
+    bridgeIds: ids.slice(0, 120),
+    bridgeIndex: 0
   };
 
   rememberPlaylist(state.playlistMode, {
@@ -202,9 +205,7 @@ function playLoadedMix() {
   renderQueue();
 
   whenReady(() => {
-    player.loadPlaylist(ids, 0, 0);
-    try { player.setLoop(state.repeat === 'queue'); } catch (_) {}
-    try { player.setShuffle(state.shuffle); } catch (_) {}
+    player.loadVideoById(ids[0]);
     try { player.setPlaybackRate(state.speed); } catch (_) {}
     applyAudioPrefs(player);
   });
@@ -317,7 +318,7 @@ function renderTabTitle() {
   const author = cleanTabText(currentTabTrack.author);
 
   if (!title) {
-    document.title = 'Aero × IVE · v0.11.3';
+    document.title = 'Aero × IVE · v0.11.4';
     return;
   }
 
@@ -535,8 +536,12 @@ function capturePlaybackProgress(force = false) {
     data = player.getVideoData() || {};
     seconds = Number(player.getCurrentTime()) || 0;
     if (state.playlistMode) {
-      const index = player.getPlaylistIndex();
-      if (Number.isInteger(index) && index >= 0) listIndex = index;
+      if (state.playlistMode.bridged && Number.isInteger(state.playlistMode.bridgeIndex)) {
+        listIndex = state.playlistMode.bridgeIndex;
+      } else {
+        const index = player.getPlaylistIndex();
+        if (Number.isInteger(index) && index >= 0) listIndex = index;
+      }
     }
   } catch (_) {
     return;
@@ -582,7 +587,9 @@ function rememberPlaylist(mode, details = {}) {
   if (!mode || !mode.id) return;
 
   let playlistIndex = Number.isInteger(details.index) ? details.index : null;
-  if (playlistIndex == null && playerReady && player) {
+  if (playlistIndex == null && mode.bridged && Number.isInteger(mode.bridgeIndex)) {
+    playlistIndex = mode.bridgeIndex;
+  } else if (playlistIndex == null && playerReady && player) {
     try {
       const current = player.getPlaylistIndex();
       if (Number.isInteger(current) && current >= 0) playlistIndex = current;
@@ -604,7 +611,8 @@ function rememberPlaylist(mode, details = {}) {
     preserveSequence: !!mode.preserveSequence,
     seedId: mode.seedId || '',
     bridged: !!mode.bridged,
-    bridgeIds: Array.isArray(mode.bridgeIds) ? mode.bridgeIds.slice(0, 120) : null
+    bridgeIds: Array.isArray(mode.bridgeIds) ? mode.bridgeIds.slice(0, 120) : null,
+    bridgeIndex: mode.bridged && Number.isInteger(mode.bridgeIndex) ? mode.bridgeIndex : null
   };
   saveLastPlaylist();
   renderResumePlaylist();
@@ -647,6 +655,9 @@ function resumeLastPlaylist() {
     preserveSequence: !!lastPlaylist.preserveSequence,
     bridged: !!lastPlaylist.bridged && Array.isArray(lastPlaylist.bridgeIds) && lastPlaylist.bridgeIds.length > 1,
     bridgeIds: Array.isArray(lastPlaylist.bridgeIds) ? lastPlaylist.bridgeIds.slice(0, 120) : null,
+    bridgeIndex: Number.isInteger(lastPlaylist.bridgeIndex)
+      ? lastPlaylist.bridgeIndex
+      : (Number.isInteger(lastPlaylist.index) ? lastPlaylist.index : 0),
     resumed: true
   };
   state.index = -1;
@@ -661,7 +672,13 @@ function resumeLastPlaylist() {
       : 0;
 
     if (state.playlistMode.bridged) {
-      player.loadPlaylist(state.playlistMode.bridgeIds, preferredIndex, 0);
+      const ids = state.playlistMode.bridgeIds || [];
+      const safeIndex = Math.max(0, Math.min(
+        Number.isInteger(state.playlistMode.bridgeIndex) ? state.playlistMode.bridgeIndex : preferredIndex,
+        ids.length - 1
+      ));
+      state.playlistMode.bridgeIndex = safeIndex;
+      if (ids[safeIndex]) player.loadVideoById(ids[safeIndex]);
     } else {
       player.loadPlaylist({
         listType: 'playlist',
@@ -671,15 +688,17 @@ function resumeLastPlaylist() {
       });
     }
 
-    setTimeout(() => {
-      try {
-        const ids = player.getPlaylist ? player.getPlaylist() : [];
-        if (lastPlaylist.currentVideoId && ids && ids.length) {
-          const found = ids.indexOf(lastPlaylist.currentVideoId);
-          if (found >= 0 && found !== player.getPlaylistIndex()) player.playVideoAt(found);
-        }
-      } catch (_) {}
-    }, 900);
+    if (!state.playlistMode.bridged) {
+      setTimeout(() => {
+        try {
+          const ids = player.getPlaylist ? player.getPlaylist() : [];
+          if (lastPlaylist.currentVideoId && ids && ids.length) {
+            const found = ids.indexOf(lastPlaylist.currentVideoId);
+            if (found >= 0 && found !== player.getPlaylistIndex()) player.playVideoAt(found);
+          }
+        } catch (_) {}
+      }, 900);
+    }
 
     try { player.setLoop(state.repeat === 'queue'); } catch (_) {}
     try { player.setShuffle(state.shuffle); } catch (_) {}
@@ -867,6 +886,16 @@ function captureAudioPrefs() {
 }
 
 function createPlayer(onReadyAction) {
+  if (creatingPlayer || player) {
+    if (onReadyAction) whenReady(onReadyAction);
+    return;
+  }
+  if (!youtubeApiReady || !window.YT || !YT.Player) {
+    if (onReadyAction) pending.push(onReadyAction);
+    return;
+  }
+
+  creatingPlayer = true;
   playerReady = false;
   player = new YT.Player('player', {
     width: '100%',
@@ -882,6 +911,7 @@ function createPlayer(onReadyAction) {
     },
     events: {
       onReady: event => {
+        creatingPlayer = false;
         playerReady = true;
         try { event.target.setPlaybackRate(state.speed); } catch (_) {}
         applyAudioPrefs(event.target);
@@ -894,16 +924,25 @@ function createPlayer(onReadyAction) {
     }
   });
 }
-window.onYouTubeIframeAPIReady = () => createPlayer();
+
+window.onYouTubeIframeAPIReady = () => {
+  youtubeApiReady = true;
+  if (pending.length && !player && !creatingPlayer) createPlayer();
+};
 
 function whenReady(fn) {
-  if (playerReady && player) fn();
-  else pending.push(fn);
+  if (playerReady && player) {
+    fn(player);
+    return;
+  }
+  pending.push(fn);
+  if (youtubeApiReady && !player && !creatingPlayer) createPlayer();
 }
 
 function rebuildPlayer(action) {
   captureAudioPrefs();
   playerReady = false;
+  creatingPlayer = false;
   pending = [];
   try { if (player) player.destroy(); } catch (_) {}
   player = null;
@@ -977,6 +1016,46 @@ function playExactManual(item) {
   });
 }
 
+function playBridgeIndex(index, useFreshPlayer = false) {
+  const mode = state.playlistMode;
+  if (!mode || !mode.bridged || !Array.isArray(mode.bridgeIds) || !mode.bridgeIds.length) return false;
+
+  let nextIndex = Number(index);
+  if (!Number.isInteger(nextIndex)) return false;
+
+  if (nextIndex < 0) {
+    nextIndex = state.repeat === 'queue' ? mode.bridgeIds.length - 1 : 0;
+  }
+  if (nextIndex >= mode.bridgeIds.length) {
+    if (state.repeat === 'queue') nextIndex = 0;
+    else return false;
+  }
+
+  const id = mode.bridgeIds[nextIndex];
+  if (!/^[A-Za-z0-9_-]{11}$/.test(id)) return false;
+
+  mode.bridgeIndex = nextIndex;
+  state.index = -1;
+  rememberPlaylist(mode, { index: nextIndex, currentVideoId:id });
+  renderQueue();
+
+  const action = target => {
+    target.loadVideoById(id);
+    try { target.setPlaybackRate(state.speed); } catch (_) {}
+    applyAudioPrefs(target);
+  };
+
+  // Bridged queues intentionally never use YouTube's playlist loader.
+  // Rebuild a little more aggressively because one-video-at-a-time playback
+  // is cheap to restore and this app prioritizes low RAM over seamless caching.
+  const bridgeRefreshEvery = Math.min(state.refreshEvery, 3);
+  const fresh = useFreshPlayer || (state.lowMemory && state.playsSinceRefresh >= bridgeRefreshEvery);
+  if (fresh) rebuildPlayer(action);
+  else whenReady(() => action(player));
+
+  return true;
+}
+
 function continueAfterManualVideo() {
   if (!manualContinuation) return false;
   tasteGateSkips = 0;
@@ -1006,7 +1085,8 @@ function continueAfterManualVideo() {
     sourceList: !!next.listId,
     preserveSequence: !!next.listId,
     bridged,
-    bridgeIds: bridged ? bridgeIds.slice(0, 120) : null
+    bridgeIds: bridged ? bridgeIds.slice(0, 120) : null,
+    bridgeIndex: null
   };
   state.index = -1;
 
@@ -1014,6 +1094,7 @@ function continueAfterManualVideo() {
   const bridgeNextIndex = bridged
     ? Math.min(seedIndex + 1, bridgeIds.length - 1)
     : 0;
+  if (bridged) state.playlistMode.bridgeIndex = bridgeNextIndex;
 
   rememberPlaylist(state.playlistMode, {
     index: bridged ? bridgeNextIndex : (Number.isInteger(next.listIndex) ? next.listIndex : 0),
@@ -1024,7 +1105,9 @@ function continueAfterManualVideo() {
 
   const action = target => {
     if (bridged) {
-      target.loadPlaylist(bridgeIds, bridgeNextIndex, 0);
+      target.loadVideoById(bridgeIds[bridgeNextIndex]);
+      try { target.setPlaybackRate(state.speed); } catch (_) {}
+      applyAudioPrefs(target);
     } else {
       target.loadPlaylist({ listType: 'playlist', list: listId, index: 0, startSeconds: 0 });
       setTimeout(() => {
@@ -1166,6 +1249,7 @@ function startPersonalized(fresh) {
 
 function applyPlaylistOptions() {
   if (!playerReady || !player || !state.playlistMode) return;
+  if (state.playlistMode.bridged) return;
   try { player.setLoop(state.repeat === 'queue'); } catch (_) {}
   try { player.setShuffle(state.shuffle); } catch (_) {}
 }
@@ -1204,6 +1288,11 @@ function nextQueueIndex() {
 }
 
 function next() {
+  if (state.playlistMode && state.playlistMode.bridged) {
+    const current = Number.isInteger(state.playlistMode.bridgeIndex) ? state.playlistMode.bridgeIndex : 0;
+    playBridgeIndex(current + 1);
+    return;
+  }
   if (state.playlistMode) {
     whenReady(() => player.nextVideo());
     return;
@@ -1223,6 +1312,11 @@ function next() {
 }
 
 function previous() {
+  if (state.playlistMode && state.playlistMode.bridged) {
+    const current = Number.isInteger(state.playlistMode.bridgeIndex) ? state.playlistMode.bridgeIndex : 0;
+    playBridgeIndex(current - 1);
+    return;
+  }
   if (state.playlistMode) {
     whenReady(() => player.previousVideo());
     return;
@@ -1234,6 +1328,7 @@ function previous() {
 
 function refreshCurrentPlaylist() {
   if (!playerReady || !player || !state.playlistMode) return false;
+  if (state.playlistMode.bridged) return false;
   if (!(state.lowMemory && state.playsSinceRefresh >= state.refreshEvery)) return false;
 
   if (state.playlistMode.personalized && profile) {
@@ -1279,6 +1374,12 @@ function onPlayerStateChange(event) {
       return;
     }
     if (!state.autoplay) return;
+
+    if (state.playlistMode && state.playlistMode.bridged) {
+      const current = Number.isInteger(state.playlistMode.bridgeIndex) ? state.playlistMode.bridgeIndex : 0;
+      playBridgeIndex(current + 1);
+      return;
+    }
 
     if (state.playlistMode && state.playlistMode.personalized && personalizedMixPlays >= 2) {
       const fresh = state.lowMemory && state.playsSinceRefresh >= state.refreshEvery;
@@ -1422,6 +1523,13 @@ function updateVideoData() {
 
 function handlePlayerError(e) {
   const code = e && e.data;
+  if (state.playlistMode && state.playlistMode.bridged) {
+    const current = Number.isInteger(state.playlistMode.bridgeIndex) ? state.playlistMode.bridgeIndex : 0;
+    if (playBridgeIndex(current + 1)) {
+      setMessage('Skipped an unavailable bridged video (YouTube error ' + code + ').', 'error');
+      return;
+    }
+  }
   if (state.playlistMode && (state.playlistMode.personalized || state.playlistMode.mix)) {
     const seed = state.playlistMode.seedId;
     setMessage('YouTube Mix could not load for this seed. Falling back and trying another seed after it ends.', 'error');

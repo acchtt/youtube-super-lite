@@ -19,7 +19,7 @@ AGENTS.md contains the standing repository instruction for this rule.
 - Product name: Aero × IVE
 - Product role: lightweight YouTube player / unofficial IVE fan edition
 - Production: https://aero-x-ive.pages.dev
-- Current app version: v0.11.3
+- Current app version: v0.11.4
 - Deployment: Cloudflare Pages from main
 - D1 database: youtube-super-lite
 - D1 binding: DB
@@ -51,7 +51,7 @@ Before media is loaded, the player, controls, history and queue layout remain hi
 - Exact pasted video plays first.
 - If a pasted watch URL contains `list=` context, Aero always loads the exact pasted `v=` directly first. When the optional Aero Mix Bridge has captured a matching youtube.com Mix, Aero uses the captured video-ID array for 2nd track onward, preserving the exact visible personalized queue instead of regenerating the RD list in the embed. Without a matching snapshot it falls back to the embedded YouTube playlist/Radio.
 - A plain watch URL falls back to that video's generated `RD<videoId>` YouTube Radio after the exact video; pressing Next early also enters that generated radio rather than Personalized mode.
-- Only one YouTube iframe is kept.
+- Only one YouTube iframe is kept, and it is now created lazily only when playback is actually requested.
 - Low-memory mode periodically rebuilds the iframe; default is every 8 videos.
 - Cinema mode is CSS-only.
 - Volume and mute survive player rebuilds.
@@ -73,7 +73,7 @@ Purpose:
 - capture the personalized Mix queue from the actual signed-in youtube.com watch page;
 - store the latest queue locally in extension storage;
 - bridge the ordered video IDs into `aero-x-ive.pages.dev`;
-- let Aero play the captured queue as a fixed video-ID array after the exact pasted seed.
+- let Aero preserve the captured fixed queue while feeding only one video ID at a time to the iframe after the exact pasted seed.
 
 Files:
 - `extension/manifest.json`
@@ -171,7 +171,7 @@ Important: the user later explicitly asked to stop using the logo skill for the 
 
 ## Versioning
 
-Current version: v0.11.3
+Current version: v0.11.4
 
 When bumping the visible app version, keep these aligned:
 - application-version meta
@@ -223,4 +223,4 @@ Once the user approves a new logo:
 
 2026-09-23 ICT
 
-Reworked Aero Mix Bridge for severe browser-memory usage. Extension is now v0.2.0 and has zero persistent code running on youtube.com: removed the YouTube content script/polling path entirely. Capture is manual via the extension popup’s “Capture current Mix” button, which injects a one-shot scraper into the active YouTube Mix tab, stores up to 100 visible items, and exits. The YouTube tab can then be closed, preserving Aero's low-memory goal. Permissions are now storage + activeTab + scripting; no tabs permission, service worker, MutationObserver, or timers. Aero site instructions were updated and site version bumped to v0.11.3.
+v0.11.4 targets the remaining ~500 MB Aero-tab memory use. The captured Mix is no longer passed to YouTube with `loadPlaylist(ids)`, which gave the iframe the entire 100-item queue and could retain/preload extra playlist state. Bridged playback now keeps the queue only in lightweight Aero JS state and calls `loadVideoById()` for exactly one item at a time. Next/Previous/ENDED/resume/error handling were updated for this local bridge index. In low-memory mode bridged playback rebuilds the iframe at most every 3 completed videos (or the user's smaller refresh setting). The YouTube iframe is also created lazily only when playback is first requested, rather than on every page load. Extension remains v0.2.0 one-shot capture.

@@ -20,6 +20,7 @@ Aero keeps one YouTube iframe player and avoids the normal YouTube feed, comment
 - exact pasted video plays first
 - playlist/Radio context preservation when present
 - optional Aero Mix Bridge extension for capturing the exact personalized Mix queue from youtube.com
+- bridged Mixes play one video ID at a time instead of loading the full playlist into the YouTube iframe
 - startup “Play loaded songs” option when a Mix Bridge snapshot is available
 - generated YouTube Radio fallback for plain watch URLs
 - custom queue
