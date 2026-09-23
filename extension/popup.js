@@ -45,9 +45,7 @@ function scrapeCurrentMix() {
     return { error:'The visible Mix panel is not loaded yet. Wait for the playlist to appear, then try again.' };
   }
 
-  const seen = new Set();
   const items = [];
-  let domOrder = 0;
 
   for (const row of rows) {
     const anchor =
@@ -64,8 +62,7 @@ function scrapeCurrentMix() {
     }
 
     const id = url.searchParams.get('v') || '';
-    if (!/^[A-Za-z0-9_-]{11}$/.test(id) || seen.has(id)) continue;
-    seen.add(id);
+    if (!/^[A-Za-z0-9_-]{11}$/.test(id)) continue;
 
     const titleNode = row.querySelector('#video-title');
     const channelNode =
@@ -78,22 +75,15 @@ function scrapeCurrentMix() {
       id,
       title: clean(titleNode && (titleNode.getAttribute('title') || titleNode.textContent)),
       channel: clean(channelNode && channelNode.textContent),
-      index: Number.isInteger(indexRaw) && indexRaw > 0 ? indexRaw - 1 : null,
-      domOrder: domOrder++
+      index: Number.isInteger(indexRaw) && indexRaw > 0 ? indexRaw - 1 : null
     });
 
     if (items.length >= 100) break;
   }
 
-  // YouTube's SPA can keep DOM nodes around in an order that is not the
-  // playlist's actual sequence. Prefer the explicit ?index= value from each
-  // watch URL and use DOM position only as a stable fallback.
-  items.sort((a, b) => {
-    const ai = Number.isInteger(a.index) ? a.index : Number.MAX_SAFE_INTEGER;
-    const bi = Number.isInteger(b.index) ? b.index : Number.MAX_SAFE_INTEGER;
-    return ai - bi || a.domOrder - b.domOrder;
-  });
-  items.forEach(item => { delete item.domOrder; });
+  // Important: preserve the active playlist panel's rendered DOM sequence
+  // exactly. On dynamic YouTube Mixes, ?index= values are not reliable enough
+  // to reconstruct the visible order and sorting by them can scramble tracks.
 
   if (items.length < 2) {
     return { error:'Aero could not read enough songs from the visible Mix panel.' };
@@ -146,7 +136,7 @@ button.addEventListener('click', async () => {
     const aeroUrl = 'https://aero-x-ive.pages.dev/#aeroMix=' + encoded;
 
     setStatus(
-      'Captured ' + result.snapshot.items.length + ' songs in playlist order. Opening Aero…',
+      'Captured ' + result.snapshot.items.length + ' songs in visible list order. Opening Aero…',
       'ok'
     );
     await chrome.tabs.create({ url: aeroUrl });

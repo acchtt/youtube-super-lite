@@ -19,7 +19,7 @@ AGENTS.md contains the standing repository instruction for this rule.
 - Product name: Aero × IVE
 - Product role: lightweight YouTube player / unofficial IVE fan edition
 - Production: https://aero-x-ive.pages.dev
-- Current app version: v0.12.1
+- Current app version: v0.12.2
 - Deployment: Cloudflare Pages from main
 - D1 database: youtube-super-lite
 - D1 binding: DB
@@ -67,7 +67,7 @@ Before media is loaded, the player, controls, history and queue layout remain hi
 
 ## Aero Mix Bridge
 
-Aero has an optional Chrome/Edge Manifest V3 companion extension under `extension/`. Extension v0.3.0 uses explicit one-click capture only, preserves YouTube's canonical order, and has no content script/runtime attached to Aero.
+Aero has an optional Chrome/Edge Manifest V3 companion extension under `extension/`. Extension v0.3.1 uses explicit one-click capture only, preserves the active visible YouTube Mix row order exactly, and has no content script/runtime attached to Aero.
 
 Purpose:
 - capture the personalized Mix queue from the actual signed-in youtube.com watch page;
@@ -170,7 +170,7 @@ Important: the user later explicitly asked to stop using the logo skill for the 
 
 ## Versioning
 
-Current version: v0.12.1
+Current version: v0.12.2
 
 When bumping the visible app version, keep these aligned:
 - application-version meta
@@ -222,4 +222,4 @@ Once the user approves a new logo:
 
 2026-09-23 ICT
 
-v0.12.1 completes the Mix Bridge isolation. Extension v0.3.0 has no Aero content script/runtime and transfers only a compact ordered-ID URL fragment. Captured playback uses the separate bridgePlayback queue rather than state.playlistMode, so the YouTube iframe sees the same simple loadVideoById() path as pre-bridge playback. Old saved bridge-era resume records are now migrated into bridgePlayback too, eliminating the final playlistMode.bridged playback path. The pre-bridge v0.10.9 player lifecycle remains intact. After git pull, reload extension v0.3.0 and recapture the Mix once.
+v0.12.2 / Mix Bridge v0.3.1 fixes the captured-order mismatch where track 1 could be correct but track 2 onward differed from the visible YouTube Mix. Root cause: v0.3.0 captured the active panel but then sorted rows by each watch link's ?index= value; dynamic RD/Mix pages do not reliably expose those values in the same order as the rendered panel. Capture now preserves the active visible playlist panel's DOM row sequence exactly. Aero also no longer re-sorts incoming snapshots. Duplicate video IDs are no longer removed, because exact playback must preserve repeated entries too. The zero-runtime bridge architecture and pre-bridge player lifecycle remain unchanged. Reload extension v0.3.1 and recapture the Mix once.

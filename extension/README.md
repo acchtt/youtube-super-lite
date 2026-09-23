@@ -21,7 +21,7 @@ It captures the visible personalized Mix order from youtube.com without leaving 
 5. Aero opens automatically with the captured order.
 6. Close the YouTube tab and use **Play loaded songs** in Aero.
 
-## v0.3.0 low-memory architecture
+## v0.3.1 low-memory architecture
 
 The extension has no content script on Aero and no storage listener.
 
@@ -36,7 +36,7 @@ There is no YouTube MutationObserver, polling timer, service worker, continuous 
 
 ## Exact order
 
-Capture uses only the active visible playlist panel and sorts by YouTube's own playlist index. Aero treats the result as a fixed ordered queue and ignores the general Shuffle option for that captured Mix.
+Capture uses only the active visible playlist panel and preserves its rendered row order exactly. It intentionally does not sort by YouTube's `?index=` parameter and does not deduplicate repeated video IDs, because either can change the sequence shown in a dynamic Mix. Aero treats the result as a fixed ordered queue and ignores the general Shuffle option for that captured Mix.
 
 ## YouTube watch history
 

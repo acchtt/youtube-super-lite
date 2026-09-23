@@ -215,12 +215,10 @@ function sanitizeBridgeSnapshot(payload) {
   const listId = String(payload.listId || '').trim();
   if (!listId) return null;
 
-  const seen = new Set();
   const items = [];
   for (const raw of Array.isArray(payload.items) ? payload.items : []) {
     const id = String(raw && raw.id || '').trim();
-    if (!/^[A-Za-z0-9_-]{11}$/.test(id) || seen.has(id)) continue;
-    seen.add(id);
+    if (!/^[A-Za-z0-9_-]{11}$/.test(id)) continue;
     items.push({
       id,
       title: cleanTabText(raw && raw.title || ''),
@@ -230,19 +228,9 @@ function sanitizeBridgeSnapshot(payload) {
   }
   if (items.length < 2) return null;
 
-  // Preserve the exact YouTube playlist sequence. The extension stores each
-  // row's ?index= value; sorting here also repairs snapshots captured by older
-  // bridge versions whose DOM enumeration order was not canonical.
-  const indexed = items.filter(item => Number.isInteger(item.index));
-  if (indexed.length >= 2) {
-    const originalOrder = new Map(items.map((item, position) => [item.id, position]));
-    items.sort((a, b) => {
-      const ai = Number.isInteger(a.index) ? a.index : Number.MAX_SAFE_INTEGER;
-      const bi = Number.isInteger(b.index) ? b.index : Number.MAX_SAFE_INTEGER;
-      return ai - bi || (originalOrder.get(a.id) - originalOrder.get(b.id));
-    });
-  }
-
+  // The bridge payload is already the exact rendered order from the active
+  // YouTube Mix panel. Do not re-sort by ?index= and do not dedupe: either
+  // operation can change the sequence the user actually sees on youtube.com.
   return {
     listId,
     seedId: String(payload.seedId || '').trim(),
@@ -333,7 +321,7 @@ function renderTabTitle() {
   const author = cleanTabText(currentTabTrack.author);
 
   if (!title) {
-    document.title = 'Aero × IVE · v0.12.1';
+    document.title = 'Aero × IVE · v0.12.2';
     return;
   }
 
