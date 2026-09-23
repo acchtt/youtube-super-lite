@@ -20,6 +20,9 @@ Current features:
 - exact captured Mix order;
 - direct non-modal home state with Mix-ready / empty / resume states;
 - first-class captured Mix position (for example 12 / 43);
+- direct Player → Mix-home navigation without stopping the current track;
+- end-of-Mix completion state with Play again;
+- undoable history clearing;
 - previous / next / play-pause;
 - compact settings for autoplay, repeat and playback speed, with Cinema kept as a quick control;
 - CSS-only Cinema mode;

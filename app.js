@@ -19,20 +19,25 @@ let videoHistory = [];
 let lastVideo = null;
 let lastObservedVideoId = '';
 let currentTabTrack = { title:'', author:'', state:'idle' };
-let mixBridge = { snapshot:null, receivedAt:0, isNewCapture:false };
+let mixBridge = { snapshot:null, receivedAt:0, isNewCapture:false, complete:false };
 let bridgePlayback = null;
+let historyUndo = null;
+let historyUndoTimer = null;
 
 const $ = id => document.getElementById(id);
 const els = {
   homePanel: $('homePanel'),
   loadingCard: $('loadingCard'),
   mixReadyCard: $('mixReadyCard'),
-  mixEyebrow: $('mixEyebrow'),
   mixReadyTitle: $('mixReadyTitle'),
   mixReadyMeta: $('mixReadyMeta'),
   playMixBtn: $('playMixBtn'),
   emptyMixCard: $('emptyMixCard'),
+  retryLoadBtn: $('retryLoadBtn'),
   message: $('message'),
+  toast: $('toast'),
+  toastText: $('toastText'),
+  toastAction: $('toastAction'),
   mediaLayout: $('mediaLayout'),
   nowTitle: $('nowTitle'),
   nowMeta: $('nowMeta'),
@@ -40,6 +45,8 @@ const els = {
   prev: $('prevBtn'),
   toggle: $('toggleBtn'),
   next: $('nextBtn'),
+  homeBtn: $('homeBtn'),
+  settingsMenu: $('settingsMenu'),
   autoplay: $('autoplayToggle'),
   cinema: $('cinemaToggle'),
   repeat: $('repeatSelect'),
@@ -114,6 +121,41 @@ function setMessage(text, kind) {
   els.message.className = 'message' + (kind ? ' ' + kind : '');
 }
 
+function hideToast() {
+  if (historyUndoTimer) clearTimeout(historyUndoTimer);
+  historyUndoTimer = null;
+  historyUndo = null;
+  els.toast.classList.add('hidden');
+  els.toastAction.classList.add('hidden');
+  els.toastAction.onclick = null;
+}
+
+function showUndoToast(items) {
+  if (historyUndoTimer) clearTimeout(historyUndoTimer);
+  historyUndo = items.slice();
+  els.toastText.textContent = 'History cleared.';
+  els.toastAction.textContent = 'Undo';
+  els.toastAction.classList.remove('hidden');
+  els.toast.classList.remove('hidden');
+
+  els.toastAction.onclick = async () => {
+    const restore = historyUndo ? historyUndo.slice() : [];
+    hideToast();
+    if (!restore.length) return;
+
+    videoHistory = restore;
+    renderVideoHistory();
+    try {
+      await CloudState.replaceHistory(restore);
+      setMessage('History restored.', 'ok');
+    } catch (_) {
+      setMessage('History is visible again, but could not be restored to saved storage.', 'error');
+    }
+  };
+
+  historyUndoTimer = setTimeout(hideToast, 8000);
+}
+
 function sanitizeBridgeSnapshot(payload) {
   if (!payload || typeof payload !== 'object') return null;
 
@@ -146,6 +188,7 @@ function applyBridgeSnapshot(payload, resetIndex = false) {
   mixBridge.snapshot = snapshot;
   mixBridge.receivedAt = Date.now();
   mixBridge.isNewCapture = !!resetIndex;
+  mixBridge.complete = false;
 
   if (resetIndex || state.bridgeIndex >= snapshot.ids.length) state.bridgeIndex = 0;
 
@@ -207,38 +250,61 @@ function renderMixStatus() {
 function renderHomeState() {
   const snapshot = mixBridge.snapshot;
   const hasMix = !!(snapshot && snapshot.ids.length > 1);
+  const playingThisMix = !!(
+    bridgePlayback &&
+    hasMix &&
+    bridgePlayback.listId === snapshot.listId
+  );
 
   els.loadingCard.classList.add('hidden');
   els.mixReadyCard.classList.toggle('hidden', !hasMix);
   els.emptyMixCard.classList.toggle('hidden', hasMix);
   els.homePanel.setAttribute('aria-busy', 'false');
 
-  if (hasMix) {
-    const canResume = !mixBridge.isNewCapture &&
-      state.bridgeIndex > 0 &&
-      state.bridgeIndex < snapshot.ids.length;
+  if (!hasMix) return;
 
-    els.mixEyebrow.textContent = mixBridge.isNewCapture ? 'MIX CAPTURED' : 'CAPTURED MIX';
-    els.mixReadyTitle.textContent = mixBridge.isNewCapture
-      ? 'Your Mix is ready'
-      : 'Captured YouTube Mix';
-    els.mixReadyMeta.textContent = [
-      snapshot.ids.length + ' tracks',
-      'exact order',
-      canResume ? ('resume at ' + (state.bridgeIndex + 1) + '/' + snapshot.ids.length) : ''
-    ].filter(Boolean).join(' · ');
-    els.playMixBtn.textContent = canResume ? 'Resume Mix' : 'Play Mix';
+  if (mixBridge.complete) {
+    els.mixReadyTitle.textContent = 'Mix complete';
+    els.mixReadyMeta.textContent = snapshot.ids.length + ' tracks · exact order';
+    els.playMixBtn.textContent = 'Play again';
+    return;
   }
+
+  if (playingThisMix) {
+    els.mixReadyTitle.textContent = 'Mix playing';
+    els.mixReadyMeta.textContent =
+      'Track ' + (bridgePlayback.index + 1) + ' of ' + bridgePlayback.ids.length + ' · exact order';
+    els.playMixBtn.textContent = 'Return to player';
+    return;
+  }
+
+  const canResume = !mixBridge.isNewCapture &&
+    state.bridgeIndex > 0 &&
+    state.bridgeIndex < snapshot.ids.length;
+
+  els.mixReadyTitle.textContent = mixBridge.isNewCapture
+    ? 'Your Mix is ready'
+    : 'Captured YouTube Mix';
+  els.mixReadyMeta.textContent = [
+    snapshot.ids.length + ' tracks',
+    'exact order',
+    canResume ? ('resume at ' + (state.bridgeIndex + 1) + '/' + snapshot.ids.length) : ''
+  ].filter(Boolean).join(' · ');
+  els.playMixBtn.textContent = canResume ? 'Resume Mix' : 'Play Mix';
 }
 
 function showMediaLayout() {
   els.homePanel.classList.add('hidden');
   els.mediaLayout.classList.remove('hidden');
+  document.body.classList.add('player-active');
 }
 
 function showHomePanel() {
   els.mediaLayout.classList.add('hidden');
   els.homePanel.classList.remove('hidden');
+  document.body.classList.remove('player-active');
+  renderHomeState();
+  renderMixStatus();
 }
 
 function playLoadedMix() {
@@ -248,11 +314,22 @@ function playLoadedMix() {
     return;
   }
 
-  const startIndex = mixBridge.isNewCapture
+  if (
+    bridgePlayback &&
+    !mixBridge.complete &&
+    bridgePlayback.listId === snapshot.listId &&
+    !mixBridge.isNewCapture
+  ) {
+    showMediaLayout();
+    return;
+  }
+
+  const startIndex = (mixBridge.isNewCapture || mixBridge.complete)
     ? 0
     : Math.max(0, Math.min(state.bridgeIndex, snapshot.ids.length - 1));
 
   mixBridge.isNewCapture = false;
+  mixBridge.complete = false;
   bridgePlayback = {
     listId: snapshot.listId,
     seedId: snapshot.seedId || snapshot.ids[0],
@@ -276,12 +353,24 @@ function cleanTabText(value) {
   return String(value || '').replace(/\s+/g, ' ').trim();
 }
 
+function completeMix() {
+  if (!mixBridge.snapshot) return;
+
+  mixBridge.complete = true;
+  state.bridgeIndex = 0;
+  bridgePlayback = null;
+  saveState();
+  updateTransport();
+  showHomePanel();
+  setMessage('Mix complete. Ready to play again.', 'ok');
+}
+
 function renderTabTitle() {
   const title = cleanTabText(currentTabTrack.title);
   const author = cleanTabText(currentTabTrack.author);
 
   if (!title) {
-    document.title = 'Aero × IVE · v0.14.2';
+    document.title = 'Aero × IVE · v0.15.0';
     return;
   }
 
@@ -657,7 +746,7 @@ function onPlayerStateChange(event) {
   if (currentId && expectedId && currentId !== expectedId) return;
 
   if (!playBridgeIndex(bridgePlayback.index + 1)) {
-    setMessage('End of captured Mix.', 'ok');
+    completeMix();
   }
 }
 
@@ -694,9 +783,7 @@ function updateVideoData() {
 
   if (data.title) els.nowTitle.textContent = data.title;
 
-  els.nowMeta.textContent = bridgePlayback
-    ? [data.author, id, 'captured Mix'].filter(Boolean).join(' · ')
-    : [data.author, id].filter(Boolean).join(' · ');
+  els.nowMeta.textContent = data.author || (bridgePlayback ? 'Captured Mix' : 'YouTube');
 
   renderMixStatus();
   renderMixProgress();
@@ -735,6 +822,8 @@ function handlePlayerError(event) {
 
 els.playMixBtn.addEventListener('click', playLoadedMix);
 els.resumeVideoBtn.addEventListener('click', resumeLastVideo);
+els.homeBtn.addEventListener('click', showHomePanel);
+els.retryLoadBtn.addEventListener('click', () => location.reload());
 
 els.prev.addEventListener('click', previous);
 els.next.addEventListener('click', next);
@@ -770,13 +859,35 @@ els.speed.addEventListener('change', event => {
 });
 
 els.clearHistory.addEventListener('click', async () => {
+  if (!videoHistory.length) return;
+
+  const backup = videoHistory.slice();
   videoHistory = [];
-  try { await CloudState.clearHistory(); } catch (_) {}
   renderVideoHistory();
-  setMessage('Video history cleared.', 'ok');
+
+  try {
+    await CloudState.clearHistory();
+    showUndoToast(backup);
+  } catch (_) {
+    videoHistory = backup;
+    renderVideoHistory();
+    setMessage('History could not be cleared. Nothing was removed.', 'error');
+  }
+});
+
+document.addEventListener('click', event => {
+  if (els.settingsMenu.open && !els.settingsMenu.contains(event.target)) {
+    els.settingsMenu.open = false;
+  }
 });
 
 document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && els.settingsMenu.open) {
+    els.settingsMenu.open = false;
+    els.settingsMenu.querySelector('summary').focus();
+    return;
+  }
+
   if (['INPUT','TEXTAREA','SELECT','BUTTON','SUMMARY'].includes(document.activeElement.tagName)) return;
 
   if (event.code === 'Space') {
@@ -816,12 +927,12 @@ async function bootstrap() {
   } catch (error) {
     console.error(error);
     els.homePanel.setAttribute('aria-busy', 'false');
-    els.loadingCard.querySelector('h2').textContent = 'Aero could not load';
-    els.loadingCard.querySelector('p').textContent =
-      'Cloudflare storage is not ready. Check the D1 binding and schema, then reload.';
+    els.loadingCard.querySelector('h2').textContent = 'Aero could not restore your saved state';
+    $('loadingCopy').textContent = 'Reload to try again. Your saved Mix and history have not been changed.';
+    els.retryLoadBtn.classList.remove('hidden');
     els.historyCard.setAttribute('aria-busy', 'false');
     els.historyCount.textContent = 'Unavailable';
-    setMessage('Cloudflare storage could not be loaded.', 'error');
+    setMessage('Saved state is temporarily unavailable.', 'error');
     renderMixStatus();
   }
 }

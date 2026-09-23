@@ -19,7 +19,7 @@ AGENTS.md contains the standing repository instruction for this rule.
 - Product name: Aero × IVE
 - Product role: lightweight YouTube Mix player / unofficial IVE fan edition
 - Production: https://aero-x-ive.pages.dev
-- Current app version: v0.14.2
+- Current app version: v0.15.0
 - Mix Bridge extension: v0.3.3
 - Deployment: Cloudflare Pages from main
 - D1 database: youtube-super-lite
@@ -121,6 +121,7 @@ v0.14.0 applies the second UI/UX Pro Max pass:
 - history rows are full-row accessible play buttons;
 - transport remains primary while only Cinema is exposed as a quick setting;
 - v0.14.1 merges transport, Cinema, Settings, and shortcut hints into the same player/title card instead of a separate controls card;
+- v0.15.0 adds Player → Mix-home navigation, makes player progress the canonical in-player Mix status, moves keyboard hints inside Settings, adds an end-of-Mix completion/replay state, and makes history clearing undoable;
 - Autoplay, Repeat and Speed moved into a compact Settings disclosure;
 - transport/history icons remain inline SVG with >=44px targets;
 - visible `:focus-visible` rings and reduced-motion handling remain;
@@ -144,7 +145,7 @@ Do not use the logo-generator skill unless the user explicitly asks to use it ag
 
 ## Versioning
 
-Current version: v0.14.2
+Current version: v0.15.0
 
 When bumping the visible app version, keep these aligned:
 - application-version meta
@@ -175,4 +176,4 @@ When GitHub access is available and the user asks for a repo change:
 
 2026-09-23 ICT
 
-Impeccable was installed project-locally from `pbakaus/impeccable` at upstream commit `e0881d2de397d5e9761d7b35ff5017d8f5ebf69b`, replacing the previous UI/UX Pro Max skill. The full project-local skill payload lives under `.agents/skills/impeccable/`, and recommended Impeccable runtime/cache paths are ignored in `.gitignore`. The optional automatic Codex hook was intentionally not enabled by this repository install. Logo Generator remains installed separately. No website runtime, playback, Mix Bridge, D1, or UI code changed. Aero remains v0.14.2 and Mix Bridge remains v0.3.3.
+v0.15.0 applies the full Impeccable critique/polish pass requested after the v0.14.2 player fixes. The player now has a visible Mix-home return control that preserves current playback; while the player is open, the duplicate header Mix-status pill is hidden and the in-player N / total pill is canonical. Now Playing metadata no longer exposes the raw YouTube video ID or redundant “captured Mix” text. Keyboard hints moved into Settings to reduce persistent chrome, transport buttons were visually quieted, and the title/control bar was tightened without changing the 16:9 iframe or player lifecycle. Reaching the natural end of a captured Mix now returns to a “Mix complete” home state with Play again. Clear History is immediate but undoable for eight seconds using the existing D1 replace-history endpoint. Storage-load failures now use viewer-facing recovery copy plus a Reload action instead of D1/schema jargon. The no-Mix state links to Mix Bridge setup for first-time recovery, Settings closes on outside click/Escape, footer copy was simplified, and browser surfaces received lightweight selection/scrollbar theming. No Mix Bridge extension or YouTube playback lifecycle changes were made; Mix Bridge remains v0.3.3.
