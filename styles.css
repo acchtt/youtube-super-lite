@@ -435,9 +435,16 @@ footer{
 }
 .fan-note{color:#897c8d;text-align:right}
 
-/* Cinema mode remains CSS-only. */
+/* Cinema mode remains CSS-only.
+   Keep the iframe viewport at a true 16:9. A height-only max on a full-width
+   aspect box makes the iframe ultra-wide and YouTube adds large side bars. */
 body.cinema .app{width:min(1700px,calc(100% - 24px))}
-body.cinema .aspect{max-height:82vh;margin-inline:auto}
+body.cinema .aspect{
+  width:100%;
+  max-height:none;
+  margin-inline:0;
+  aspect-ratio:16/9;
+}
 body.cinema .now-playing{min-height:64px}
 
 @media(max-width:760px){

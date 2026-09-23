@@ -19,7 +19,7 @@ AGENTS.md contains the standing repository instruction for this rule.
 - Product name: Aero × IVE
 - Product role: lightweight YouTube Mix player / unofficial IVE fan edition
 - Production: https://aero-x-ive.pages.dev
-- Current app version: v0.14.1
+- Current app version: v0.14.2
 - Mix Bridge extension: v0.3.3
 - Deployment: Cloudflare Pages from main
 - D1 database: youtube-super-lite
@@ -142,7 +142,7 @@ Do not use the logo-generator skill unless the user explicitly asks to use it ag
 
 ## Versioning
 
-Current version: v0.14.1
+Current version: v0.14.2
 
 When bumping the visible app version, keep these aligned:
 - application-version meta
@@ -173,4 +173,4 @@ When GitHub access is available and the user asks for a repo change:
 
 2026-09-23 ICT
 
-v0.14.1 is a UI-only consolidation requested from the current player screenshot. The separate controls card below Now Playing was removed. The Now Playing title/meta, Mix progress, Previous/Play/Next transport, Cinema toggle, Settings disclosure, and keyboard shortcut hints now live inside the same player card under the iframe. Desktop uses a single titlebar row with title information on the left and controls on the right; narrower layouts stack cleanly. No playback, Mix Bridge, D1, exact-order, or player-lifecycle logic changed. Mix Bridge remains v0.3.3.
+v0.14.2 fixes the large black side bars visible in Cinema mode after the title/control consolidation. The cause was the old `max-height:82vh` rule on a full-width 16:9 aspect box: once the width became large, the height cap forced the iframe viewport away from 16:9 and YouTube letterboxed/pillarboxed the video inside it. Cinema now keeps the video viewport at a true full-width 16:9 with no height-only cap. The merged v0.14.1 title/control bar remains unchanged. This is CSS/UI-only; player lifecycle, Mix Bridge v0.3.3, exact-order playback, D1, and memory behavior are unchanged.
