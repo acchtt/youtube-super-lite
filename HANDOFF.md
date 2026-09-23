@@ -19,7 +19,7 @@ AGENTS.md contains the standing repository instruction for this rule.
 - Product name: Aero × IVE
 - Product role: lightweight YouTube Mix player / unofficial IVE fan edition
 - Production: https://aero-x-ive.pages.dev
-- Current app version: v0.14.0
+- Current app version: v0.14.1
 - Mix Bridge extension: v0.3.3
 - Deployment: Cloudflare Pages from main
 - D1 database: youtube-super-lite
@@ -120,6 +120,7 @@ v0.14.0 applies the second UI/UX Pro Max pass:
 - the visible version moved to the footer;
 - history rows are full-row accessible play buttons;
 - transport remains primary while only Cinema is exposed as a quick setting;
+- v0.14.1 merges transport, Cinema, Settings, and shortcut hints into the same player/title card instead of a separate controls card;
 - Autoplay, Repeat and Speed moved into a compact Settings disclosure;
 - transport/history icons remain inline SVG with >=44px targets;
 - visible `:focus-visible` rings and reduced-motion handling remain;
@@ -141,7 +142,7 @@ Do not use the logo-generator skill unless the user explicitly asks to use it ag
 
 ## Versioning
 
-Current version: v0.14.0
+Current version: v0.14.1
 
 When bumping the visible app version, keep these aligned:
 - application-version meta
@@ -172,4 +173,4 @@ When GitHub access is available and the user asks for a repo change:
 
 2026-09-23 ICT
 
-v0.14.0 applies the UI Pro Max re-inspection without changing Mix Bridge v0.3.3 or the core YouTube player lifecycle. The blocking startup modal is removed. Aero now opens directly to a lightweight home state with explicit D1 loading feedback, a prominent captured-Mix Play/Resume card, a no-Mix instruction state, and Continue Watching. A newly captured Mix is labeled clearly and starts from track 1. Mix position is shown as N / total both in the header status and beside Now Playing. The header version badge moved to the footer. Cinema remains a quick control; Autoplay, Repeat and Speed moved under Settings. History rows are now full-row accessible play targets. Exact-ID playback correction, one-ID-at-a-time bridge playback, static dark palette, and the low-overhead player implementation are preserved. History-to-player scrolling is non-animated so reduced-motion users do not receive scripted smooth scrolling.
+v0.14.1 is a UI-only consolidation requested from the current player screenshot. The separate controls card below Now Playing was removed. The Now Playing title/meta, Mix progress, Previous/Play/Next transport, Cinema toggle, Settings disclosure, and keyboard shortcut hints now live inside the same player card under the iframe. Desktop uses a single titlebar row with title information on the left and controls on the right; narrower layouts stack cleanly. No playback, Mix Bridge, D1, exact-order, or player-lifecycle logic changed. Mix Bridge remains v0.3.3.

@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#0d0b12">
-  <meta name="application-version" content="0.14.0">
-  <title>Aero × IVE · v0.14.0</title>
-  <link rel="stylesheet" href="styles.css?v=0.14.0">
+  <meta name="application-version" content="0.14.1">
+  <title>Aero × IVE · v0.14.1</title>
+  <link rel="stylesheet" href="styles.css?v=0.14.1">
 </head>
 <body>
   <main class="app">
@@ -77,61 +77,64 @@
     <section id="mediaLayout" class="media-layout hidden" aria-label="Player">
       <div class="player-shell card">
         <div class="aspect"><div id="player"></div></div>
-        <div class="now-playing">
-          <div class="now-text">
-            <span class="eyebrow">NOW PLAYING</span>
-            <strong id="nowTitle">Nothing loaded</strong>
-            <span id="nowMeta" class="muted">Choose a captured Mix or a video from history.</span>
-          </div>
-          <span id="mixProgress" class="mix-progress hidden" aria-label="Captured Mix position"></span>
-        </div>
-      </div>
 
-      <div class="controls card">
-        <div class="transport" aria-label="Playback controls">
-          <button id="prevBtn" class="icon-btn" aria-label="Previous captured track" disabled>
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M6 5h2v14H6zM9.5 12 19 5v14z"/>
-            </svg>
-          </button>
-          <button id="toggleBtn" class="primary icon-btn play-toggle" aria-label="Play">
-            <svg class="icon-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
-            <svg class="icon-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>
-          </button>
-          <button id="nextBtn" class="icon-btn" aria-label="Next captured track" disabled>
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M16 5h2v14h-2zM5 5l9.5 7L5 19z"/>
-            </svg>
-          </button>
-        </div>
-
-        <div class="control-actions">
-          <label class="setting cinema-setting"><span>Cinema</span><input id="cinemaToggle" type="checkbox" checked></label>
-
-          <details id="settingsMenu" class="more-settings">
-            <summary>Settings</summary>
-            <div class="more-settings-panel">
-              <label class="setting"><span>Autoplay</span><input id="autoplayToggle" type="checkbox" checked></label>
-              <label class="setting"><span>Repeat</span>
-                <select id="repeatSelect">
-                  <option value="off">Off</option>
-                  <option value="one">One</option>
-                  <option value="queue">Mix</option>
-                </select>
-              </label>
-              <label class="setting"><span>Speed</span>
-                <select id="speedSelect">
-                  <option value="0.5">0.5×</option>
-                  <option value="0.75">0.75×</option>
-                  <option value="1" selected>1×</option>
-                  <option value="1.25">1.25×</option>
-                  <option value="1.5">1.5×</option>
-                  <option value="1.75">1.75×</option>
-                  <option value="2">2×</option>
-                </select>
-              </label>
+        <div class="player-titlebar">
+          <div class="now-playing">
+            <div class="now-text">
+              <span class="eyebrow">NOW PLAYING</span>
+              <strong id="nowTitle">Nothing loaded</strong>
+              <span id="nowMeta" class="muted">Choose a captured Mix or a video from history.</span>
             </div>
-          </details>
+            <span id="mixProgress" class="mix-progress hidden" aria-label="Captured Mix position"></span>
+          </div>
+
+          <div class="titlebar-controls">
+            <div class="transport" aria-label="Playback controls">
+              <button id="prevBtn" class="icon-btn" aria-label="Previous captured track" disabled>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M6 5h2v14H6zM9.5 12 19 5v14z"/>
+                </svg>
+              </button>
+              <button id="toggleBtn" class="primary icon-btn play-toggle" aria-label="Play">
+                <svg class="icon-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+                <svg class="icon-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>
+              </button>
+              <button id="nextBtn" class="icon-btn" aria-label="Next captured track" disabled>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M16 5h2v14h-2zM5 5l9.5 7L5 19z"/>
+                </svg>
+              </button>
+            </div>
+
+            <div class="control-actions">
+              <label class="setting cinema-setting"><span>Cinema</span><input id="cinemaToggle" type="checkbox" checked></label>
+
+              <details id="settingsMenu" class="more-settings">
+                <summary>Settings</summary>
+                <div class="more-settings-panel">
+                  <label class="setting"><span>Autoplay</span><input id="autoplayToggle" type="checkbox" checked></label>
+                  <label class="setting"><span>Repeat</span>
+                    <select id="repeatSelect">
+                      <option value="off">Off</option>
+                      <option value="one">One</option>
+                      <option value="queue">Mix</option>
+                    </select>
+                  </label>
+                  <label class="setting"><span>Speed</span>
+                    <select id="speedSelect">
+                      <option value="0.5">0.5×</option>
+                      <option value="0.75">0.75×</option>
+                      <option value="1" selected>1×</option>
+                      <option value="1.25">1.25×</option>
+                      <option value="1.5">1.5×</option>
+                      <option value="1.75">1.75×</option>
+                      <option value="2">2×</option>
+                    </select>
+                  </label>
+                </div>
+              </details>
+            </div>
+          </div>
         </div>
 
         <div class="tips-inline">
@@ -160,13 +163,13 @@
 
     <footer>
       <span>Captured Mix order and playback state are stored in Cloudflare D1.</span>
-      <span class="footer-version">v0.14.0</span>
+      <span class="footer-version">v0.14.1</span>
       <span class="fan-note">Aero × IVE is an unofficial fan-made edition and is not affiliated with IVE or Starship Entertainment.</span>
     </footer>
   </main>
 
-  <script src="cloud-state.js?v=0.14.0"></script>
-  <script src="app.js?v=0.14.0"></script>
+  <script src="cloud-state.js?v=0.14.1"></script>
+  <script src="app.js?v=0.14.1"></script>
   <script src="https://www.youtube.com/iframe_api"></script>
 </body>
 </html>
