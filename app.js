@@ -1,6 +1,7 @@
 'use strict';
 
 const HISTORY_LIMIT = 200;
+const PREFERRED_PLAYBACK_QUALITY = 'hd1080';
 
 const state = {
   autoplay: true,
@@ -370,7 +371,7 @@ function renderTabTitle() {
   const author = cleanTabText(currentTabTrack.author);
 
   if (!title) {
-    document.title = 'Aero × IVE · v0.15.1';
+    document.title = 'Aero × IVE · v0.15.2';
     return;
   }
 
@@ -626,6 +627,7 @@ function createPlayer() {
       rel: 1,
       playsinline: 1,
       iv_load_policy: 3,
+      vq: PREFERRED_PLAYBACK_QUALITY,
       origin: window.location.origin
     },
     events: {
