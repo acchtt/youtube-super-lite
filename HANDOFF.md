@@ -19,7 +19,7 @@ AGENTS.md contains the standing repository instruction for this rule.
 - Product name: Aero × IVE
 - Product role: lightweight YouTube Mix player / unofficial IVE fan edition
 - Production: https://aero-x-ive.pages.dev
-- Current app version: v0.15.1
+- Current app version: v0.15.2
 - Mix Bridge extension: v0.3.3
 - Deployment: Cloudflare Pages from main
 - D1 database: youtube-super-lite
@@ -58,6 +58,7 @@ The normal page is now the landing state:
 - Autoplay, repeat-one/repeat-Mix, playback speed and CSS-only Cinema mode remain.
 - Volume/mute and last-video progress are persisted.
 - Browser tab title reflects the current video.
+- The YouTube embed requests `hd1080` as the preferred playback quality. YouTube still controls the final adaptive stream quality and may override the preference.
 
 ### Mix Bridge
 
@@ -123,6 +124,7 @@ v0.14.0 applies the second UI/UX Pro Max pass:
 - v0.14.1 merges transport, Cinema, Settings, and shortcut hints into the same player/title card instead of a separate controls card;
 - v0.15.0 adds Player → Mix-home navigation, makes player progress the canonical in-player Mix status, moves keyboard hints inside Settings, adds an end-of-Mix completion/replay state, and makes history clearing undoable;
 - v0.15.1 constrains Cinema mode by viewport height as well as width so the true 16:9 YouTube iframe stays inside the visible screen on wide, short desktop windows;
+- v0.15.2 adds an embed-level `hd1080` playback preference without adding deprecated quality-setter calls or changing the player lifecycle;
 - Autoplay, Repeat and Speed moved into a compact Settings disclosure;
 - transport/history icons remain inline SVG with >=44px targets;
 - visible `:focus-visible` rings and reduced-motion handling remain;
@@ -146,7 +148,7 @@ Do not use the logo-generator skill unless the user explicitly asks to use it ag
 
 ## Versioning
 
-Current version: v0.15.1
+Current version: v0.15.2
 
 When bumping the visible app version, keep these aligned:
 - application-version meta
@@ -176,6 +178,8 @@ When GitHub access is available and the user asks for a repo change:
 ## Last handoff update
 
 2026-09-25 ICT
+
+v0.15.2 adds `vq: 'hd1080'` to the YouTube IFrame player configuration so Aero requests 1080p as its default/preferred quality. Current YouTube IFrame API quality setter methods and `suggestedQuality` are deprecated/no-op, so Aero does not pretend to force a stream level; YouTube may still lower or raise quality adaptively based on the viewer environment. No queue, Mix Bridge, storage, or transport behavior changed.
 
 v0.15.1 fixes Cinema sizing on wide/short desktop viewports. Cinema still preserves a true 16:9 YouTube iframe, but the app width is now capped by viewport height (with `dvh` when supported and `vh` fallback), leaving a small vertical safety margin so YouTube’s bottom controls remain visible instead of extending just below the screen. No playback lifecycle, Mix Bridge, storage, or queue behavior changed.
 
