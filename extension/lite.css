@@ -1,10 +1,10 @@
-/* YouTube Super Lite — intentionally CSS-first and framework-free. */
+/* YouTube Super Lite — native YouTube player, aggressively reduced shell. */
 
 html[data-aero-lite="on"] {
   --aero-lite-max-player: 1280px;
 }
 
-/* Remove YouTube's persistent navigation chrome. */
+/* Remove persistent navigation chrome. */
 html[data-aero-lite="on"] ytd-guide-renderer,
 html[data-aero-lite="on"] ytd-mini-guide-renderer,
 html[data-aero-lite="on"] tp-yt-app-drawer#guide,
@@ -20,20 +20,20 @@ html[data-aero-lite="on"] ytd-page-manager {
   margin-left: 0 !important;
 }
 
-/* Keep the masthead/search usable but drop secondary top-bar noise. */
+/* Keep native search/account access, drop secondary masthead noise. */
 html[data-aero-lite="on"] ytd-masthead ytd-notification-topbar-button-renderer,
 html[data-aero-lite="on"] ytd-masthead #voice-search-button,
 html[data-aero-lite="on"] ytd-masthead ytd-button-renderer.ytd-masthead {
   display: none !important;
 }
 
-/* Home becomes search-first by default. */
+/* Home becomes search-first unless explicitly restored. */
 html[data-aero-lite="on"][data-aero-page="home"][data-aero-home-feed="hide"]
 ytd-browse[page-subtype="home"] ytd-rich-grid-renderer {
   display: none !important;
 }
 
-/* Shorts disappear from shelves and normal result grids unless explicitly restored. */
+/* Shorts disappear from shelves/results unless explicitly restored. */
 html[data-aero-lite="on"][data-aero-shorts="hide"] ytd-reel-shelf-renderer,
 html[data-aero-lite="on"][data-aero-shorts="hide"] ytd-rich-section-renderer:has(ytd-reel-shelf-renderer),
 html[data-aero-lite="on"][data-aero-shorts="hide"] ytd-video-renderer:has(a[href^="/shorts/"]),
@@ -42,7 +42,7 @@ html[data-aero-lite="on"][data-aero-shorts="hide"] ytd-rich-item-renderer:has(a[
   display: none !important;
 }
 
-/* Watch-page clutter. */
+/* Watch-page surfaces. The native player itself is never replaced. */
 html[data-aero-lite="on"][data-aero-comments="hide"] #comments,
 html[data-aero-lite="on"][data-aero-comments="hide"] ytd-comments,
 html[data-aero-lite="on"][data-aero-comments="hide"] ytd-comments-header-renderer {
@@ -59,11 +59,12 @@ html[data-aero-lite="on"][data-aero-description="hide"] ytd-text-inline-expander
   display: none !important;
 }
 
+/* Mix/playlist stays visible by default and remains fully native. */
 html[data-aero-lite="on"][data-aero-mix-panel="hide"] ytd-playlist-panel-renderer {
   display: none !important;
 }
 
-/* Remove ancillary modules that are not part of core playback. */
+/* Ancillary modules not required for playback/history/Mix operation. */
 html[data-aero-lite="on"] ytd-live-chat-frame,
 html[data-aero-lite="on"] ytd-merch-shelf-renderer,
 html[data-aero-lite="on"] ytd-offer-module-renderer,
@@ -77,7 +78,7 @@ html[data-aero-lite="on"] .ytp-endscreen-content {
   display: none !important;
 }
 
-/* If both recommendation surfaces are disabled, do not reserve an empty right rail. */
+/* Do not reserve a blank secondary column. */
 html[data-aero-lite="on"][data-aero-related="hide"][data-aero-mix-panel="hide"]
 ytd-watch-flexy #secondary {
   display: none !important;
@@ -88,17 +89,23 @@ ytd-watch-flexy #secondary:not(:has(ytd-playlist-panel-renderer)) {
   display: none !important;
 }
 
-/* Let the native player use the space reclaimed from hidden rails. */
+/* Reclaim space in standard view. */
 html[data-aero-lite="on"] ytd-watch-flexy #columns {
   justify-content: center !important;
 }
 
-html[data-aero-lite="on"] ytd-watch-flexy #primary {
+html[data-aero-lite="on"] ytd-watch-flexy:not([theater]) #primary {
   max-width: var(--aero-lite-max-player) !important;
   margin-left: 0 !important;
 }
 
-/* Keep keyboard focus visible after the surrounding chrome is removed. */
+/* Preserve native YouTube Theater/Cinema mode at full available width. */
+html[data-aero-lite="on"] ytd-watch-flexy[theater] #primary {
+  max-width: none !important;
+  width: 100% !important;
+}
+
+/* Keep keyboard focus visible after surrounding chrome is removed. */
 html[data-aero-lite="on"] :focus-visible {
   outline: 2px solid currentColor !important;
   outline-offset: 2px !important;
