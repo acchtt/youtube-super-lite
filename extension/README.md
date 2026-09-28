@@ -2,64 +2,47 @@
 
 A lightweight Chrome / Edge Manifest V3 extension for `youtube.com`.
 
-It now has two jobs:
+## v0.5.0: Lite Watch Player
 
-1. **Super Lite mode** strips the normal YouTube page down toward the native player, search, title/channel essentials, and optionally the visible Mix/playlist panel.
-2. **Aero Mix Bridge** still captures the visible personalized Mix order and opens Aero × IVE with only the ordered video IDs.
+The extension now separates **browsing** from **watching**:
 
-## Install locally
+- YouTube search, results, channels and browsing stay on normal youtube.com.
+- Opening a normal `/watch?v=...` URL is routed into an extension-owned **Lite Player** page.
+- Lite Player contains one standard YouTube embed, a small search bar, basic metadata, and links back to Browse / Full YouTube.
+- The full `ytd-watch-flexy` shell is never needed for ordinary viewing, which is the main memory-saving change compared with v0.4.0.
+- URL playlist/list/index/start parameters are forwarded to the embed when present.
+- **Full YouTube** adds a one-page bypass flag so comments, description, native playlist UI, or Aero Mix capture can still be used.
+- The popup includes a **Lite watch player** switch. Turning it off falls back to the v0.4-style CSS stripping on normal YouTube watch pages.
 
-1. Clone or download this repository.
-2. Open `chrome://extensions` in Chrome, or `edge://extensions` in Edge.
+This remains framework-free and intentionally small: no service worker, polling loop, MutationObserver, React/Vue/etc., or custom playback engine.
+
+## Install / update locally
+
+1. Pull the latest repository.
+2. Open `chrome://extensions` or `edge://extensions`.
 3. Enable **Developer mode**.
-4. Choose **Load unpacked**.
-5. Select the repository's `extension` folder.
+4. Load the repository's `extension` folder if this is a first install.
+5. For an existing install, click **Reload**.
+6. Refresh any already-open YouTube tabs.
 
-## Super Lite defaults
+## Super Lite browsing defaults
 
-Super Lite is enabled immediately after installation.
-
-Hidden by default:
+Hidden by default on normal YouTube pages:
 - left navigation / mini guide;
 - homepage recommendation feed;
-- Shorts shelves and Shorts results;
-- related videos;
-- comments;
-- live chat;
-- description;
-- merch / offer / donation / ticket shelves;
-- end-screen recommendation cards;
-- filter-chip bars and some secondary masthead controls.
+- Shorts shelves/results;
+- filter-chip bars;
+- some secondary masthead controls.
 
-Kept by default:
-- native YouTube video player and controls;
-- search;
-- video title/channel metadata;
-- account/session behavior;
-- Mix / playlist panel, so Aero capture remains available.
-
-Open the extension popup to restore the homepage feed, related videos, comments, Shorts, Mix panel, or description individually. Turning **Super Lite** off restores YouTube's normal layout without uninstalling the extension.
-
-## Low-overhead architecture
-
-v0.4.0 remains intentionally framework-free:
-- no background service worker;
-- no polling loop;
-- no MutationObserver;
-- one tiny content script;
-- one CSS file that performs almost all visual stripping;
-- `chrome.storage.sync` only for the seven user switches;
-- YouTube's own `yt-navigate-finish` / `yt-page-data-updated` events keep route state current during SPA navigation.
-
-This primarily removes visual/UI overhead and reclaims layout space. It does **not** pretend to stop every YouTube script or network request, so the memory reduction will be smaller than Aero × IVE's separate one-iframe player.
+When Lite Player is disabled and the native watch page is used, Super Lite also hides related videos, comments, live chat, description, promotional shelves and end-screen recommendation cards according to the popup switches.
 
 ## Aero Mix capture
 
-1. Sign into YouTube normally.
-2. Open the personalized Mix / Radio on youtube.com and wait for the playlist panel to appear.
-3. Keep **Mix / playlist panel** enabled.
-4. Click the extension.
-5. Click **Capture current Mix**.
-6. Aero opens automatically with the captured order.
+Lite Player is optimized for playback, not DOM scraping. To capture the exact visible personalized Mix order:
 
-Capture still preserves the rendered row order exactly, including repeated video IDs, and transfers only a compact URL fragment.
+1. From Lite Player choose **Full YouTube**.
+2. Wait for the native Mix/playlist panel to render.
+3. Open the extension popup.
+4. Click **Capture current Mix**.
+
+The capture path still preserves visible row order exactly, including repeated IDs, and transfers only a compact ID list to Aero × IVE.

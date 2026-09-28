@@ -2,6 +2,7 @@
 
 const DEFAULTS = Object.freeze({
   liteEnabled: true,
+  litePlayerEnabled: true,
   showHomeFeed: false,
   showRelated: false,
   showComments: false,
@@ -31,9 +32,14 @@ async function loadSettings() {
 for (const [key, input] of Object.entries(settingInputs)) {
   input.addEventListener('change', async () => {
     await chrome.storage.sync.set({ [key]: input.checked });
-    setStatus(input.checked || key !== 'liteEnabled'
-      ? 'Settings updated.'
-      : 'Super Lite is off. YouTube is back to its normal layout.', 'ok');
+
+    if (key === 'litePlayerEnabled' && input.checked) {
+      setStatus('Lite watch player enabled. New /watch pages will open in the single-embed player.', 'ok');
+    } else if (key === 'liteEnabled' && !input.checked) {
+      setStatus('Super Lite is off. YouTube is back to its normal layout.', 'ok');
+    } else {
+      setStatus('Settings updated.', 'ok');
+    }
   });
 }
 
@@ -51,7 +57,7 @@ function scrapeCurrentMix() {
   }
 
   if (pageUrl.hostname.replace(/^www\./, '') !== 'youtube.com' || pageUrl.pathname !== '/watch') {
-    return { error:'Open a YouTube watch page first.' };
+    return { error:'Open the full YouTube Mix page first. From Lite Player, choose Full YouTube.' };
   }
 
   const seedId = pageUrl.searchParams.get('v') || '';
@@ -73,7 +79,7 @@ function scrapeCurrentMix() {
     : [];
 
   if (rows.length < 2) {
-    return { error:'The visible Mix panel is not loaded yet. Enable the Mix / playlist panel, wait for it to appear, then try again.' };
+    return { error:'The visible Mix panel is not loaded yet. Wait for it to appear, then try again.' };
   }
 
   const ids = [];
@@ -123,7 +129,7 @@ button.addEventListener('click', async () => {
 
     const url = String(tab.url || '');
     if (!url.startsWith('https://www.youtube.com/') && !url.startsWith('https://youtube.com/')) {
-      throw new Error('Open the personalized Mix on youtube.com first.');
+      throw new Error('Open the full YouTube Mix page first. From Lite Player, choose Full YouTube.');
     }
 
     const results = await chrome.scripting.executeScript({

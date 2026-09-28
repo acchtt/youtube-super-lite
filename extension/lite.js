@@ -2,6 +2,7 @@
 
 const DEFAULTS = Object.freeze({
   liteEnabled: true,
+  litePlayerEnabled: true,
   showHomeFeed: false,
   showRelated: false,
   showComments: false,
@@ -11,6 +12,7 @@ const DEFAULTS = Object.freeze({
 });
 
 let settings = { ...DEFAULTS };
+let settingsReady = false;
 
 function pageKind() {
   const path = location.pathname;
@@ -22,11 +24,20 @@ function pageKind() {
   return 'other';
 }
 
+function isFullYouTubeBypass(url = new URL(location.href)) {
+  return url.pathname === '/watch' && url.searchParams.get('aero_full') === '1';
+}
+
 function applyState() {
   const root = document.documentElement;
   if (!root) return;
 
-  root.dataset.aeroLite = settings.liteEnabled ? 'on' : 'off';
+  let bypass = false;
+  try {
+    bypass = isFullYouTubeBypass();
+  } catch (_) {}
+
+  root.dataset.aeroLite = settings.liteEnabled && !bypass ? 'on' : 'off';
   root.dataset.aeroPage = pageKind();
   root.dataset.aeroHomeFeed = settings.showHomeFeed ? 'show' : 'hide';
   root.dataset.aeroRelated = settings.showRelated ? 'show' : 'hide';
@@ -36,13 +47,54 @@ function applyState() {
   root.dataset.aeroDescription = settings.showDescription ? 'show' : 'hide';
 }
 
+function buildLitePlayerUrl(sourceHref) {
+  let source;
+  try {
+    source = new URL(sourceHref, location.origin);
+  } catch (_) {
+    return '';
+  }
+
+  if (!/^https:\/\/(?:www\.)?youtube\.com$/.test(source.origin)) return '';
+  if (source.pathname !== '/watch') return '';
+  if (source.searchParams.get('aero_full') === '1') return '';
+
+  const videoId = source.searchParams.get('v') || '';
+  if (!/^[A-Za-z0-9_-]{11}$/.test(videoId)) return '';
+
+  const params = new URLSearchParams();
+  params.set('v', videoId);
+
+  for (const key of ['list', 'index', 't', 'start']) {
+    const value = source.searchParams.get(key);
+    if (value) params.set(key, value);
+  }
+
+  params.set('source', source.toString());
+  return chrome.runtime.getURL('player.html') + '?' + params.toString();
+}
+
+function maybeRouteToLitePlayer(sourceHref = location.href, replace = true) {
+  if (!settingsReady || !settings.liteEnabled || !settings.litePlayerEnabled) return false;
+
+  const target = buildLitePlayerUrl(sourceHref);
+  if (!target) return false;
+
+  if (replace) location.replace(target);
+  else location.href = target;
+  return true;
+}
+
 async function loadSettings() {
   try {
     settings = { ...DEFAULTS, ...(await chrome.storage.sync.get(DEFAULTS)) };
   } catch (_) {
     settings = { ...DEFAULTS };
   }
+
+  settingsReady = true;
   applyState();
+  maybeRouteToLitePlayer(location.href, true);
 }
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
@@ -55,12 +107,41 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
     changed = true;
   }
 
-  if (changed) applyState();
+  if (!changed) return;
+  settingsReady = true;
+  applyState();
+  maybeRouteToLitePlayer(location.href, true);
 });
+
+document.addEventListener('click', event => {
+  if (!settingsReady || !settings.liteEnabled || !settings.litePlayerEnabled) return;
+  if (event.defaultPrevented || event.button !== 0) return;
+  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+  const anchor = event.target && event.target.closest
+    ? event.target.closest('a[href]')
+    : null;
+  if (!anchor) return;
+  if (anchor.target && anchor.target !== '_self') return;
+
+  const target = buildLitePlayerUrl(anchor.href);
+  if (!target) return;
+
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  location.href = target;
+}, true);
+
+document.addEventListener('yt-navigate-start', () => {
+  queueMicrotask(() => maybeRouteToLitePlayer(location.href, true));
+}, true);
 
 document.addEventListener('yt-navigate-finish', applyState, true);
 document.addEventListener('yt-page-data-updated', applyState, true);
-window.addEventListener('popstate', applyState);
+window.addEventListener('popstate', () => {
+  applyState();
+  maybeRouteToLitePlayer(location.href, true);
+});
 
 applyState();
 loadSettings();

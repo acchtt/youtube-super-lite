@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>YouTube Super Lite</title>
+  <link rel="stylesheet" href="player.css">
+</head>
+<body>
+  <header class="topbar">
+    <button id="back" class="brand" type="button" aria-label="Back to YouTube">
+      <span class="mark" aria-hidden="true"></span>
+      <span>YT SUPER LITE</span>
+    </button>
+
+    <form id="search" class="search" role="search">
+      <input id="query" type="search" autocomplete="off" placeholder="Search YouTube" aria-label="Search YouTube">
+      <button type="submit">Search</button>
+    </form>
+
+    <a id="fullYoutube" class="ghost" href="https://www.youtube.com/">Full YouTube</a>
+  </header>
+
+  <main>
+    <section class="player-shell" aria-label="YouTube video player">
+      <iframe
+        id="player"
+        title="YouTube video player"
+        allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+        allowfullscreen
+        referrerpolicy="strict-origin-when-cross-origin"></iframe>
+    </section>
+
+    <section class="meta">
+      <div class="text">
+        <h1 id="title">Loading video…</h1>
+        <p id="channel">YouTube</p>
+      </div>
+      <div class="actions">
+        <a id="browseYoutube" class="ghost" href="https://www.youtube.com/">Browse</a>
+        <a id="fullYoutubeSecondary" class="primary" href="https://www.youtube.com/">Open full page</a>
+      </div>
+    </section>
+
+    <p id="note" class="note">Light Player keeps only one YouTube embed. Use Full YouTube when you need comments, description, or Mix capture.</p>
+  </main>
+
+  <script src="player.js"></script>
+</body>
+</html>
