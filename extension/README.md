@@ -2,57 +2,32 @@
 
 A lightweight Chrome / Edge Manifest V3 extension for `youtube.com`.
 
-## v0.7.2 experimental: same-origin watch takeover
+## v0.8.0 experimental: direct YouTube embed mode
 
-This build tests the architecture selected after native YouTube's stripped watch page still measured roughly 400 MB on the first video.
+v0.7's same-origin document-replacement experiment was abandoned after normal videos could still become stuck loading. v0.8 removes all watch-page document surgery.
 
-For normal `youtube.com/watch?v=...` pages, a MAIN-world script runs at `document_start` and atomically replaces the pending watch document before the normal YouTube watch SPA finishes booting. v0.7.2 additionally fixes dynamic YouTube Mixes that could leave the player loading indefinitely.
+For ordinary `youtube.com/watch?v=...` URLs, the extension redirects immediately to YouTube's own top-level `https://www.youtube.com/embed/VIDEO_ID` page.
 
-Important differences from the discarded v0.5 approach:
+This is not an extension page and not an Aero wrapper. It is YouTube's own lightweight player document.
 
-- the top-level page remains the real `https://www.youtube.com/watch?...` URL;
-- there is no `chrome-extension://` player page;
-- there is no Aero-domain wrapper;
-- an official YouTube iframe is created immediately, then the IFrame API attaches to it for Mix state/control; playback therefore remains visible even if the control API initializes late;
-- signed-in YouTube cookies remain available to the official player;
-- a one-click **Full YouTube** / popup escape hatch reloads the same video with `aero_native=1`.
+The acceptance tests are reliable playback, materially lower memory than the ~400 MB native watch-page baseline, signed-in YouTube History recording, and native quality controls including 1080p when YouTube offers it.
 
-### The key experiment
+The direct embed page is already effectively Cinema mode because the player occupies the viewport.
 
-Play a normal video long enough that YouTube would normally record it, then check YouTube History.
+## Mix support
 
-If the played item is recorded correctly, this architecture gives us the strongest path toward Aero-like memory while keeping YouTube account history. If it is not recorded, the project must choose between the full native watch runtime and a separate lightweight-player history limitation.
+Dynamic `RD...` Mix IDs are not passed to the player. The current video starts immediately as a plain embed. The extension fetches the corresponding native watch HTML as inert text with signed-in cookies, extracts ordered `playlistPanelVideoRenderer` IDs, discards the HTML, and stores the queue in session storage.
 
-## Playback and Cinema
+A tiny overlay provides Previous / Next / position. When the media element ends, the extension navigates to the next lightweight embed page. The same queue is exposed to **Capture current Mix**.
 
-The takeover shell includes:
-- one official YouTube IFrame API player;
-- native player controls, settings, captions, speed and fullscreen;
-- the player's native quality selector, including 1080p when YouTube offers it;
-- a lightweight Cinema toggle that expands the player without loading YouTube's Theater watch shell;
-- search plus direct return to YouTube;
-- a Full YouTube escape hatch for non-embeddable videos or account/UI features.
+No fetched watch-page scripts are executed.
 
-The extension does not force a particular stream quality.
+## Full YouTube escape hatch
 
-## Mix / playlist support
-
-When a `list` parameter is present:
-- the official player receives the list/index context;
-- native playlist autoplay/Next/Previous behavior remains inside the player;
-- a tiny side panel exposes Previous, Next and current position/total;
-- each player state change publishes the current video/list/index back into the address bar with `history.replaceState()`;
-- the player's actual ordered playlist IDs are exposed to the extension through DOM dataset state;
-- **Capture current Mix** reads that ordered player queue and transfers it to Aero, preserving repeated IDs when the player reports them.
-
-The full native playlist DOM is intentionally not loaded in takeover mode because that would defeat the memory experiment.
+The popup and embed overlay reconstruct the current native `/watch` URL with `aero_native=1`, bypassing Super Lite for comments, description, troubleshooting, or incompatible videos.
 
 ## Browsing
 
-Home/search/channel pages still use the v0.4-style Super Lite CSS:
-- navigation shell hidden;
-- homepage feed optionally hidden;
-- Shorts hidden by default;
-- no background service worker, polling loop, or MutationObserver.
+Home/search/channel pages keep the v0.4-style stripped interface. Clicking a video goes directly to embed mode instead of allowing YouTube's SPA to construct the full watch page.
 
-Video links are converted to full document navigations so the document-start takeover can run before the heavy watch page initializes.
+Architecture remains plain JS/CSS with no framework, background service worker, persistent polling loop, or MutationObserver.
