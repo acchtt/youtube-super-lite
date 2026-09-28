@@ -43,7 +43,7 @@ Removed as obsolete in v0.13.0:
 
 ## Mix Bridge
 
-Extension v0.4.1 keeps the v0.4 native-desktop architecture and adds a configurable periodic memory reset. By default, after the third distinct video in the same YouTube SPA document, it reloads the exact current native watch URL and restores Theater mode, while leaving Mix/list/index and all native player behavior under YouTube's control.
+Extension v0.4.2 keeps the v0.4 native-desktop architecture and replaces the failed periodic-reload experiment with Deep Trim: hidden comments, related recommendations, Shorts, chat, guide/feed and promotional modules are physically removed after insertion while the native player and Mix/playlist panel are explicitly protected.
 
 See `extension/README.md`.
 

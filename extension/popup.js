@@ -2,7 +2,7 @@
 
 const DEFAULTS = Object.freeze({
   liteEnabled: true,
-  memoryResetEvery: 3,
+  deepTrimEnabled: true,
   showHomeFeed: false,
   showRelated: false,
   showComments: false,
@@ -13,12 +13,8 @@ const DEFAULTS = Object.freeze({
 
 const button = document.getElementById('capture');
 const status = document.getElementById('status');
-const memoryResetSelect = document.getElementById('memoryResetEvery');
-
-const toggleInputs = Object.fromEntries(
-  Object.keys(DEFAULTS)
-    .filter(key => key !== 'memoryResetEvery')
-    .map(key => [key, document.getElementById(key)])
+const settingInputs = Object.fromEntries(
+  Object.keys(DEFAULTS).map(key => [key, document.getElementById(key)])
 );
 
 function setStatus(text, kind) {
@@ -29,37 +25,33 @@ function setStatus(text, kind) {
 async function loadSettings() {
   const saved = await chrome.storage.sync.get(DEFAULTS);
 
-  for (const [key, input] of Object.entries(toggleInputs)) {
+  for (const [key, input] of Object.entries(settingInputs)) {
     input.checked = Boolean(saved[key]);
   }
-
-  memoryResetSelect.value = String(saved.memoryResetEvery ?? DEFAULTS.memoryResetEvery);
 }
 
-for (const [key, input] of Object.entries(toggleInputs)) {
+for (const [key, input] of Object.entries(settingInputs)) {
   input.addEventListener('change', async () => {
     await chrome.storage.sync.set({ [key]: input.checked });
+
+    if (key === 'deepTrimEnabled') {
+      setStatus(
+        input.checked
+          ? 'Deep Trim enabled.'
+          : 'Deep Trim disabled. Current page reloads to restore removed modules.',
+        'ok'
+      );
+      return;
+    }
 
     setStatus(
       input.checked || key !== 'liteEnabled'
         ? 'Settings updated.'
-        : 'Super Lite is off. YouTube is back to its normal layout.',
+        : 'Super Lite is off. Current page reloads to restore removed modules.',
       'ok'
     );
   });
 }
-
-memoryResetSelect.addEventListener('change', async () => {
-  const value = Number(memoryResetSelect.value);
-  await chrome.storage.sync.set({ memoryResetEvery:value });
-
-  setStatus(
-    value
-      ? 'Memory reset set to every ' + value + ' videos.'
-      : 'Automatic memory reset is off.',
-    'ok'
-  );
-});
 
 async function getActiveTab() {
   const tabs = await chrome.tabs.query({ active:true, currentWindow:true });
@@ -68,6 +60,7 @@ async function getActiveTab() {
 
 function scrapeCurrentMix() {
   let pageUrl;
+
   try {
     pageUrl = new URL(location.href);
   } catch (_) {
@@ -80,6 +73,7 @@ function scrapeCurrentMix() {
 
   const seedId = pageUrl.searchParams.get('v') || '';
   const listId = pageUrl.searchParams.get('list') || '';
+
   if (!seedId || !listId) {
     return { error:'This YouTube page does not contain a Mix/playlist.' };
   }
@@ -97,7 +91,9 @@ function scrapeCurrentMix() {
     : [];
 
   if (rows.length < 2) {
-    return { error:'The visible Mix panel is not loaded yet. Enable the Mix / playlist panel, wait for it to appear, then try again.' };
+    return {
+      error:'The visible Mix panel is not loaded yet. Keep the Mix / playlist panel enabled, wait for it to appear, then try again.'
+    };
   }
 
   const ids = [];
@@ -111,6 +107,7 @@ function scrapeCurrentMix() {
     if (!anchor) continue;
 
     let url;
+
     try {
       url = new URL(anchor.href || anchor.getAttribute('href'), location.origin);
     } catch (_) {
@@ -146,24 +143,26 @@ button.addEventListener('click', async () => {
     if (!tab || !tab.id) throw new Error('No active tab found.');
 
     const url = String(tab.url || '');
+
     if (!url.startsWith('https://www.youtube.com/') && !url.startsWith('https://youtube.com/')) {
       throw new Error('Open the personalized Mix on youtube.com first.');
     }
 
     const results = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: scrapeCurrentMix
+      target: { tabId:tab.id },
+      func:scrapeCurrentMix
     });
 
     const result = results && results[0] && results[0].result;
+
     if (!result) throw new Error('The Mix could not be read.');
     if (result.error) throw new Error(result.error);
 
     const compact = {
-      v: 1,
-      listId: result.snapshot.listId,
-      seedId: result.snapshot.seedId,
-      ids: result.snapshot.ids
+      v:1,
+      listId:result.snapshot.listId,
+      seedId:result.snapshot.seedId,
+      ids:result.snapshot.ids
     };
 
     const encoded = btoa(JSON.stringify(compact))
@@ -177,7 +176,7 @@ button.addEventListener('click', async () => {
     );
 
     await chrome.tabs.create({
-      url: 'https://aero-x-ive.pages.dev/#aeroMix=' + encoded
+      url:'https://aero-x-ive.pages.dev/#aeroMix=' + encoded
     });
   } catch (error) {
     setStatus(error && error.message ? error.message : 'Capture failed.', 'err');

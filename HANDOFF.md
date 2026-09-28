@@ -20,7 +20,7 @@ AGENTS.md contains the standing repository instruction for this rule.
 - Product role: lightweight YouTube Mix player / unofficial IVE fan edition
 - Production: https://aero-x-ive.pages.dev
 - Current app version: v0.15.2
-- YouTube Super Lite + Mix Bridge extension: v0.4.1
+- YouTube Super Lite + Mix Bridge extension: v0.4.2
 - Deployment: Cloudflare Pages from main
 - D1 database: youtube-super-lite
 - D1 binding: DB
@@ -62,17 +62,16 @@ The normal page is now the landing state:
 
 ### YouTube Super Lite + Mix Bridge
 
-Extension v0.4.1 is the canonical baseline plus a periodic native memory reset:
+Extension v0.4.2 is the canonical v0.4 native-desktop baseline plus Deep Trim:
 - uses the real desktop `youtube.com` page and native YouTube player;
 - preserves normal signed-in YouTube history/account behavior;
 - preserves native Theater/Cinema mode and YouTube's own quality selector, including 1080p when offered;
-- keeps the native Mix/playlist panel visible by default;
-- strips navigation/feed/Shorts/comments/related/live-chat/description/promotional clutter primarily with CSS;
-- defaults memory reset to every 3 distinct videos in the current SPA document, with Off / 3 / 5 / 10 options in the popup;
-- when the threshold is reached, waits for the new native watch navigation to settle, records Theater state, then calls `location.reload()` on the exact current URL. It does not reconstruct or replace `v`, `list`, `index`, `start_radio` or timestamp parameters;
-- restores Theater mode after the reload if it was active;
-- normal YouTube SPA navigation remains in use between resets; this is not the rejected hard-reload-every-video v0.6 approach;
-- has no background service worker, polling loop, MutationObserver, alternate player shell, iframe wrapper, mobile User-Agent spoofing, or watch-page document takeover;
+- keeps the native Mix/playlist panel visible by default and explicitly protects `ytd-playlist-panel-renderer` from DOM trimming;
+- keeps v0.4 CSS hiding for instant layout cleanup, then physically removes selected hidden modules: comments, related recommendations, Shorts shelves/results, guide/mini-guide, chip bars, live chat, promotional/merch modules, end-screen recommendation cards, hidden home feed and hidden description metadata;
+- uses one debounced insertion-only `MutationObserver` and schedules trim passes during browser idle time; removals do not retrigger the observer;
+- the native player, playlist panel, account/session, Theater mode and quality controls are not replaced or reimplemented;
+- the v0.4.1 periodic reload experiment is removed after it reached about 460 MB and failed to improve memory use;
+- there is no background service worker, polling loop, alternate player shell, iframe wrapper, mobile User-Agent spoofing, watch-page document takeover, or forced video reload cycle;
 - Capture current Mix reads the visible native playlist panel once, preserves rendered row order exactly including repeated IDs, and opens Aero with a compact `#aeroMix=` fragment.
 
 Aero imports the fragment into D1-backed state and immediately removes it from the address bar.
@@ -185,7 +184,7 @@ When GitHub access is available and the user asks for a repo change:
 
 2026-09-28 ICT
 
-Extension v0.4.1 builds directly on the known-good v0.4.0 native-desktop baseline after v0.5–v0.9 experiments proved worse for the actual requirements. Rejected approaches include: extension-owned player shell, Aero HTTPS wrapper, hard-navigation-only native watch mode, same-origin document takeover, top-level /embed playback, and native Mobile Web/User-Agent spoofing. Do not restore those approaches unless explicitly requested. The current optimization is deliberately narrow: periodic exact-URL reloads every 3 videos by default to cap SPA memory growth while preserving native desktop YouTube history, Theater/Cinema, quality controls, and Mix behavior.
+Extension v0.4.2 builds directly on the known-good v0.4.0 native-desktop baseline after v0.5–v0.9 experiments proved worse for the actual requirements. Rejected approaches include: extension-owned player shell, Aero HTTPS wrapper, hard-navigation-only native watch mode, same-origin document takeover, top-level /embed playback, and native Mobile Web/User-Agent spoofing. Do not restore those approaches unless explicitly requested. The current optimization is Deep Trim: physically remove hidden non-player modules while preserving native desktop YouTube history, Theater/Cinema, quality controls, and Mix behavior. The v0.4.1 periodic reload approach is rejected after measuring about 460 MB.
 
 Extension v0.4.0 evolves Aero Mix Bridge into YouTube Super Lite + Mix Bridge. Super Lite is default-on and CSS-first: it removes most of the normal youtube.com shell while retaining native playback/search/session behavior and the Mix panel needed for capture. The extension deliberately uses no framework, background service worker, polling loop, or MutationObserver; one small content script only applies stored switches and tracks YouTube SPA navigation. The popup can restore individual surfaces or disable Lite mode entirely. Mix capture semantics are unchanged.\n\nv0.15.2 adds `vq: 'hd1080'` to the YouTube IFrame player configuration so Aero requests 1080p as its default/preferred quality. Current YouTube IFrame API quality setter methods and `suggestedQuality` are deprecated/no-op, so Aero does not pretend to force a stream level; YouTube may still lower or raise quality adaptively based on the viewer environment. No queue, Mix Bridge, storage, or transport behavior changed.
 
