@@ -1,227 +1,108 @@
 'use strict';
 
 const DEFAULTS = Object.freeze({
-  liteEnabled: true,
-  showHomeFeed: false,
-  showRelated: false,
-  showComments: false,
-  showShorts: false,
-  showMixPanel: true,
-  showDescription: false
+  liteEnabled:true, cinemaMode:true, hardReloadVideos:true,
+  showHomeFeed:false, showRelated:false, showComments:false,
+  showShorts:false, showMixPanel:true, showDescription:false
 });
 
-const MIX_STORAGE_PREFIX = 'aero_super_lite_mix:';
-const captureButton = document.getElementById('capture');
-const nativeButton = document.getElementById('native');
-const status = document.getElementById('status');
-const settingInputs = Object.fromEntries(
-  Object.keys(DEFAULTS).map(key => [key, document.getElementById(key)])
-);
+const captureButton=document.getElementById('capture');
+const nativeButton=document.getElementById('native');
+const status=document.getElementById('status');
+const inputs=Object.fromEntries(Object.keys(DEFAULTS).map(k=>[k,document.getElementById(k)]));
 
-function setStatus(text, kind) {
-  status.textContent = text;
-  status.className = kind || '';
+function setStatus(text,kind){status.textContent=text;status.className=kind||''}
+
+async function loadSettings(){
+  const saved=await chrome.storage.sync.get(DEFAULTS);
+  for(const [key,input] of Object.entries(inputs)) input.checked=Boolean(saved[key]);
 }
 
-async function loadSettings() {
-  const saved = await chrome.storage.sync.get(DEFAULTS);
-  for (const [key, input] of Object.entries(settingInputs)) {
-    input.checked = Boolean(saved[key]);
-  }
-}
-
-for (const [key, input] of Object.entries(settingInputs)) {
-  input.addEventListener('change', async () => {
-    await chrome.storage.sync.set({ [key]: input.checked });
-    setStatus('Settings updated.', 'ok');
+for(const [key,input] of Object.entries(inputs)){
+  input.addEventListener('change',async()=>{
+    await chrome.storage.sync.set({[key]:input.checked});
+    setStatus('Settings updated.','ok');
   });
 }
 
-async function getActiveTab() {
-  const tabs = await chrome.tabs.query({ active:true, currentWindow:true });
-  return tabs && tabs[0] ? tabs[0] : null;
+async function activeTab(){
+  const tabs=await chrome.tabs.query({active:true,currentWindow:true});
+  return tabs&&tabs[0]?tabs[0]:null;
 }
 
-function watchUrlFromTabUrl(raw) {
-  let url;
-  try {
-    url = new URL(raw);
-  } catch (_) {
-    return null;
-  }
-
-  const host = url.hostname.replace(/^www\./, '');
-  if (host !== 'youtube.com') return null;
-
-  if (url.pathname === '/watch') {
-    url.searchParams.set('aero_native', '1');
-    return url;
-  }
-
-  const match = url.pathname.match(/^\/embed\/([A-Za-z0-9_-]{11})/);
-  if (!match) return null;
-
-  const watch = new URL('https://www.youtube.com/watch');
-  watch.searchParams.set('v', match[1]);
-
-  const listId = url.searchParams.get('aero_list') || '';
-  const index = url.searchParams.get('aero_index') || '';
-
-  if (listId) watch.searchParams.set('list', listId);
-  if (index && /^\d+$/.test(index)) watch.searchParams.set('index', index);
-  watch.searchParams.set('aero_native', '1');
-  return watch;
+function desktopUrl(raw){
+  try{
+    const u=new URL(raw);
+    const v=u.searchParams.get('v')||'';
+    if(u.pathname!=='/watch'||!/^[A-Za-z0-9_-]{11}$/.test(v)) return null;
+    u.hostname='www.youtube.com';
+    u.searchParams.delete('app');
+    u.searchParams.delete('aero_mobile');
+    u.searchParams.set('aero_native','1');
+    return u;
+  }catch(_){return null}
 }
 
-function scrapeCurrentMix() {
-  let pageUrl;
-  try {
-    pageUrl = new URL(location.href);
-  } catch (_) {
-    return { error:'This page is not a valid YouTube page.' };
-  }
+function scrapeMix(){
+  let u;
+  try{u=new URL(location.href)}catch(_){return{error:'Invalid YouTube page.'}}
+  if(u.pathname!=='/watch') return{error:'Open a YouTube Mix/watch page first.'};
 
-  const root = document.documentElement;
-  const listId =
-    (root && root.dataset.aeroListId) ||
-    pageUrl.searchParams.get('aero_list') ||
-    pageUrl.searchParams.get('list') ||
-    '';
+  const seedId=u.searchParams.get('v')||'';
+  const listId=u.searchParams.get('list')||'';
+  if(!seedId||!listId) return{error:'This page is not a Mix/playlist.'};
 
-  const seedId =
-    (root && root.dataset.aeroMixSeedId) ||
-    pageUrl.searchParams.get('aero_seed') ||
-    pageUrl.searchParams.get('v') ||
-    (pageUrl.pathname.match(/^\/embed\/([A-Za-z0-9_-]{11})/) || [])[1] ||
-    '';
-
-  if (root && root.dataset.aeroEmbed === 'on') {
-    let ids = [];
-
-    try {
-      const parsed = JSON.parse(root.dataset.aeroPlaylistIds || '[]');
-      if (Array.isArray(parsed)) {
-        ids = parsed.filter(id => typeof id === 'string' && /^[A-Za-z0-9_-]{11}$/.test(id));
+  const ids=[];
+  const anchors=Array.from(document.querySelectorAll('a[href*="/watch?"]'));
+  for(const a of anchors){
+    try{
+      const x=new URL(a.href||a.getAttribute('href'),location.origin);
+      if(x.searchParams.get('list')&&/^[A-Za-z0-9_-]{11}$/.test(x.searchParams.get('v')||'')){
+        ids.push(x.searchParams.get('v'));
       }
-    } catch (_) {}
-
-    if (!ids.length && listId) {
-      try {
-        const cached = JSON.parse(sessionStorage.getItem(MIX_STORAGE_PREFIX + listId) || 'null');
-        if (cached && Array.isArray(cached.ids)) {
-          ids = cached.ids.filter(id => typeof id === 'string' && /^[A-Za-z0-9_-]{11}$/.test(id));
-        }
-      } catch (_) {}
-    }
-
-    if (!listId) return { error:'This video is not currently part of a Mix/playlist.' };
-    if (ids.length < 2) return { error:'Mix order is not ready yet. Wait a moment and try again.' };
-
-    return { snapshot:{ seedId, listId, ids:ids.slice(0,100) } };
+    }catch(_){}
+    if(ids.length>=100) break;
   }
 
-  if (pageUrl.pathname !== '/watch') {
-    return { error:'Open a YouTube Mix/watch page first.' };
+  if(ids.length<2){
+    const html=document.documentElement?document.documentElement.innerHTML:'';
+    const re=/"playlistPanelVideoRenderer":\{"videoId":"([A-Za-z0-9_-]{11})"/g;
+    let m;
+    while((m=re.exec(html))&&ids.length<100) ids.push(m[1]);
   }
 
-  const nativeListId = pageUrl.searchParams.get('list') || '';
-  const nativeSeedId = pageUrl.searchParams.get('v') || '';
-  if (!nativeSeedId || !nativeListId) {
-    return { error:'This YouTube page does not contain a Mix/playlist.' };
-  }
-
-  const panels = Array.from(document.querySelectorAll('ytd-playlist-panel-renderer'))
-    .filter(panel => panel.offsetParent !== null && panel.querySelector('ytd-playlist-panel-video-renderer'));
-
-  const panel =
-    panels.find(candidate => candidate.querySelector('ytd-playlist-panel-video-renderer[selected]')) ||
-    panels[0] ||
-    null;
-
-  const rows = panel ? Array.from(panel.querySelectorAll('ytd-playlist-panel-video-renderer')) : [];
-  const ids = [];
-
-  for (const row of rows) {
-    const anchor =
-      row.querySelector('a#wc-endpoint[href*="/watch?"]') ||
-      row.querySelector('a#video-title[href*="/watch?"]') ||
-      row.querySelector('a[href*="/watch?"]');
-
-    if (!anchor) continue;
-
-    try {
-      const u = new URL(anchor.href || anchor.getAttribute('href'), location.origin);
-      const id = u.searchParams.get('v') || '';
-      if (/^[A-Za-z0-9_-]{11}$/.test(id)) ids.push(id);
-    } catch (_) {}
-
-    if (ids.length >= 100) break;
-  }
-
-  if (ids.length < 2) return { error:'Aero could not read enough songs from the visible Mix panel.' };
-
-  return { snapshot:{ seedId:nativeSeedId, listId:nativeListId, ids } };
+  if(ids.length<2) return{error:'Mix order is not available yet. Let the playlist load, then try again.'};
+  return{snapshot:{seedId,listId,ids}};
 }
 
-nativeButton.addEventListener('click', async () => {
-  try {
-    const tab = await getActiveTab();
-    if (!tab || !tab.id) throw new Error('No active tab found.');
-
-    const target = watchUrlFromTabUrl(String(tab.url || ''));
-    if (!target) throw new Error('Open a YouTube video first.');
-
-    await chrome.tabs.update(tab.id, { url:target.toString() });
+nativeButton.addEventListener('click',async()=>{
+  try{
+    const tab=await activeTab();
+    if(!tab||!tab.id) throw new Error('No active tab found.');
+    const target=desktopUrl(String(tab.url||''));
+    if(!target) throw new Error('Open a YouTube video first.');
+    await chrome.tabs.update(tab.id,{url:target.toString()});
     window.close();
-  } catch (error) {
-    setStatus(error && error.message ? error.message : 'Could not open native page.', 'err');
-  }
+  }catch(e){setStatus(e.message||'Could not open desktop YouTube.','err')}
 });
 
-captureButton.addEventListener('click', async () => {
-  captureButton.disabled = true;
+captureButton.addEventListener('click',async()=>{
+  captureButton.disabled=true;
   setStatus('Reading the current Mix…');
+  try{
+    const tab=await activeTab();
+    if(!tab||!tab.id) throw new Error('No active tab found.');
+    const results=await chrome.scripting.executeScript({target:{tabId:tab.id},func:scrapeMix});
+    const result=results&&results[0]&&results[0].result;
+    if(!result) throw new Error('The Mix could not be read.');
+    if(result.error) throw new Error(result.error);
 
-  try {
-    const tab = await getActiveTab();
-    if (!tab || !tab.id) throw new Error('No active tab found.');
-
-    const url = String(tab.url || '');
-    if (!url.startsWith('https://www.youtube.com/') && !url.startsWith('https://youtube.com/')) {
-      throw new Error('Open the personalized Mix on youtube.com first.');
-    }
-
-    const results = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: scrapeCurrentMix
-    });
-
-    const result = results && results[0] && results[0].result;
-    if (!result) throw new Error('The Mix could not be read.');
-    if (result.error) throw new Error(result.error);
-
-    const compact = {
-      v: 1,
-      listId: result.snapshot.listId,
-      seedId: result.snapshot.seedId,
-      ids: result.snapshot.ids
-    };
-
-    const encoded = btoa(JSON.stringify(compact))
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=+$/g, '');
-
-    setStatus('Captured ' + compact.ids.length + ' songs. Opening Aero…', 'ok');
-
-    await chrome.tabs.create({
-      url: 'https://aero-x-ive.pages.dev/#aeroMix=' + encoded
-    });
-  } catch (error) {
-    setStatus(error && error.message ? error.message : 'Capture failed.', 'err');
-  } finally {
-    captureButton.disabled = false;
-  }
+    const compact={v:1,listId:result.snapshot.listId,seedId:result.snapshot.seedId,ids:result.snapshot.ids};
+    const encoded=btoa(JSON.stringify(compact)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/g,'');
+    setStatus('Captured '+compact.ids.length+' songs. Opening Aero…','ok');
+    await chrome.tabs.create({url:'https://aero-x-ive.pages.dev/#aeroMix='+encoded});
+  }catch(e){setStatus(e.message||'Capture failed.','err')}
+  finally{captureButton.disabled=false}
 });
 
-loadSettings().catch(() => setStatus('Could not load extension settings.', 'err'));
+loadSettings().catch(()=>setStatus('Could not load extension settings.','err'));

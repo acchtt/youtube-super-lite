@@ -14,7 +14,7 @@ Before continuing development in a new chat/session, read HANDOFF.md. It is the 
 
 Aero intentionally keeps the runtime small: one YouTube iframe, plain HTML/CSS/JavaScript, Cloudflare Pages Functions, and D1 persistence.
 
-The companion **YouTube Super Lite + Aero Mix Bridge** extension currently redirects watch URLs to YouTube's own top-level `/embed/VIDEO_ID` player, avoiding the full watch SPA while keeping a first-party YouTube playback page. Mix order is extracted from inert watch HTML and driven with lightweight navigation.
+The companion **YouTube Super Lite + Aero Mix Bridge** extension is currently testing native YouTube Mobile Web for watch pages. Desktop watch URLs route to `m.youtube.com` with a mobile browser identity, preserving a real signed-in YouTube watch page while targeting a smaller runtime.
 
 Current features:
 - exact captured Mix order;
@@ -43,7 +43,7 @@ Removed as obsolete in v0.13.0:
 
 ## Mix Bridge
 
-Extension v0.8.0 abandons document replacement entirely. Normal watch URLs redirect to YouTube's own top-level `/embed/VIDEO_ID` page. Dynamic Mix order is extracted separately from inert watch HTML, while Previous/Next/autoplay and Aero capture are handled by the extension. The critical tests remain RAM and signed-in YouTube History.
+Extension v0.9.0 retires direct embed mode after a normal video returned YouTube error 152-4. Watch URLs now use native YouTube Mobile Web with a mobile User-Agent, preserved Mix parameters, CSS Cinema layout, and fresh full-page video navigation.
 
 See `extension/README.md`.
 

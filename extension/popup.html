@@ -5,37 +5,29 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>YouTube Super Lite</title>
   <style>
-    :root{color-scheme:dark}
-    *{box-sizing:border-box}
+    :root{color-scheme:dark}*{box-sizing:border-box}
     body{margin:0;width:320px;background:#0f1217;color:#f3f5f7;font:13px/1.4 system-ui,-apple-system,Segoe UI,sans-serif}
-    main{padding:14px;display:grid;gap:12px}
-    h1{font-size:16px;margin:0}
-    .intro{margin:0;color:#9ba5b2}
+    main{padding:14px;display:grid;gap:12px}h1{font-size:16px;margin:0}.intro{margin:0;color:#9ba5b2}
     .badge{display:inline-flex;width:max-content;padding:4px 7px;border:1px solid #3a4350;border-radius:999px;color:#bfc7d2;font-size:10px;font-weight:800;letter-spacing:.08em}
     .panel{border:1px solid #2c3440;border-radius:12px;background:#151a21;overflow:hidden}
-    .row{min-height:42px;padding:9px 11px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid #252c36}
-    .row:first-child{border-top:0}
-    .row strong{font-size:13px}
-    .row span{color:#a8b1bd}
+    .row{min-height:42px;padding:9px 11px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid #252c36}.row:first-child{border-top:0}
+    .row span{color:#a8b1bd}.sub{padding:0 11px 10px;color:#7f8996;font-size:11px}
     input[type="checkbox"]{width:17px;height:17px;accent-color:#c8b5ff}
     button{width:100%;border:1px solid #3a4350;border-radius:10px;padding:10px 12px;background:#f4f5f7;color:#0c0e12;font-weight:750;cursor:pointer}
-    button.secondary{background:#151a21;color:#e5e9ee}
-    button:disabled{opacity:.55;cursor:default}
-    #status{min-height:34px;font-size:12px;color:#aeb8c4}
-    .ok{color:#9fe0b5!important}.err{color:#ff9d9d!important}
+    button.secondary{background:#151a21;color:#e5e9ee}button:disabled{opacity:.55}
+    #status{min-height:34px;font-size:12px;color:#aeb8c4}.ok{color:#9fe0b5!important}.err{color:#ff9d9d!important}
     .section-title{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#7f8996}
   </style>
 </head>
 <body>
   <main>
-    <div>
-      <h1>YouTube Super Lite</h1>
-      <p class="intro">Watch pages use YouTube's own top-level embed player instead of the heavy watch SPA.</p>
-    </div>
-    <span class="badge">v0.8 DIRECT EMBED</span>
-
+    <div><h1>YouTube Super Lite</h1><p class="intro">Native YouTube Mobile Web for a smaller signed-in watch page.</p></div>
+    <span class="badge">v0.9 MOBILE NATIVE</span>
     <div class="panel">
-      <label class="row"><strong>Super Lite browsing</strong><input id="liteEnabled" type="checkbox"></label>
+      <label class="row"><strong>Super Lite</strong><input id="liteEnabled" type="checkbox"></label>
+      <label class="row"><strong>Cinema mode</strong><input id="cinemaMode" type="checkbox"></label>
+      <label class="row"><strong>Fresh page each video</strong><input id="hardReloadVideos" type="checkbox"></label>
+      <div class="sub">Watch pages use m.youtube.com with a mobile browser identity and avoid SPA track changes.</div>
       <label class="row"><span>Homepage feed</span><input id="showHomeFeed" type="checkbox"></label>
       <label class="row"><span>Related videos</span><input id="showRelated" type="checkbox"></label>
       <label class="row"><span>Comments</span><input id="showComments" type="checkbox"></label>
@@ -43,12 +35,10 @@
       <label class="row"><span>Mix / playlist panel</span><input id="showMixPanel" type="checkbox"></label>
       <label class="row"><span>Description</span><input id="showDescription" type="checkbox"></label>
     </div>
-
-    <button id="native" class="secondary" type="button">Open full native YouTube page</button>
-
+    <button id="native" class="secondary" type="button">Open desktop YouTube page</button>
     <div class="section-title">Aero Mix Bridge</div>
     <button id="capture" type="button">Capture current Mix</button>
-    <div id="status">First verify that a normal video plays. Then check RAM and YouTube History.</div>
+    <div id="status">Test one plain video first: playback, RAM, History, then 1080p.</div>
   </main>
   <script src="popup.js"></script>
 </body>

@@ -1,114 +1,51 @@
-/* YouTube Super Lite — browse stripping + direct YouTube embed mode. */
+/* YouTube Super Lite v0.9 — native Mobile Web experiment. */
 
-html[data-aero-lite="on"] {
-  --aero-lite-max-player: 1280px;
-}
-
-html[data-aero-lite="on"] ytd-guide-renderer,
-html[data-aero-lite="on"] ytd-mini-guide-renderer,
-html[data-aero-lite="on"] tp-yt-app-drawer#guide,
-html[data-aero-lite="on"] #guide,
-html[data-aero-lite="on"] #guide-content,
-html[data-aero-lite="on"] ytd-masthead #guide-button,
-html[data-aero-lite="on"] ytd-feed-filter-chip-bar-renderer,
-html[data-aero-lite="on"] yt-chip-cloud-renderer {
+html[data-aero-lite="on"]:not([data-aero-mobile="on"]) ytd-guide-renderer,
+html[data-aero-lite="on"]:not([data-aero-mobile="on"]) ytd-mini-guide-renderer,
+html[data-aero-lite="on"]:not([data-aero-mobile="on"]) tp-yt-app-drawer#guide,
+html[data-aero-lite="on"]:not([data-aero-mobile="on"]) #guide,
+html[data-aero-lite="on"]:not([data-aero-mobile="on"]) #guide-content,
+html[data-aero-lite="on"]:not([data-aero-mobile="on"]) ytd-feed-filter-chip-bar-renderer,
+html[data-aero-lite="on"]:not([data-aero-mobile="on"]) yt-chip-cloud-renderer {
   display: none !important;
 }
 
-html[data-aero-lite="on"] ytd-page-manager {
+html[data-aero-lite="on"]:not([data-aero-mobile="on"]) ytd-page-manager {
   margin-left: 0 !important;
 }
 
-html[data-aero-lite="on"] ytd-masthead ytd-notification-topbar-button-renderer,
-html[data-aero-lite="on"] ytd-masthead #voice-search-button,
-html[data-aero-lite="on"] ytd-masthead ytd-button-renderer.ytd-masthead {
-  display: none !important;
-}
-
-html[data-aero-lite="on"][data-aero-page="home"][data-aero-home-feed="hide"]
+html[data-aero-lite="on"][data-aero-page="home"][data-aero-home-feed="hide"]:not([data-aero-mobile="on"])
 ytd-browse[page-subtype="home"] ytd-rich-grid-renderer {
   display: none !important;
 }
 
-html[data-aero-lite="on"][data-aero-shorts="hide"] ytd-reel-shelf-renderer,
-html[data-aero-lite="on"][data-aero-shorts="hide"] ytd-rich-section-renderer:has(ytd-reel-shelf-renderer),
-html[data-aero-lite="on"][data-aero-shorts="hide"] ytd-video-renderer:has(a[href^="/shorts/"]),
-html[data-aero-lite="on"][data-aero-shorts="hide"] ytd-grid-video-renderer:has(a[href^="/shorts/"]),
-html[data-aero-lite="on"][data-aero-shorts="hide"] ytd-rich-item-renderer:has(a[href^="/shorts/"]) {
+html[data-aero-lite="on"][data-aero-mobile="on"] ytm-pivot-bar-renderer,
+html[data-aero-lite="on"][data-aero-mobile="on"] ytm-reel-shelf-renderer,
+html[data-aero-lite="on"][data-aero-mobile="on"][data-aero-comments="hide"] ytm-comment-section-renderer,
+html[data-aero-lite="on"][data-aero-mobile="on"][data-aero-comments="hide"] ytm-comments-entry-point-header-renderer,
+html[data-aero-lite="on"][data-aero-mobile="on"] ytm-promoted-sparkles-web-renderer,
+html[data-aero-lite="on"][data-aero-mobile="on"] ytm-merch-shelf-renderer,
+html[data-aero-lite="on"][data-aero-mobile="on"] .ytp-ce-element,
+html[data-aero-lite="on"][data-aero-mobile="on"] .ytp-endscreen-content {
   display: none !important;
 }
 
-html[data-aero-lite="on"][data-aero-comments="hide"] #comments,
-html[data-aero-lite="on"][data-aero-comments="hide"] ytd-comments,
-html[data-aero-lite="on"][data-aero-comments="hide"] ytd-comments-header-renderer,
-html[data-aero-lite="on"][data-aero-related="hide"] #related,
-html[data-aero-lite="on"][data-aero-related="hide"] ytd-watch-next-secondary-results-renderer,
-html[data-aero-lite="on"][data-aero-description="hide"] ytd-watch-metadata #description,
-html[data-aero-lite="on"][data-aero-description="hide"] ytd-text-inline-expander#description-inline-expander,
-html[data-aero-lite="on"] ytd-live-chat-frame,
-html[data-aero-lite="on"] ytd-merch-shelf-renderer,
-html[data-aero-lite="on"] ytd-offer-module-renderer,
-html[data-aero-lite="on"] ytd-donation-shelf-renderer,
-html[data-aero-lite="on"] ytd-ticket-shelf-renderer,
-html[data-aero-lite="on"] ytd-product-list-renderer,
-html[data-aero-lite="on"] ytd-brand-video-shelf-renderer,
-html[data-aero-lite="on"] ytd-metadata-row-container-renderer,
-html[data-aero-lite="on"] .ytp-ce-element,
-html[data-aero-lite="on"] .ytp-endscreen-content {
-  display: none !important;
+html[data-aero-lite="on"][data-aero-mobile="on"][data-aero-cinema="on"] ytm-watch #player-container-id,
+html[data-aero-lite="on"][data-aero-mobile="on"][data-aero-cinema="on"] ytm-watch .player-container,
+html[data-aero-lite="on"][data-aero-mobile="on"][data-aero-cinema="on"] #player-container-id {
+  width: min(100vw, calc((100vh - 56px) * 1.7777778)) !important;
+  max-width: none !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
 }
 
-html[data-aero-lite="on"][data-aero-mix-panel="hide"] ytd-playlist-panel-renderer {
-  display: none !important;
+html[data-aero-lite="on"][data-aero-mobile="on"][data-aero-cinema="on"] ytm-watch {
+  max-width: none !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
 }
 
 html[data-aero-lite="on"] :focus-visible {
   outline: 2px solid currentColor !important;
   outline-offset: 2px !important;
-}
-
-html[data-aero-embed="on"] #aero-embed-controls {
-  position: fixed;
-  top: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 2147483647;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px;
-  border: 1px solid rgba(255,255,255,.18);
-  border-radius: 999px;
-  background: rgba(10,12,16,.72);
-  backdrop-filter: blur(8px);
-  color: #f5f7fa;
-  font: 12px/1.2 system-ui,-apple-system,Segoe UI,sans-serif;
-  opacity: .3;
-  transition: opacity .15s ease;
-}
-
-html[data-aero-embed="on"] #aero-embed-controls:hover,
-html[data-aero-embed="on"] #aero-embed-controls:focus-within {
-  opacity: 1;
-}
-
-html[data-aero-embed="on"] #aero-embed-controls button,
-html[data-aero-embed="on"] #aero-embed-controls a {
-  min-height: 30px;
-  padding: 6px 9px;
-  border: 0;
-  border-radius: 999px;
-  background: rgba(255,255,255,.1);
-  color: #f5f7fa;
-  text-decoration: none;
-  cursor: pointer;
-  font: inherit;
-  font-weight: 700;
-}
-
-html[data-aero-embed="on"] #aero-embed-status {
-  min-width: 58px;
-  text-align: center;
-  color: #d8dde4;
-  font-weight: 700;
 }
