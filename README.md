@@ -14,7 +14,7 @@ Before continuing development in a new chat/session, read HANDOFF.md. It is the 
 
 Aero intentionally keeps the runtime small: one YouTube iframe, plain HTML/CSS/JavaScript, Cloudflare Pages Functions, and D1 persistence.
 
-The companion **Aero Mix Bridge** extension captures the visible personalized YouTube Mix order and opens Aero with only the ordered video IDs. Aero then plays those IDs one at a time through the normal YouTube IFrame API.
+The companion **YouTube Super Lite + Aero Mix Bridge** extension can strip most of the normal youtube.com shell while preserving the native player/search/session, and it still captures the visible personalized YouTube Mix order for Aero. Aero then plays captured IDs one at a time through the normal YouTube IFrame API.
 
 Current features:
 - exact captured Mix order;
@@ -43,7 +43,7 @@ Removed as obsolete in v0.13.0:
 
 ## Mix Bridge
 
-Extension v0.3.3 has no content script or runtime attached to Aero. It performs one explicit capture on the active YouTube Mix page, preserves the visible row order, and transfers only the ordered IDs through a short URL fragment.
+Extension v0.4.0 adds an optional-on-by-default Super Lite youtube.com mode using one tiny content script plus CSS, with no service worker, polling loop, or MutationObserver. The Mix Bridge capture remains explicit: it reads the active visible YouTube Mix panel once, preserves visible row order, and transfers only the ordered IDs through a short URL fragment.
 
 See `extension/README.md`.
 

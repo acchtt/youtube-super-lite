@@ -1,8 +1,11 @@
-# Aero Mix Bridge
+# YouTube Super Lite + Aero Mix Bridge
 
-A tiny Chrome / Edge Manifest V3 companion extension for Aero × IVE.
+A lightweight Chrome / Edge Manifest V3 extension for `youtube.com`.
 
-It captures the visible personalized Mix order from youtube.com and hands only the ordered video IDs to Aero.
+It now has two jobs:
+
+1. **Super Lite mode** strips the normal YouTube page down toward the native player, search, title/channel essentials, and optionally the visible Mix/playlist panel.
+2. **Aero Mix Bridge** still captures the visible personalized Mix order and opens Aero × IVE with only the ordered video IDs.
 
 ## Install locally
 
@@ -12,24 +15,51 @@ It captures the visible personalized Mix order from youtube.com and hands only t
 4. Choose **Load unpacked**.
 5. Select the repository's `extension` folder.
 
-## Use
+## Super Lite defaults
+
+Super Lite is enabled immediately after installation.
+
+Hidden by default:
+- left navigation / mini guide;
+- homepage recommendation feed;
+- Shorts shelves and Shorts results;
+- related videos;
+- comments;
+- live chat;
+- description;
+- merch / offer / donation / ticket shelves;
+- end-screen recommendation cards;
+- filter-chip bars and some secondary masthead controls.
+
+Kept by default:
+- native YouTube video player and controls;
+- search;
+- video title/channel metadata;
+- account/session behavior;
+- Mix / playlist panel, so Aero capture remains available.
+
+Open the extension popup to restore the homepage feed, related videos, comments, Shorts, Mix panel, or description individually. Turning **Super Lite** off restores YouTube's normal layout without uninstalling the extension.
+
+## Low-overhead architecture
+
+v0.4.0 remains intentionally framework-free:
+- no background service worker;
+- no polling loop;
+- no MutationObserver;
+- one tiny content script;
+- one CSS file that performs almost all visual stripping;
+- `chrome.storage.sync` only for the seven user switches;
+- YouTube's own `yt-navigate-finish` / `yt-page-data-updated` events keep route state current during SPA navigation.
+
+This primarily removes visual/UI overhead and reclaims layout space. It does **not** pretend to stop every YouTube script or network request, so the memory reduction will be smaller than Aero × IVE's separate one-iframe player.
+
+## Aero Mix capture
 
 1. Sign into YouTube normally.
 2. Open the personalized Mix / Radio on youtube.com and wait for the playlist panel to appear.
-3. Click **Aero Mix Bridge**.
-4. Click **Capture current Mix**.
-5. Aero opens automatically with the captured order.
-6. Close the YouTube tab and use **Play loaded songs** in Aero.
+3. Keep **Mix / playlist panel** enabled.
+4. Click the extension.
+5. Click **Capture current Mix**.
+6. Aero opens automatically with the captured order.
 
-## v0.3.3 low-memory architecture
-
-The extension has no content script, storage listener, background service worker, MutationObserver, or polling loop.
-
-It uses only:
-- `activeTab` while you click the extension;
-- one `scripting.executeScript` call to read the visible Mix;
-- one compact URL fragment containing the ordered video IDs.
-
-Capture preserves the active visible playlist panel's rendered row order exactly and keeps repeated video IDs when YouTube shows them.
-
-Aero imports the fragment into its D1-backed state and removes the fragment from the address bar. The extension is not present in the Aero tab after transfer.
+Capture still preserves the rendered row order exactly, including repeated video IDs, and transfers only a compact URL fragment.

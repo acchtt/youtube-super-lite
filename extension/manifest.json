@@ -1,11 +1,19 @@
 {
   "manifest_version": 3,
-  "name": "Aero Mix Bridge",
-  "version": "0.3.3",
-  "description": "One-click capture of your personalized YouTube Mix queue for Aero × IVE.",
-  "permissions": ["activeTab", "scripting"],
+  "name": "YouTube Super Lite + Aero",
+  "version": "0.4.0",
+  "description": "Strip YouTube down to the player and essentials, while keeping Aero Mix capture.",
+  "permissions": ["activeTab", "scripting", "storage"],
   "action": {
-    "default_title": "Capture YouTube Mix",
+    "default_title": "YouTube Super Lite",
     "default_popup": "popup.html"
-  }
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/*", "https://youtube.com/*"],
+      "js": ["lite.js"],
+      "css": ["lite.css"],
+      "run_at": "document_start"
+    }
+  ]
 }

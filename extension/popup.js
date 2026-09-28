@@ -1,11 +1,40 @@
 'use strict';
 
+const DEFAULTS = Object.freeze({
+  liteEnabled: true,
+  showHomeFeed: false,
+  showRelated: false,
+  showComments: false,
+  showShorts: false,
+  showMixPanel: true,
+  showDescription: false
+});
+
 const button = document.getElementById('capture');
 const status = document.getElementById('status');
+const settingInputs = Object.fromEntries(
+  Object.keys(DEFAULTS).map(key => [key, document.getElementById(key)])
+);
 
 function setStatus(text, kind) {
   status.textContent = text;
   status.className = kind || '';
+}
+
+async function loadSettings() {
+  const saved = await chrome.storage.sync.get(DEFAULTS);
+  for (const [key, input] of Object.entries(settingInputs)) {
+    input.checked = Boolean(saved[key]);
+  }
+}
+
+for (const [key, input] of Object.entries(settingInputs)) {
+  input.addEventListener('change', async () => {
+    await chrome.storage.sync.set({ [key]: input.checked });
+    setStatus(input.checked || key !== 'liteEnabled'
+      ? 'Settings updated.'
+      : 'Super Lite is off. YouTube is back to its normal layout.', 'ok');
+  });
 }
 
 async function getActiveTab() {
@@ -44,7 +73,7 @@ function scrapeCurrentMix() {
     : [];
 
   if (rows.length < 2) {
-    return { error:'The visible Mix panel is not loaded yet. Wait for the playlist to appear, then try again.' };
+    return { error:'The visible Mix panel is not loaded yet. Enable the Mix / playlist panel, wait for it to appear, then try again.' };
   }
 
   const ids = [];
@@ -67,7 +96,6 @@ function scrapeCurrentMix() {
     const id = url.searchParams.get('v') || '';
     if (!/^[A-Za-z0-9_-]{11}$/.test(id)) continue;
 
-    // Preserve the rendered row sequence exactly, including repeated IDs.
     ids.push(id);
     if (ids.length >= 100) break;
   }
@@ -94,7 +122,7 @@ button.addEventListener('click', async () => {
     if (!tab || !tab.id) throw new Error('No active tab found.');
 
     const url = String(tab.url || '');
-    if (!url.startsWith('https://www.youtube.com/')) {
+    if (!url.startsWith('https://www.youtube.com/') && !url.startsWith('https://youtube.com/')) {
       throw new Error('Open the personalized Mix on youtube.com first.');
     }
 
@@ -133,3 +161,5 @@ button.addEventListener('click', async () => {
     button.disabled = false;
   }
 });
+
+loadSettings().catch(() => setStatus('Could not load extension settings.', 'err'));

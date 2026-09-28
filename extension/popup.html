@@ -3,25 +3,47 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Aero Mix Bridge</title>
+  <title>YouTube Super Lite</title>
   <style>
     :root{color-scheme:dark}
-    body{margin:0;width:280px;background:#0f1217;color:#f3f5f7;font:13px/1.4 system-ui,-apple-system,Segoe UI,sans-serif}
-    main{padding:14px;display:grid;gap:10px}
-    h1{font-size:15px;margin:0}
-    p{margin:0;color:#9ba5b2}
-    button{border:1px solid #3a4350;border-radius:9px;padding:10px 12px;background:#f4f5f7;color:#0c0e12;font-weight:750;cursor:pointer}
+    *{box-sizing:border-box}
+    body{margin:0;width:320px;background:#0f1217;color:#f3f5f7;font:13px/1.4 system-ui,-apple-system,Segoe UI,sans-serif}
+    main{padding:14px;display:grid;gap:12px}
+    h1{font-size:16px;margin:0}
+    .intro{margin:0;color:#9ba5b2}
+    .panel{border:1px solid #2c3440;border-radius:12px;background:#151a21;overflow:hidden}
+    .row{min-height:42px;padding:9px 11px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid #252c36}
+    .row:first-child{border-top:0}
+    .row strong{font-size:13px}
+    .row span{color:#a8b1bd}
+    input[type="checkbox"]{width:17px;height:17px;accent-color:#c8b5ff}
+    button{width:100%;border:1px solid #3a4350;border-radius:10px;padding:10px 12px;background:#f4f5f7;color:#0c0e12;font-weight:750;cursor:pointer}
     button:disabled{opacity:.55;cursor:default}
-    #status{min-height:36px;font-size:12px;color:#aeb8c4}
+    #status{min-height:34px;font-size:12px;color:#aeb8c4}
     .ok{color:#9fe0b5!important}.err{color:#ff9d9d!important}
+    .section-title{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#7f8996}
   </style>
 </head>
 <body>
   <main>
-    <h1>Aero Mix Bridge</h1>
-    <p>Open your personalized YouTube Mix, capture it once, and Aero will open with that exact order.</p>
+    <div>
+      <h1>YouTube Super Lite</h1>
+      <p class="intro">Keep native YouTube playback. Strip the shell around it.</p>
+    </div>
+
+    <div class="panel">
+      <label class="row"><strong>Super Lite</strong><input id="liteEnabled" type="checkbox"></label>
+      <label class="row"><span>Homepage feed</span><input id="showHomeFeed" type="checkbox"></label>
+      <label class="row"><span>Related videos</span><input id="showRelated" type="checkbox"></label>
+      <label class="row"><span>Comments</span><input id="showComments" type="checkbox"></label>
+      <label class="row"><span>Shorts</span><input id="showShorts" type="checkbox"></label>
+      <label class="row"><span>Mix / playlist panel</span><input id="showMixPanel" type="checkbox"></label>
+      <label class="row"><span>Description</span><input id="showDescription" type="checkbox"></label>
+    </div>
+
+    <div class="section-title">Aero Mix Bridge</div>
     <button id="capture" type="button">Capture current Mix</button>
-    <div id="status">No background monitoring or Aero content script is running.</div>
+    <div id="status">Settings apply immediately on youtube.com.</div>
   </main>
   <script src="popup.js"></script>
 </body>
