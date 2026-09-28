@@ -20,7 +20,7 @@ AGENTS.md contains the standing repository instruction for this rule.
 - Product role: lightweight YouTube Mix player / unofficial IVE fan edition
 - Production: https://aero-x-ive.pages.dev
 - Current app version: v0.15.2
-- YouTube Super Lite + Mix Bridge extension: v0.9.0 experimental
+- YouTube Super Lite + Mix Bridge extension: v0.4.0
 - Deployment: Cloudflare Pages from main
 - D1 database: youtube-super-lite
 - D1 binding: DB
@@ -62,18 +62,17 @@ The normal page is now the landing state:
 
 ### YouTube Super Lite + Mix Bridge
 
-Extension v0.9.0 experimental:
-- retires v0.8 direct-embed mode after a normal video returned YouTube error 152-4;
-- desktop watch URLs redirect early to native `m.youtube.com/watch`, preserving video/list/index/timestamp parameters;
-- a static Manifest V3 declarativeNetRequest rule sets a mobile Android Chrome User-Agent for `m.youtube.com`;
-- playback therefore remains on a real signed-in YouTube watch page instead of an embed, extension page, or Aero wrapper;
-- watch-link clicks use full mobile-page navigation and a changed video/list/index SPA state triggers one reload, targeting long-session RAM growth;
-- Cinema mode is CSS-only around the native mobile player; YouTube remains responsible for player controls and available quality levels;
-- Mix/list/index remain native; Capture current Mix reads rendered watch links and falls back to playlist IDs present in the page's initial HTML;
-- the popup can open the same video on desktop YouTube with `aero_native=1`;
-- critical tests: plain-video playback, RAM versus the ~400 MB desktop baseline, signed-in YouTube History, 1080p availability, and Mix behavior.
+Extension v0.4.0 is the canonical baseline:
+- uses the real desktop `youtube.com` page and native YouTube player;
+- preserves normal signed-in YouTube history/account behavior;
+- preserves native Theater/Cinema mode and YouTube's own quality selector, including 1080p when offered;
+- keeps the native Mix/playlist panel visible by default;
+- strips navigation/feed/Shorts/comments/related/live-chat/description/promotional clutter primarily with CSS;
+- uses one tiny content script for settings and YouTube SPA route-state updates;
+- has no background service worker, polling loop, MutationObserver, alternate player shell, iframe wrapper, mobile User-Agent spoofing, or watch-page document takeover;
+- Capture current Mix reads the visible native playlist panel once, preserves rendered row order exactly including repeated IDs, and opens Aero with a compact `#aeroMix=` fragment.
 
-Aero imports captured Mix fragments into D1-backed state and immediately removes the fragment from its address bar.
+Aero imports the fragment into D1-backed state and immediately removes it from the address bar.
 
 ### History and storage
 
@@ -183,7 +182,9 @@ When GitHub access is available and the user asks for a repo change:
 
 2026-09-28 ICT
 
-Extension v0.9.0 replaces direct embed mode after the user's plain-video test returned YouTube error 152-4. The current experiment uses native YouTube Mobile Web with a mobile User-Agent, preserving a real watch-page/account path while targeting a smaller runtime than desktop YouTube.\n\nExtension v0.8.0 replaces the failed v0.7 takeover architecture entirely. Normal watch URLs now redirect to YouTube's own top-level `/embed/VIDEO_ID` player page, eliminating document replacement and its blank/loading failure modes. Mix order is obtained separately from inert watch HTML and driven with lightweight full-page embed navigation. The primary tests are playback reliability, memory, and signed-in YouTube History.\n\nExtension v0.7.2 fixes the second v0.7 test, where a dynamic YouTube Mix (`RD...`) left the lightweight player loading indefinitely. The iframe now always starts from the concrete video ID without list parameters. Mix order is obtained separately by fetching the native watch HTML as inert text with signed-in cookies, extracting playlist renderer IDs, and discarding the HTML without executing the full watch SPA. The extracted queue drives Next/Previous/autoplay and Aero Mix capture.\n\nExtension v0.7.1 fixes the first v0.7 takeover test, which produced a blank page because `window.stop()` ran against an unstable document-start DOM. The takeover now atomically replaces the pending document with `document.open/write/close`, and creates the official YouTube iframe immediately before attaching the control API. The same History/RAM/Mix acceptance tests remain.\n\nExtension v0.7.0 is the same-origin takeover experiment prompted by v0.6 reaching roughly 400 MB on the first stripped native watch page. The new architecture keeps the real youtube.com/watch top-level origin but stops its heavy document at document_start and builds only an official YouTube player shell. The primary go/no-go criterion is signed-in YouTube History recording; memory, Cinema, 1080p-capable native player controls and Mix behavior are secondary verification targets.\n\nExtension v0.6.0 removes the Lite Player architecture after clarifying the extension goal: playback must remain native YouTube so signed-in watch history, Theater/Cinema mode, 1080p-capable native quality controls, and Mix behavior are retained. The v0.4 stripped native page is restored, with a new default-on hard-navigation reset between videos/Mix positions to stop SPA state from accumulating across long sessions. Clicked watch links bypass the SPA directly; player-driven Next/Previous/autoplay transitions are reloaded once after navigation. Mix identity includes video/list/index so repeated IDs remain correct. The old v0.5 player/wrapper files are removed.\n\nExtension v0.5.1 fixes YouTube Error 153 in Lite Player. Chromium extension pages can omit the HTTP Referer required by YouTube embeds, so Lite Player no longer embeds youtube.com directly from `chrome-extension://`. It now loads the static `lite-embed.html` wrapper from the existing Aero HTTPS domain, and that wrapper hosts the single YouTube iframe with `strict-origin-when-cross-origin`. This keeps the lightweight one-player architecture and adds no background service worker or framework.\n\nExtension v0.5.0 is the first memory-focused watch-page architecture. Normal YouTube browsing/search remains available, but ordinary watch URLs are now routed into a minimal extension-owned page with one YouTube embed, so the full native watch shell does not need to stay resident during playback. A Full YouTube bypass preserves access to comments/native playlist UI and exact Mix capture. Lite Player can be disabled from the popup to fall back to v0.4 behavior. There is still no service worker, polling loop, MutationObserver, framework, or custom playback engine.\n\nExtension v0.4.0 evolves Aero Mix Bridge into YouTube Super Lite + Mix Bridge. Super Lite is default-on and CSS-first: it removes most of the normal youtube.com shell while retaining native playback/search/session behavior and the Mix panel needed for capture. The extension deliberately uses no framework, background service worker, polling loop, or MutationObserver; one small content script only applies stored switches and tracks YouTube SPA navigation. The popup can restore individual surfaces or disable Lite mode entirely. Mix capture semantics are unchanged.\n\nv0.15.2 adds `vq: 'hd1080'` to the YouTube IFrame player configuration so Aero requests 1080p as its default/preferred quality. Current YouTube IFrame API quality setter methods and `suggestedQuality` are deprecated/no-op, so Aero does not pretend to force a stream level; YouTube may still lower or raise quality adaptively based on the viewer environment. No queue, Mix Bridge, storage, or transport behavior changed.
+Extension work has been deliberately rolled back to the known-good v0.4.0 native-desktop baseline after v0.5–v0.9 experiments proved worse for the actual requirements. Rejected approaches include: extension-owned player shell, Aero HTTPS wrapper, hard-navigation-only native watch mode, same-origin document takeover, top-level /embed playback, and native Mobile Web/User-Agent spoofing. Do not restore those approaches unless explicitly requested. The next optimization work must start from v0.4.0 and preserve native desktop YouTube history, Theater/Cinema, quality controls, and Mix behavior.
+
+Extension v0.4.0 evolves Aero Mix Bridge into YouTube Super Lite + Mix Bridge. Super Lite is default-on and CSS-first: it removes most of the normal youtube.com shell while retaining native playback/search/session behavior and the Mix panel needed for capture. The extension deliberately uses no framework, background service worker, polling loop, or MutationObserver; one small content script only applies stored switches and tracks YouTube SPA navigation. The popup can restore individual surfaces or disable Lite mode entirely. Mix capture semantics are unchanged.\n\nv0.15.2 adds `vq: 'hd1080'` to the YouTube IFrame player configuration so Aero requests 1080p as its default/preferred quality. Current YouTube IFrame API quality setter methods and `suggestedQuality` are deprecated/no-op, so Aero does not pretend to force a stream level; YouTube may still lower or raise quality adaptively based on the viewer environment. No queue, Mix Bridge, storage, or transport behavior changed.
 
 v0.15.1 fixes Cinema sizing on wide/short desktop viewports. Cinema still preserves a true 16:9 YouTube iframe, but the app width is now capped by viewport height (with `dvh` when supported and `vh` fallback), leaving a small vertical safety margin so YouTube’s bottom controls remain visible instead of extending just below the screen. No playback lifecycle, Mix Bridge, storage, or queue behavior changed.
 

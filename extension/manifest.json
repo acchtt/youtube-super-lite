@@ -1,34 +1,16 @@
 {
   "manifest_version": 3,
   "name": "YouTube Super Lite + Aero",
-  "version": "0.9.0",
-  "description": "Use native YouTube Mobile Web for a lighter signed-in watch page with Cinema and Mix support.",
-  "permissions": ["activeTab", "scripting", "storage", "declarativeNetRequest"],
-  "host_permissions": [
-    "https://www.youtube.com/*",
-    "https://youtube.com/*",
-    "https://m.youtube.com/*"
-  ],
-  "declarative_net_request": {
-    "rule_resources": [
-      {
-        "id": "mobile_ua",
-        "enabled": true,
-        "path": "rules.json"
-      }
-    ]
-  },
+  "version": "0.4.0",
+  "description": "Strip YouTube down to the player and essentials, while keeping Aero Mix capture.",
+  "permissions": ["activeTab", "scripting", "storage"],
   "action": {
     "default_title": "YouTube Super Lite",
     "default_popup": "popup.html"
   },
   "content_scripts": [
     {
-      "matches": [
-        "https://www.youtube.com/*",
-        "https://youtube.com/*",
-        "https://m.youtube.com/*"
-      ],
+      "matches": ["https://www.youtube.com/*", "https://youtube.com/*"],
       "js": ["lite.js"],
       "css": ["lite.css"],
       "run_at": "document_start"
