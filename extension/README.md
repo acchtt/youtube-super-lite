@@ -2,19 +2,19 @@
 
 A lightweight Chrome / Edge Manifest V3 extension for `youtube.com`.
 
-## v0.5.0: Lite Watch Player
+## v0.5.1: Lite Watch Player
 
 The extension now separates **browsing** from **watching**:
 
 - YouTube search, results, channels and browsing stay on normal youtube.com.
 - Opening a normal `/watch?v=...` URL is routed into an extension-owned **Lite Player** page.
-- Lite Player contains one standard YouTube embed, a small search bar, basic metadata, and links back to Browse / Full YouTube.
-- The full `ytd-watch-flexy` shell is never needed for ordinary viewing, which is the main memory-saving change compared with v0.4.0.
+- Lite Player contains a small search bar, basic metadata, and one YouTube embed reached through the tiny HTTPS `lite-embed.html` wrapper on the Aero domain.
+- The HTTPS wrapper exists specifically to supply the normal HTTP referrer YouTube now requires for embedded playback; direct YouTube iframes from `chrome-extension://` pages can fail with Error 153.
 - URL playlist/list/index/start parameters are forwarded to the embed when present.
 - **Full YouTube** adds a one-page bypass flag so comments, description, native playlist UI, or Aero Mix capture can still be used.
 - The popup includes a **Lite watch player** switch. Turning it off falls back to the v0.4-style CSS stripping on normal YouTube watch pages.
 
-This remains framework-free and intentionally small: no service worker, polling loop, MutationObserver, React/Vue/etc., or custom playback engine.
+This remains framework-free and intentionally small: no service worker, polling loop, MutationObserver, React/Vue/etc., or custom playback engine. The wrapper is a static HTML page plus a tiny script and does not load the Aero app shell.
 
 ## Install / update locally
 

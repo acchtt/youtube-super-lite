@@ -50,21 +50,24 @@ function fullYouTubeUrl() {
 }
 
 function buildEmbedUrl() {
-  const embed = new URL('https://www.youtube.com/embed/' + encodeURIComponent(videoId));
-  embed.searchParams.set('autoplay', '1');
-  embed.searchParams.set('playsinline', '1');
-  embed.searchParams.set('rel', '0');
-  embed.searchParams.set('modestbranding', '1');
+  // YouTube error 153 is triggered when an extension-owned page embeds
+  // youtube.com directly because Chromium may omit the required HTTP Referer.
+  // Route through our tiny HTTPS wrapper so YouTube receives a normal web referrer.
+  const wrapper = new URL('https://aero-x-ive.pages.dev/lite-embed.html');
+  wrapper.searchParams.set('v', videoId);
+  wrapper.searchParams.set('autoplay', '1');
+  wrapper.searchParams.set('playsinline', '1');
+  wrapper.searchParams.set('rel', '0');
 
   const list = params.get('list');
   const index = params.get('index');
   const start = parseStart(params.get('start') || params.get('t'));
 
-  if (list) embed.searchParams.set('list', list);
-  if (index && /^\d+$/.test(index)) embed.searchParams.set('index', index);
-  if (start > 0) embed.searchParams.set('start', String(start));
+  if (list) wrapper.searchParams.set('list', list);
+  if (index && /^\d+$/.test(index)) wrapper.searchParams.set('index', index);
+  if (start > 0) wrapper.searchParams.set('start', String(start));
 
-  return embed.toString();
+  return wrapper.toString();
 }
 
 async function loadMetadata() {

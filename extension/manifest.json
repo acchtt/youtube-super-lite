@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "YouTube Super Lite + Aero",
-  "version": "0.5.0",
-  "description": "Route YouTube watch pages into a lightweight player while keeping browse/search and Aero Mix capture.",
+  "version": "0.5.1",
+  "description": "Lightweight YouTube watch player with a referrer-safe Aero embed wrapper, plus browse/search and Mix capture.",
   "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": ["https://www.youtube.com/*", "https://youtube.com/*"],
   "action": {
@@ -24,6 +24,6 @@
     }
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; connect-src https://www.youtube.com; frame-src https://www.youtube.com"
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src https://www.youtube.com; frame-src https://aero-x-ive.pages.dev https://www.youtube.com"
   }
 }

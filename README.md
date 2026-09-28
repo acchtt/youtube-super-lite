@@ -43,7 +43,7 @@ Removed as obsolete in v0.13.0:
 
 ## Mix Bridge
 
-Extension v0.5.0 adds the memory-focused Lite Watch Player. Search/browse remains on youtube.com, while normal watch URLs are routed into an extension page containing one standard YouTube embed instead of the full watch shell. A Full YouTube bypass remains available for native features and exact Mix capture. There is still no service worker, polling loop, MutationObserver, or frontend framework.
+Extension v0.5.1 keeps the memory-focused Lite Watch Player and routes its YouTube iframe through a tiny HTTPS wrapper on the Aero domain so YouTube receives the required HTTP referrer and does not raise Error 153. Extension v0.5.0 added the memory-focused Lite Watch Player. Search/browse remains on youtube.com, while normal watch URLs are routed into an extension page containing one standard YouTube embed instead of the full watch shell. A Full YouTube bypass remains available for native features and exact Mix capture. There is still no service worker, polling loop, MutationObserver, or frontend framework.
 
 See `extension/README.md`.
 
