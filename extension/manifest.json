@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "YouTube Super Lite + Aero",
-  "version": "0.4.0",
-  "description": "Strip YouTube down to the player and essentials, while keeping Aero Mix capture.",
+  "version": "0.4.1",
+  "description": "Strip YouTube down to the player and essentials, with periodic native-page memory resets and Aero Mix capture.",
   "permissions": ["activeTab", "scripting", "storage"],
   "action": {
     "default_title": "YouTube Super Lite",

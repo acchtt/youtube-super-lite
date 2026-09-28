@@ -43,7 +43,7 @@ Removed as obsolete in v0.13.0:
 
 ## Mix Bridge
 
-Extension v0.4.0 adds an optional-on-by-default Super Lite youtube.com mode using one tiny content script plus CSS, with no service worker, polling loop, or MutationObserver. The Mix Bridge capture remains explicit: it reads the active visible YouTube Mix panel once, preserves visible row order, and transfers only the ordered IDs through a short URL fragment.
+Extension v0.4.1 keeps the v0.4 native-desktop architecture and adds a configurable periodic memory reset. By default, after the third distinct video in the same YouTube SPA document, it reloads the exact current native watch URL and restores Theater mode, while leaving Mix/list/index and all native player behavior under YouTube's control.
 
 See `extension/README.md`.
 

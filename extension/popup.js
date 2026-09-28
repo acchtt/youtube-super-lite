@@ -2,6 +2,7 @@
 
 const DEFAULTS = Object.freeze({
   liteEnabled: true,
+  memoryResetEvery: 3,
   showHomeFeed: false,
   showRelated: false,
   showComments: false,
@@ -12,8 +13,12 @@ const DEFAULTS = Object.freeze({
 
 const button = document.getElementById('capture');
 const status = document.getElementById('status');
-const settingInputs = Object.fromEntries(
-  Object.keys(DEFAULTS).map(key => [key, document.getElementById(key)])
+const memoryResetSelect = document.getElementById('memoryResetEvery');
+
+const toggleInputs = Object.fromEntries(
+  Object.keys(DEFAULTS)
+    .filter(key => key !== 'memoryResetEvery')
+    .map(key => [key, document.getElementById(key)])
 );
 
 function setStatus(text, kind) {
@@ -23,19 +28,38 @@ function setStatus(text, kind) {
 
 async function loadSettings() {
   const saved = await chrome.storage.sync.get(DEFAULTS);
-  for (const [key, input] of Object.entries(settingInputs)) {
+
+  for (const [key, input] of Object.entries(toggleInputs)) {
     input.checked = Boolean(saved[key]);
   }
+
+  memoryResetSelect.value = String(saved.memoryResetEvery ?? DEFAULTS.memoryResetEvery);
 }
 
-for (const [key, input] of Object.entries(settingInputs)) {
+for (const [key, input] of Object.entries(toggleInputs)) {
   input.addEventListener('change', async () => {
     await chrome.storage.sync.set({ [key]: input.checked });
-    setStatus(input.checked || key !== 'liteEnabled'
-      ? 'Settings updated.'
-      : 'Super Lite is off. YouTube is back to its normal layout.', 'ok');
+
+    setStatus(
+      input.checked || key !== 'liteEnabled'
+        ? 'Settings updated.'
+        : 'Super Lite is off. YouTube is back to its normal layout.',
+      'ok'
+    );
   });
 }
+
+memoryResetSelect.addEventListener('change', async () => {
+  const value = Number(memoryResetSelect.value);
+  await chrome.storage.sync.set({ memoryResetEvery:value });
+
+  setStatus(
+    value
+      ? 'Memory reset set to every ' + value + ' videos.'
+      : 'Automatic memory reset is off.',
+    'ok'
+  );
+});
 
 async function getActiveTab() {
   const tabs = await chrome.tabs.query({ active:true, currentWindow:true });
