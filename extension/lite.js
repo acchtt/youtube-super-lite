@@ -1,187 +1,117 @@
 'use strict';
 
-const DEFAULTS = Object.freeze({
-  liteEnabled: true,
-  hardReloadVideos: true,
-  showHomeFeed: false,
-  showRelated: false,
-  showComments: false,
-  showShorts: false,
-  showMixPanel: true,
-  showDescription: false
-});
-
-let settings = { ...DEFAULTS };
-let settingsReady = false;
-let hardReloadQueued = false;
-
-function pageKind(url = location.href) {
+(() => {
   let parsed;
   try {
-    parsed = new URL(url, location.origin);
+    parsed = new URL(location.href);
   } catch (_) {
+    return;
+  }
+
+  const host = parsed.hostname.replace(/^www\./, '');
+  const isWatch = host === 'youtube.com' && parsed.pathname === '/watch';
+  const validVideo = /^[A-Za-z0-9_-]{11}$/.test(parsed.searchParams.get('v') || '');
+
+  // v0.7 takeover owns normal watch pages. aero_native=1 is an intentional
+  // escape hatch to the untouched full YouTube watch page.
+  if (isWatch && (validVideo || parsed.searchParams.get('aero_native') === '1')) return;
+
+  const DEFAULTS = Object.freeze({
+    liteEnabled: true,
+    showHomeFeed: false,
+    showRelated: false,
+    showComments: false,
+    showShorts: false,
+    showMixPanel: true,
+    showDescription: false
+  });
+
+  let settings = { ...DEFAULTS };
+
+  function pageKind() {
+    const path = location.pathname;
+    if (path === '/') return 'home';
+    if (path === '/results') return 'search';
+    if (path.startsWith('/shorts/')) return 'shorts';
+    if (path.startsWith('/playlist')) return 'playlist';
     return 'other';
   }
 
-  const path = parsed.pathname;
-  if (path === '/') return 'home';
-  if (path === '/watch') return 'watch';
-  if (path === '/results') return 'search';
-  if (path.startsWith('/shorts/')) return 'shorts';
-  if (path.startsWith('/playlist')) return 'playlist';
-  return 'other';
-}
+  function applyState() {
+    const root = document.documentElement;
+    if (!root) return;
 
-function watchKey(url = location.href) {
-  let parsed;
-  try {
-    parsed = new URL(url, location.origin);
-  } catch (_) {
-    return '';
+    root.dataset.aeroLite = settings.liteEnabled ? 'on' : 'off';
+    root.dataset.aeroPage = pageKind();
+    root.dataset.aeroHomeFeed = settings.showHomeFeed ? 'show' : 'hide';
+    root.dataset.aeroRelated = settings.showRelated ? 'show' : 'hide';
+    root.dataset.aeroComments = settings.showComments ? 'show' : 'hide';
+    root.dataset.aeroShorts = settings.showShorts ? 'show' : 'hide';
+    root.dataset.aeroMixPanel = settings.showMixPanel ? 'show' : 'hide';
+    root.dataset.aeroDescription = settings.showDescription ? 'show' : 'hide';
   }
 
-  if (!/^(?:www\.)?youtube\.com$/.test(parsed.hostname)) return '';
-  if (parsed.pathname !== '/watch') return '';
+  function watchTarget(href) {
+    let target;
+    try {
+      target = new URL(href, location.origin);
+    } catch (_) {
+      return '';
+    }
 
-  const videoId = parsed.searchParams.get('v') || '';
-  if (!/^[A-Za-z0-9_-]{11}$/.test(videoId)) return '';
-
-  // list + index are part of the identity so repeated videos inside a Mix
-  // still receive a fresh document when their playlist position changes.
-  return [
-    videoId,
-    parsed.searchParams.get('list') || '',
-    parsed.searchParams.get('index') || ''
-  ].join('|');
-}
-
-const documentStartKind = pageKind();
-const documentStartWatchKey = watchKey();
-let leftStartingWatch = false;
-
-function applyState() {
-  const root = document.documentElement;
-  if (!root) return;
-
-  root.dataset.aeroLite = settings.liteEnabled ? 'on' : 'off';
-  root.dataset.aeroPage = pageKind();
-  root.dataset.aeroHomeFeed = settings.showHomeFeed ? 'show' : 'hide';
-  root.dataset.aeroRelated = settings.showRelated ? 'show' : 'hide';
-  root.dataset.aeroComments = settings.showComments ? 'show' : 'hide';
-  root.dataset.aeroShorts = settings.showShorts ? 'show' : 'hide';
-  root.dataset.aeroMixPanel = settings.showMixPanel ? 'show' : 'hide';
-  root.dataset.aeroDescription = settings.showDescription ? 'show' : 'hide';
-}
-
-function shouldHardNavigate(targetHref) {
-  if (!settingsReady || !settings.liteEnabled || !settings.hardReloadVideos) return false;
-
-  let target;
-  try {
-    target = new URL(targetHref, location.origin);
-  } catch (_) {
-    return false;
+    if (target.hostname.replace(/^www\./, '') !== 'youtube.com') return '';
+    if (target.pathname !== '/watch') return '';
+    if (!/^[A-Za-z0-9_-]{11}$/.test(target.searchParams.get('v') || '')) return '';
+    return target.toString();
   }
 
-  if (!/^(?:www\.)?youtube\.com$/.test(target.hostname)) return false;
-  if (target.pathname !== '/watch') return false;
-
-  const targetKey = watchKey(target.toString());
-  if (!targetKey) return false;
-
-  // Entering watch from Home/Search should always start a fresh document.
-  if (pageKind() !== 'watch') return true;
-
-  return targetKey !== watchKey();
-}
-
-function forceFreshCurrentWatchIfNeeded() {
-  if (!settingsReady || !settings.liteEnabled || !settings.hardReloadVideos) return;
-  if (hardReloadQueued || pageKind() !== 'watch') return;
-
-  const currentKey = watchKey();
-  if (!currentKey) return;
-
-  // If this document did not begin on this exact watch/list/index state,
-  // YouTube reached it through SPA navigation. Reload once to discard the
-  // previous video's application state and component/cache accumulation.
-  const needsFreshDocument =
-    documentStartKind !== 'watch' ||
-    leftStartingWatch ||
-    currentKey !== documentStartWatchKey;
-
-  if (!needsFreshDocument) return;
-
-  hardReloadQueued = true;
-  location.reload();
-}
-
-async function loadSettings() {
-  try {
-    settings = { ...DEFAULTS, ...(await chrome.storage.sync.get(DEFAULTS)) };
-  } catch (_) {
-    settings = { ...DEFAULTS };
+  async function loadSettings() {
+    try {
+      settings = { ...DEFAULTS, ...(await chrome.storage.sync.get(DEFAULTS)) };
+    } catch (_) {
+      settings = { ...DEFAULTS };
+    }
+    applyState();
   }
 
-  settingsReady = true;
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== 'sync') return;
+
+    let changed = false;
+    for (const key of Object.keys(DEFAULTS)) {
+      if (!changes[key]) continue;
+      settings[key] = changes[key].newValue;
+      changed = true;
+    }
+
+    if (changed) applyState();
+  });
+
+  document.addEventListener('click', event => {
+    if (!settings.liteEnabled) return;
+    if (event.defaultPrevented || event.button !== 0) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+    const anchor = event.target && event.target.closest
+      ? event.target.closest('a[href]')
+      : null;
+    if (!anchor) return;
+    if (anchor.target && anchor.target !== '_self') return;
+
+    const target = watchTarget(anchor.href);
+    if (!target) return;
+
+    // Force a real document navigation so takeover-main.js runs before the
+    // native YouTube watch SPA has a chance to boot.
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    location.assign(target);
+  }, true);
+
+  document.addEventListener('yt-navigate-finish', applyState, true);
+  document.addEventListener('yt-page-data-updated', applyState, true);
+  window.addEventListener('popstate', applyState);
+
   applyState();
-  forceFreshCurrentWatchIfNeeded();
-}
-
-chrome.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName !== 'sync') return;
-
-  let changed = false;
-  for (const key of Object.keys(DEFAULTS)) {
-    if (!changes[key]) continue;
-    settings[key] = changes[key].newValue;
-    changed = true;
-  }
-
-  if (!changed) return;
-  settingsReady = true;
-  applyState();
-});
-
-document.addEventListener('click', event => {
-  if (event.defaultPrevented || event.button !== 0) return;
-  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-
-  const anchor = event.target && event.target.closest
-    ? event.target.closest('a[href]')
-    : null;
-  if (!anchor) return;
-  if (anchor.target && anchor.target !== '_self') return;
-  if (!shouldHardNavigate(anchor.href)) return;
-
-  // Bypass YouTube's SPA router for video changes. Native YouTube still owns
-  // playback, history, theater mode, quality controls and Mix behavior.
-  event.preventDefault();
-  event.stopImmediatePropagation();
-  location.assign(anchor.href);
-}, true);
-
-document.addEventListener('yt-navigate-finish', () => {
-  applyState();
-
-  if (pageKind() !== 'watch' && documentStartKind === 'watch') {
-    leftStartingWatch = true;
-  }
-
-  forceFreshCurrentWatchIfNeeded();
-}, true);
-
-document.addEventListener('yt-page-data-updated', applyState, true);
-
-window.addEventListener('popstate', () => {
-  applyState();
-
-  if (pageKind() !== 'watch' && documentStartKind === 'watch') {
-    leftStartingWatch = true;
-  }
-
-  forceFreshCurrentWatchIfNeeded();
-});
-
-applyState();
-loadSettings();
+  loadSettings();
+})();

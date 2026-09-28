@@ -2,7 +2,6 @@
 
 const DEFAULTS = Object.freeze({
   liteEnabled: true,
-  hardReloadVideos: true,
   showHomeFeed: false,
   showRelated: false,
   showComments: false,
@@ -11,7 +10,8 @@ const DEFAULTS = Object.freeze({
   showDescription: false
 });
 
-const button = document.getElementById('capture');
+const captureButton = document.getElementById('capture');
+const nativeButton = document.getElementById('native');
 const status = document.getElementById('status');
 const settingInputs = Object.fromEntries(
   Object.keys(DEFAULTS).map(key => [key, document.getElementById(key)])
@@ -32,19 +32,12 @@ async function loadSettings() {
 for (const [key, input] of Object.entries(settingInputs)) {
   input.addEventListener('change', async () => {
     await chrome.storage.sync.set({ [key]: input.checked });
-
-    if (key === 'hardReloadVideos') {
-      setStatus(
-        input.checked
-          ? 'RAM reset enabled. New videos will use fresh native YouTube page loads.'
-          : 'RAM reset disabled. YouTube SPA navigation will be used.',
-        'ok'
-      );
-    } else if (key === 'liteEnabled' && !input.checked) {
-      setStatus('Super Lite is off. YouTube is back to its normal layout.', 'ok');
-    } else {
-      setStatus('Settings updated.', 'ok');
-    }
+    setStatus(
+      key === 'liteEnabled' && !input.checked
+        ? 'Super Lite browsing is off. The v0.7 watch takeover remains the active experiment.'
+        : 'Settings updated.',
+      'ok'
+    );
   });
 }
 
@@ -59,6 +52,33 @@ function scrapeCurrentMix() {
     pageUrl = new URL(location.href);
   } catch (_) {
     return { error:'This page is not a valid YouTube Mix.' };
+  }
+
+  const root = document.documentElement;
+  if (root && root.dataset.aeroTakeover === 'on') {
+    const listId = root.dataset.aeroListId || pageUrl.searchParams.get('list') || '';
+    const seedId = root.dataset.aeroMixSeedId || pageUrl.searchParams.get('v') || '';
+    let ids = [];
+
+    try {
+      const parsed = JSON.parse(root.dataset.aeroPlaylistIds || '[]');
+      if (Array.isArray(parsed)) {
+        ids = parsed.filter(id => typeof id === 'string' && /^[A-Za-z0-9_-]{11}$/.test(id));
+      }
+    } catch (_) {}
+
+    if (!listId) return { error:'This lightweight watch page is not currently playing a Mix/playlist.' };
+    if (ids.length < 2) {
+      return { error:'The Mix queue is not ready yet. Let playback start, then try Capture current Mix again.' };
+    }
+
+    return {
+      snapshot: {
+        seedId,
+        listId,
+        ids: ids.slice(0, 100)
+      }
+    };
   }
 
   if (pageUrl.hostname.replace(/^www\./, '') !== 'youtube.com' || pageUrl.pathname !== '/watch') {
@@ -84,7 +104,7 @@ function scrapeCurrentMix() {
     : [];
 
   if (rows.length < 2) {
-    return { error:'The visible Mix panel is not loaded yet. Keep the Mix panel enabled, wait for it to appear, then try again.' };
+    return { error:'The visible Mix panel is not loaded yet.' };
   }
 
   const ids = [];
@@ -115,18 +135,30 @@ function scrapeCurrentMix() {
     return { error:'Aero could not read enough songs from the visible Mix panel.' };
   }
 
-  return {
-    snapshot: {
-      seedId,
-      listId,
-      ids
-    }
-  };
+  return { snapshot:{ seedId, listId, ids } };
 }
 
-button.addEventListener('click', async () => {
-  button.disabled = true;
-  setStatus('Capturing the visible Mix…');
+nativeButton.addEventListener('click', async () => {
+  try {
+    const tab = await getActiveTab();
+    if (!tab || !tab.id) throw new Error('No active tab found.');
+
+    const url = new URL(String(tab.url || ''));
+    if (url.hostname.replace(/^www\./, '') !== 'youtube.com' || url.pathname !== '/watch') {
+      throw new Error('Open a YouTube watch page first.');
+    }
+
+    url.searchParams.set('aero_native', '1');
+    await chrome.tabs.update(tab.id, { url:url.toString() });
+    window.close();
+  } catch (error) {
+    setStatus(error && error.message ? error.message : 'Could not open native page.', 'err');
+  }
+});
+
+captureButton.addEventListener('click', async () => {
+  captureButton.disabled = true;
+  setStatus('Reading the current Mix…');
 
   try {
     const tab = await getActiveTab();
@@ -159,7 +191,7 @@ button.addEventListener('click', async () => {
       .replace(/=+$/g, '');
 
     setStatus(
-      'Captured ' + compact.ids.length + ' songs in visible list order. Opening Aero…',
+      'Captured ' + compact.ids.length + ' songs in player order. Opening Aero…',
       'ok'
     );
 
@@ -169,7 +201,7 @@ button.addEventListener('click', async () => {
   } catch (error) {
     setStatus(error && error.message ? error.message : 'Capture failed.', 'err');
   } finally {
-    button.disabled = false;
+    captureButton.disabled = false;
   }
 });
 

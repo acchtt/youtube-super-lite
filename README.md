@@ -14,7 +14,7 @@ Before continuing development in a new chat/session, read HANDOFF.md. It is the 
 
 Aero intentionally keeps the runtime small: one YouTube iframe, plain HTML/CSS/JavaScript, Cloudflare Pages Functions, and D1 persistence.
 
-The companion **YouTube Super Lite + Aero Mix Bridge** extension keeps the native youtube.com player/history/Mix experience, strips most surrounding UI, and forces a fresh native page between videos to limit long-session SPA memory growth.
+The companion **YouTube Super Lite + Aero Mix Bridge** extension is currently testing a same-origin watch takeover: it stops normal youtube.com/watch startup at document start and builds a tiny official-player shell on the same YouTube URL, while retaining lightweight browse/search and Aero Mix capture.
 
 Current features:
 - exact captured Mix order;
@@ -43,7 +43,7 @@ Removed as obsolete in v0.13.0:
 
 ## Mix Bridge
 
-Extension v0.6.0 returns to native YouTube playback and removes the extension-owned Lite Player. Video changes use fresh page navigations instead of retaining the previous YouTube SPA watch state, while native history, Theater mode, quality controls and Mix/playlist behavior remain available. Exact Mix capture is preserved.
+Extension v0.7.0 is an experimental same-origin watch takeover. It stops the heavy native watch document before the YouTube SPA finishes booting, keeps the real youtube.com/watch URL, uses one official YouTube IFrame API player, provides lightweight Cinema and Mix controls, and exposes the player's ordered Mix IDs to Aero capture. The critical acceptance test is whether playback is recorded in the signed-in user's normal YouTube History.
 
 See `extension/README.md`.
 

@@ -1,14 +1,20 @@
 {
   "manifest_version": 3,
   "name": "YouTube Super Lite + Aero",
-  "version": "0.6.0",
-  "description": "Strip native YouTube down to essentials and hard-reload between videos to limit long-session memory growth.",
+  "version": "0.7.0",
+  "description": "Experimental same-origin YouTube watch takeover for minimal memory, native player controls, history testing and Mix playback.",
   "permissions": ["activeTab", "scripting", "storage"],
   "action": {
     "default_title": "YouTube Super Lite",
     "default_popup": "popup.html"
   },
   "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/*", "https://youtube.com/*"],
+      "js": ["takeover-main.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
     {
       "matches": ["https://www.youtube.com/*", "https://youtube.com/*"],
       "js": ["lite.js"],
