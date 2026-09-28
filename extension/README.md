@@ -2,18 +2,18 @@
 
 A lightweight Chrome / Edge Manifest V3 extension for `youtube.com`.
 
-## v0.7.0 experimental: same-origin watch takeover
+## v0.7.1 experimental: same-origin watch takeover
 
 This build tests the architecture selected after native YouTube's stripped watch page still measured roughly 400 MB on the first video.
 
-For normal `youtube.com/watch?v=...` pages, a MAIN-world script runs at `document_start`, calls `window.stop()`, and replaces the unfinished watch document with a tiny shell **before the normal YouTube watch SPA finishes booting**.
+For normal `youtube.com/watch?v=...` pages, a MAIN-world script runs at `document_start` and uses `document.open/write/close` to atomically replace the pending watch document **before the normal YouTube watch SPA finishes booting**. v0.7.1 replaces the fragile v0.7.0 `window.stop()` DOM mutation that could leave a blank page.
 
 Important differences from the discarded v0.5 approach:
 
 - the top-level page remains the real `https://www.youtube.com/watch?...` URL;
 - there is no `chrome-extension://` player page;
 - there is no Aero-domain wrapper;
-- the official YouTube IFrame API is loaded directly on the youtube.com page;
+- an official YouTube iframe is created immediately, then the IFrame API attaches to it for Mix state/control; playback therefore remains visible even if the control API initializes late;
 - signed-in YouTube cookies remain available to the official player;
 - a one-click **Full YouTube** / popup escape hatch reloads the same video with `aero_native=1`.
 

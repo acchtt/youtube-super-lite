@@ -43,7 +43,7 @@ Removed as obsolete in v0.13.0:
 
 ## Mix Bridge
 
-Extension v0.7.0 is an experimental same-origin watch takeover. It stops the heavy native watch document before the YouTube SPA finishes booting, keeps the real youtube.com/watch URL, uses one official YouTube IFrame API player, provides lightweight Cinema and Mix controls, and exposes the player's ordered Mix IDs to Aero capture. The critical acceptance test is whether playback is recorded in the signed-in user's normal YouTube History.
+Extension v0.7.1 fixes the experimental same-origin watch takeover so the pending watch document is atomically replaced with `document.open/write/close` and an official YouTube iframe is created immediately. Extension v0.7.0 introduced the same-origin watch takeover. It stops the heavy native watch document before the YouTube SPA finishes booting, keeps the real youtube.com/watch URL, uses one official YouTube IFrame API player, provides lightweight Cinema and Mix controls, and exposes the player's ordered Mix IDs to Aero capture. The critical acceptance test is whether playback is recorded in the signed-in user's normal YouTube History.
 
 See `extension/README.md`.
 
