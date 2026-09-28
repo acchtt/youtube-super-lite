@@ -43,7 +43,7 @@ Removed as obsolete in v0.13.0:
 
 ## Mix Bridge
 
-Extension v0.4.2 keeps the v0.4 native-desktop architecture and replaces the failed periodic-reload experiment with Deep Trim: hidden comments, related recommendations, Shorts, chat, guide/feed and promotional modules are physically removed after insertion while the native player and Mix/playlist panel are explicitly protected.
+Extension v0.4.0 adds an optional-on-by-default Super Lite youtube.com mode using one tiny content script plus CSS, with no service worker, polling loop, or MutationObserver. The Mix Bridge capture remains explicit: it reads the active visible YouTube Mix panel once, preserves visible row order, and transfers only the ordered IDs through a short URL fragment.
 
 See `extension/README.md`.
 

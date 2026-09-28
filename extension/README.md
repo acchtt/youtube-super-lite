@@ -2,51 +2,64 @@
 
 A lightweight Chrome / Edge Manifest V3 extension for `youtube.com`.
 
-## v0.4.2: Deep Trim
+It now has two jobs:
 
-v0.4.2 returns fully to the successful v0.4 native-desktop architecture and removes the failed v0.4.1 periodic reload experiment.
+1. **Super Lite mode** strips the normal YouTube page down toward the native player, search, title/channel essentials, and optionally the visible Mix/playlist panel.
+2. **Aero Mix Bridge** still captures the visible personalized Mix order and opens Aero × IVE with only the ordered video IDs.
 
-The extension still uses:
-- the real desktop `youtube.com/watch` page;
-- the native YouTube player;
-- normal signed-in YouTube history;
-- native Theater/Cinema mode;
-- YouTube's own quality selector, including 1080p when available;
-- the native Mix/playlist panel and native Mix playback.
+## Install locally
 
-### Deep Trim
+1. Clone or download this repository.
+2. Open `chrome://extensions` in Chrome, or `edge://extensions` in Edge.
+3. Enable **Developer mode**.
+4. Choose **Load unpacked**.
+5. Select the repository's `extension` folder.
 
-v0.4 originally hid unwanted modules with CSS. Deep Trim keeps that CSS for instant layout stability, then physically removes selected hidden modules from the DOM after YouTube inserts them.
+## Super Lite defaults
 
-Default trimmed modules include:
+Super Lite is enabled immediately after installation.
+
+Hidden by default:
+- left navigation / mini guide;
+- homepage recommendation feed;
+- Shorts shelves and Shorts results;
+- related videos;
 - comments;
-- related/recommendation renderer;
-- Shorts shelves/results;
-- guide/mini-guide;
-- filter-chip bars;
 - live chat;
-- merch/offers/donations/tickets/product shelves;
+- description;
+- merch / offer / donation / ticket shelves;
 - end-screen recommendation cards;
-- hidden homepage feed;
-- hidden description metadata.
+- filter-chip bars and some secondary masthead controls.
 
-The native player and `ytd-playlist-panel-renderer` are explicitly protected. The Mix panel remains CSS-only even if the user chooses to hide it, because removing the playlist component could interfere with YouTube's Mix state.
+Kept by default:
+- native YouTube video player and controls;
+- search;
+- video title/channel metadata;
+- account/session behavior;
+- Mix / playlist panel, so Aero capture remains available.
 
-One debounced `MutationObserver` watches only for DOM insertions and schedules trimming during idle time. It ignores removals, so Deep Trim does not continuously react to its own work.
+Open the extension popup to restore the homepage feed, related videos, comments, Shorts, Mix panel, or description individually. Turning **Super Lite** off restores YouTube's normal layout without uninstalling the extension.
 
-Deep Trim can be disabled in the popup. If a user restores a surface that was physically removed, the extension reloads the current native YouTube page once so YouTube can recreate that surface.
+## Low-overhead architecture
 
-## Architecture
-
-Still intentionally small:
-- plain JS/CSS;
-- no frontend framework;
+v0.4.0 remains intentionally framework-free:
 - no background service worker;
 - no polling loop;
-- one insertion-only MutationObserver;
-- one content script plus CSS;
-- native YouTube playback/session/Mix behavior.
+- no MutationObserver;
+- one tiny content script;
+- one CSS file that performs almost all visual stripping;
+- `chrome.storage.sync` only for the seven user switches;
+- YouTube's own `yt-navigate-finish` / `yt-page-data-updated` events keep route state current during SPA navigation.
+
+This primarily removes visual/UI overhead and reclaims layout space. It does **not** pretend to stop every YouTube script or network request, so the memory reduction will be smaller than Aero × IVE's separate one-iframe player.
 
 ## Aero Mix capture
 
-Mix capture is unchanged. It reads the visible native playlist panel once, preserves exact visible row order including repeated IDs, and opens Aero with the compact captured queue.
+1. Sign into YouTube normally.
+2. Open the personalized Mix / Radio on youtube.com and wait for the playlist panel to appear.
+3. Keep **Mix / playlist panel** enabled.
+4. Click the extension.
+5. Click **Capture current Mix**.
+6. Aero opens automatically with the captured order.
+
+Capture still preserves the rendered row order exactly, including repeated video IDs, and transfers only a compact URL fragment.

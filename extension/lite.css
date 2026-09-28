@@ -1,4 +1,4 @@
-/* YouTube Super Lite v0.4.2 — CSS-first layout plus optional Deep Trim. */
+/* YouTube Super Lite — intentionally CSS-first and framework-free. */
 
 html[data-aero-lite="on"] {
   --aero-lite-max-player: 1280px;
