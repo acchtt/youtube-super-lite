@@ -51,7 +51,8 @@ function applyState() {
   root.dataset.aeroDescription = settings.showDescription ? 'show' : 'hide';
 }
 
-function removeSelector(selector) {
+function removeSelector(selector, options = {}) {
+  const { allowPlayer = false } = options;
   let nodes;
   try {
     nodes = document.querySelectorAll(selector);
@@ -64,15 +65,24 @@ function removeSelector(selector) {
   for (const node of nodes) {
     // Protect all native player and Mix/playlist machinery even if a future
     // YouTube DOM change causes a broad selector to overlap it.
-    if (
+    const insidePlayer = Boolean(
       node.closest &&
       (
         node.closest('#movie_player') ||
-        node.closest('ytd-player') ||
-        node.matches('ytd-playlist-panel-renderer') ||
-        node.closest('ytd-playlist-panel-renderer')
+        node.closest('ytd-player')
       )
-    ) {
+    );
+
+    const touchesPlaylist = Boolean(
+      node.matches &&
+      (
+        node.matches('ytd-playlist-panel-renderer') ||
+        node.closest('ytd-playlist-panel-renderer') ||
+        (node.querySelector && node.querySelector('ytd-playlist-panel-renderer'))
+      )
+    );
+
+    if ((!allowPlayer && insidePlayer) || touchesPlaylist) {
       continue;
     }
 
@@ -101,11 +111,14 @@ function deepTrim() {
     'ytd-ticket-shelf-renderer',
     'ytd-product-list-renderer',
     'ytd-brand-video-shelf-renderer',
-    '.ytp-ce-element',
-    '.ytp-endscreen-content'
   ];
 
   for (const selector of alwaysRemove) removeSelector(selector);
+
+  // End-screen recommendation cards are visual overlays, not player-core
+  // controls, so they are safe to trim even though they live inside #movie_player.
+  removeSelector('.ytp-ce-element', { allowPlayer:true });
+  removeSelector('.ytp-endscreen-content', { allowPlayer:true });
 
   if (!settings.showComments) {
     removeSelector('ytd-comments');
@@ -184,7 +197,9 @@ function startTrimObserver() {
 }
 
 function settingChangeNeedsReload(changes) {
-  if (!settings.deepTrimEnabled) return false;
+  const deepTrimWasEnabled = Object.prototype.hasOwnProperty.call(changes, 'deepTrimEnabled')
+    ? changes.deepTrimEnabled.oldValue === true
+    : settings.deepTrimEnabled;
 
   for (const [key, change] of Object.entries(changes)) {
     if (!RELOAD_TO_RESTORE_KEYS.has(key)) continue;
@@ -197,7 +212,12 @@ function settingChangeNeedsReload(changes) {
       return true;
     }
 
-    if (key.startsWith('show') && change.oldValue === false && change.newValue === true) {
+    if (
+      deepTrimWasEnabled &&
+      key.startsWith('show') &&
+      change.oldValue === false &&
+      change.newValue === true
+    ) {
       return true;
     }
   }

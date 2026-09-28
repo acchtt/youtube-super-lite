@@ -68,7 +68,7 @@ Extension v0.4.2 is the canonical v0.4 native-desktop baseline plus Deep Trim:
 - preserves native Theater/Cinema mode and YouTube's own quality selector, including 1080p when offered;
 - keeps the native Mix/playlist panel visible by default and explicitly protects `ytd-playlist-panel-renderer` from DOM trimming;
 - keeps v0.4 CSS hiding for instant layout cleanup, then physically removes selected hidden modules: comments, related recommendations, Shorts shelves/results, guide/mini-guide, chip bars, live chat, promotional/merch modules, end-screen recommendation cards, hidden home feed and hidden description metadata;
-- uses one debounced insertion-only `MutationObserver` and schedules trim passes during browser idle time; removals do not retrigger the observer;
+- uses one debounced insertion-only `MutationObserver` and schedules trim passes during browser idle time; removals do not retrigger the observer; Deep Trim refuses to remove any node containing the native playlist renderer, and disabling Deep Trim/restoring a removed surface reloads once so YouTube can recreate it;
 - the native player, playlist panel, account/session, Theater mode and quality controls are not replaced or reimplemented;
 - the v0.4.1 periodic reload experiment is removed after it reached about 460 MB and failed to improve memory use;
 - there is no background service worker, polling loop, alternate player shell, iframe wrapper, mobile User-Agent spoofing, watch-page document takeover, or forced video reload cycle;
