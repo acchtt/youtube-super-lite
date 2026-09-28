@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "YouTube Super Lite + Aero",
-  "version": "0.7.1",
-  "description": "Same-origin YouTube watch takeover with reliable document replacement, low-memory playback, Cinema and Mix support.",
+  "version": "0.7.2",
+  "description": "Same-origin low-memory YouTube player with inert Mix extraction, Cinema mode and Aero Mix capture.",
   "permissions": ["activeTab", "scripting", "storage"],
   "action": {
     "default_title": "YouTube Super Lite",

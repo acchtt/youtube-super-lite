@@ -34,9 +34,6 @@
       Number(match[3] || 0);
   }
 
-  // document.open() atomically replaces the pending YouTube document and
-  // aborts its parser/network-driven page construction. This is more reliable
-  // at document_start than calling window.stop() and mutating a half-created DOM.
   try {
     document.open('text/html', 'replace');
     document.write(`<!doctype html>
@@ -84,7 +81,7 @@
 
       <aside id="aero-mix" class="aero-mix">
         <div class="aero-mix-label">YouTube Mix / Playlist</div>
-        <div id="aero-mix-count" class="aero-mix-count">Loading…</div>
+        <div id="aero-mix-count" class="aero-mix-count">Reading Mix…</div>
         <div class="aero-mix-controls">
           <button id="aero-prev" type="button">Previous</button>
           <button id="aero-next" type="button">Next</button>
@@ -129,6 +126,9 @@
 
   let player = null;
   let playlistIds = [];
+  let playlistIndex = -1;
+  let currentVideoId = videoId;
+  let advancing = false;
 
   function currentNativeUrl() {
     const current = new URL(location.href);
@@ -143,6 +143,9 @@
   }
 
   function buildEmbedUrl() {
+    // Important: never pass list/listType here. Dynamic RD... YouTube Mix IDs
+    // can leave the embedded player spinning indefinitely. Always start from
+    // the concrete video ID; Mix playback is driven by our extracted queue.
     const embed = new URL('https://www.youtube.com/embed/' + encodeURIComponent(videoId));
     embed.searchParams.set('autoplay', '1');
     embed.searchParams.set('controls', '1');
@@ -151,20 +154,12 @@
     embed.searchParams.set('enablejsapi', '1');
     embed.searchParams.set('origin', location.origin);
 
-    if (listId) {
-      embed.searchParams.set('listType', 'playlist');
-      embed.searchParams.set('list', listId);
-      if (/^\d+$/.test(rawIndex)) embed.searchParams.set('index', rawIndex);
-    }
-
     const start = parseStart(startValue);
     if (start > 0) embed.searchParams.set('start', String(start));
 
     return embed.toString();
   }
 
-  // Create the iframe immediately. Even if the IFrame API script is delayed
-  // or rejected, the user still gets a playable official YouTube embed.
   const frame = document.createElement('iframe');
   frame.id = 'aero-player-frame';
   frame.title = 'YouTube video player';
@@ -174,60 +169,133 @@
   frame.src = buildEmbedUrl();
   stage.appendChild(frame);
 
-  function syncPlayerState() {
-    if (!player) return;
-
-    let currentId = videoId;
-    let currentIndex = -1;
-    let data = {};
-
-    try {
-      data = player.getVideoData ? (player.getVideoData() || {}) : {};
-      if (data.video_id) currentId = data.video_id;
-    } catch (_) {}
-
-    try {
-      const rawPlaylist = player.getPlaylist ? player.getPlaylist() : null;
-      if (Array.isArray(rawPlaylist) && rawPlaylist.length) {
-        playlistIds = rawPlaylist
-          .filter(id => typeof id === 'string' && /^[A-Za-z0-9_-]{11}$/.test(id))
-          .slice(0, 100);
-      }
-    } catch (_) {}
-
-    try {
-      currentIndex = player.getPlaylistIndex ? player.getPlaylistIndex() : -1;
-    } catch (_) {}
-
-    root.dataset.aeroPlaylistIds = JSON.stringify(playlistIds);
-    root.dataset.aeroPlaylistIndex = String(Number.isInteger(currentIndex) ? currentIndex : -1);
-    root.dataset.aeroCurrentVideoId = currentId;
+  function publishQueueState() {
+    root.dataset.aeroPlaylistIds = JSON.stringify(playlistIds.slice(0, 100));
+    root.dataset.aeroPlaylistIndex = String(playlistIndex);
+    root.dataset.aeroCurrentVideoId = currentVideoId;
     root.dataset.aeroListId = listId;
     root.dataset.aeroMixSeedId = seedId;
 
-    if (data.title) {
-      title.textContent = data.title;
-      document.title = data.title + ' — Super Lite';
-    }
-    if (data.author) channel.textContent = data.author;
+    if (!listId) return;
 
-    if (listId) {
-      const total = playlistIds.length;
-      const position = currentIndex >= 0 ? currentIndex + 1 : 1;
-      mixCount.textContent = total ? position + ' / ' + total : 'Mix active';
+    if (playlistIds.length) {
+      const position = playlistIndex >= 0 ? playlistIndex + 1 : 1;
+      mixCount.textContent = position + ' / ' + playlistIds.length;
+    } else {
+      mixCount.textContent = 'Mix unavailable';
     }
+  }
 
+  function syncAddress() {
     const currentUrl = new URL(location.href);
-    currentUrl.searchParams.set('v', currentId);
+    currentUrl.searchParams.set('v', currentVideoId);
     currentUrl.searchParams.delete('aero_native');
 
     if (listId) {
       currentUrl.searchParams.set('list', listId);
-      if (currentIndex >= 0) currentUrl.searchParams.set('index', String(currentIndex));
+      if (playlistIndex >= 0) currentUrl.searchParams.set('index', String(playlistIndex));
     }
 
     history.replaceState(null, '', currentUrl.toString());
     updateLinks();
+  }
+
+  function syncMetadata() {
+    if (!player) return;
+
+    try {
+      const data = player.getVideoData ? (player.getVideoData() || {}) : {};
+      if (data.video_id) currentVideoId = data.video_id;
+      if (data.title) {
+        title.textContent = data.title;
+        document.title = data.title + ' — Super Lite';
+      }
+      if (data.author) channel.textContent = data.author;
+    } catch (_) {}
+
+    if (playlistIds.length) {
+      const exact = playlistIds.indexOf(currentVideoId);
+      if (exact >= 0) playlistIndex = exact;
+    }
+
+    publishQueueState();
+    syncAddress();
+  }
+
+  function extractPlaylistIds(html) {
+    const ids = [];
+    const regex = /"playlistPanelVideoRenderer":\{"videoId":"([A-Za-z0-9_-]{11})"/g;
+    let match;
+
+    while ((match = regex.exec(html)) && ids.length < 100) {
+      ids.push(match[1]);
+    }
+
+    return ids;
+  }
+
+  async function loadMixQueue() {
+    if (!listId) return;
+
+    try {
+      const source = new URL(pageUrl.toString());
+      source.searchParams.set('aero_native', '1');
+
+      const response = await fetch(source.toString(), {
+        credentials: 'include',
+        cache: 'no-store'
+      });
+
+      if (!response.ok) throw new Error('Mix source unavailable');
+
+      let html = await response.text();
+      const ids = extractPlaylistIds(html);
+      html = '';
+
+      if (ids.length < 2) throw new Error('Mix queue not found');
+
+      playlistIds = ids;
+
+      const requestedIndex = /^\d+$/.test(rawIndex) ? Number(rawIndex) : -1;
+      if (
+        requestedIndex >= 0 &&
+        requestedIndex < playlistIds.length &&
+        playlistIds[requestedIndex] === currentVideoId
+      ) {
+        playlistIndex = requestedIndex;
+      } else {
+        playlistIndex = playlistIds.indexOf(currentVideoId);
+        if (playlistIndex < 0) playlistIndex = 0;
+      }
+
+      publishQueueState();
+      syncAddress();
+    } catch (_) {
+      playlistIds = [];
+      playlistIndex = -1;
+      publishQueueState();
+    }
+  }
+
+  function playQueueIndex(index) {
+    if (!player || !playlistIds.length) return;
+    if (index < 0 || index >= playlistIds.length) return;
+
+    playlistIndex = index;
+    currentVideoId = playlistIds[index];
+    advancing = true;
+
+    publishQueueState();
+    syncAddress();
+
+    try {
+      player.loadVideoById(currentVideoId);
+    } finally {
+      setTimeout(() => {
+        advancing = false;
+        syncMetadata();
+      }, 250);
+    }
   }
 
   function attachPlayerApi() {
@@ -237,11 +305,18 @@
       player = new window.YT.Player(frame, {
         events: {
           onReady() {
-            syncPlayerState();
-            setTimeout(syncPlayerState, 800);
+            syncMetadata();
+            setTimeout(syncMetadata, 700);
           },
-          onStateChange() {
-            syncPlayerState();
+          onStateChange(event) {
+            syncMetadata();
+
+            // ENDED = 0. Advance through the inertly extracted Mix queue
+            // instead of asking the iframe to resolve an RD... radio list.
+            if (event.data === 0 && !advancing && playlistIds.length) {
+              const nextIndex = playlistIndex + 1;
+              if (nextIndex < playlistIds.length) playQueueIndex(nextIndex);
+            }
           },
           onError(event) {
             title.textContent = 'YouTube player error ' + event.data;
@@ -249,9 +324,7 @@
           }
         }
       });
-    } catch (_) {
-      // The already-created iframe remains independently playable.
-    }
+    } catch (_) {}
   }
 
   brand.addEventListener('click', () => {
@@ -274,14 +347,18 @@
   });
 
   prev.addEventListener('click', () => {
-    if (player && player.previousVideo) player.previousVideo();
+    if (!playlistIds.length) return;
+    playQueueIndex(playlistIndex > 0 ? playlistIndex - 1 : 0);
   });
 
   next.addEventListener('click', () => {
-    if (player && player.nextVideo) player.nextVideo();
+    if (!playlistIds.length) return;
+    const target = playlistIndex + 1;
+    if (target < playlistIds.length) playQueueIndex(target);
   });
 
   updateLinks();
+  loadMixQueue();
 
   window.onYouTubeIframeAPIReady = attachPlayerApi;
 

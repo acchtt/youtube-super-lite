@@ -2,11 +2,11 @@
 
 A lightweight Chrome / Edge Manifest V3 extension for `youtube.com`.
 
-## v0.7.1 experimental: same-origin watch takeover
+## v0.7.2 experimental: same-origin watch takeover
 
 This build tests the architecture selected after native YouTube's stripped watch page still measured roughly 400 MB on the first video.
 
-For normal `youtube.com/watch?v=...` pages, a MAIN-world script runs at `document_start` and uses `document.open/write/close` to atomically replace the pending watch document **before the normal YouTube watch SPA finishes booting**. v0.7.1 replaces the fragile v0.7.0 `window.stop()` DOM mutation that could leave a blank page.
+For normal `youtube.com/watch?v=...` pages, a MAIN-world script runs at `document_start` and atomically replaces the pending watch document before the normal YouTube watch SPA finishes booting. v0.7.2 additionally fixes dynamic YouTube Mixes that could leave the player loading indefinitely.
 
 Important differences from the discarded v0.5 approach:
 
