@@ -17,7 +17,7 @@ Aero intentionally keeps the runtime small: one YouTube iframe, plain HTML/CSS/J
 The companion **YouTube Super Lite + Aero Mix Bridge** extension can strip most of the normal youtube.com shell while preserving the native player/search/session, and it still captures the visible personalized YouTube Mix order for Aero. Aero then plays captured IDs one at a time through the normal YouTube IFrame API.
 
 Current features:
-- experimental **Connect YouTube** OAuth authorization using Google Identity Services and the read-only YouTube Data API;
+- experimental **YouTube History session test** for browsers that isolate cross-site YouTube storage;
 - exact captured Mix order;
 - direct non-modal home state with Mix-ready / empty / resume states;
 - first-class captured Mix position (for example 12 / 43);
@@ -48,13 +48,13 @@ Extension v0.4.0 adds an optional-on-by-default Super Lite youtube.com mode usin
 
 See `extension/README.md`.
 
-## Experimental YouTube OAuth
+## Experimental YouTube History session test
 
-Aero v0.15.3 adds a contained OAuth experiment. **Connect YouTube** obtains a short-lived browser access token with the read-only YouTube scope, then calls `channels.list?mine=true` to verify which YouTube channel authorized Aero. The token is kept in memory only and is not stored in D1/localStorage.
+Aero v0.15.4 removes the OAuth experiment after a successful OAuth login still failed to place iframe-played videos into normal YouTube History.
 
-This does **not** inject OAuth credentials into the YouTube iframe. The purpose is to test whether an explicitly authorized Aero session changes practical History behavior while keeping the existing lightweight player unchanged. OAuth also gives us a supported path for future playlist/subscription/account features.
+The current experiment keeps the existing lightweight `www.youtube.com` iframe and tests browser session access instead. On Brave, cross-site cookies/storage are blocked or partitioned by default, so the user must allow YouTube cross-site storage for `aero-x-ive.pages.dev` (or temporarily lower Shields for Aero only), reload Aero, then play a fresh track and check normal YouTube History.
 
-Configure `GOOGLE_OAUTH_CLIENT_ID` in Cloudflare Pages before testing. See `CLOUDFLARE_SETUP.md`.
+Aero also adds `storage-access` to the iframe's Permissions Policy allow list where supported. This does not grant storage access by itself; the browser and YouTube embedded document remain in control.
 
 ## Cloudflare storage
 

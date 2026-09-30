@@ -211,90 +211,6 @@ p{margin:0}
 body.player-active .mix-status{display:none}
 
 
-.topbar-actions{
-  display:flex;
-  align-items:flex-start;
-  justify-content:flex-end;
-  gap:10px;
-  flex-wrap:wrap;
-}
-.youtube-auth{
-  display:grid;
-  justify-items:end;
-  gap:4px;
-  min-width:168px;
-}
-.youtube-connect{
-  min-height:34px;
-  padding:.38rem .7rem;
-  border-color:#3c4652;
-  border-radius:999px;
-  background:#151a20;
-  color:#eef2f6;
-  font-size:.78rem;
-}
-.youtube-connect:hover{background:#20262f}
-.youtube-connect:disabled{cursor:default;opacity:.55}
-.youtube-account{
-  min-height:36px;
-  display:flex;
-  align-items:center;
-  gap:8px;
-  max-width:320px;
-  padding:3px 5px 3px 4px;
-  border:1px solid #3a424d;
-  border-radius:999px;
-  background:#151a20;
-}
-.youtube-avatar{
-  width:30px;
-  height:30px;
-  flex:0 0 auto;
-  border-radius:50%;
-  object-fit:cover;
-  background:#222831;
-}
-.youtube-account-copy{
-  min-width:0;
-  display:grid;
-  gap:0;
-  text-align:left;
-}
-.youtube-account-copy strong{
-  max-width:150px;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-  color:#edf1f5;
-  font-size:.76rem;
-  line-height:1.25;
-}
-.youtube-account-copy span{
-  color:#8f9aa7;
-  font-size:.64rem;
-  line-height:1.2;
-}
-.youtube-disconnect{
-  min-height:28px;
-  padding:.28rem .5rem;
-  border:0;
-  background:transparent;
-  color:#aab4c0;
-  font-size:.68rem;
-}
-.youtube-disconnect:hover{background:#242b34;color:#fff}
-.youtube-auth-note{
-  max-width:245px;
-  color:#778390;
-  font-size:.64rem;
-  line-height:1.25;
-  text-align:right;
-}
-.youtube-auth[data-state="connected"] .youtube-auth-note{color:#9ccdad}
-.youtube-auth[data-state="error"] .youtube-auth-note{color:#e2a4a4}
-.youtube-auth[data-state="setup"] .youtube-auth-note{color:#c2b68d}
-body.player-active .topbar-actions{align-items:center}
-
 /* Player */
 .media-layout{display:grid;gap:14px;margin-bottom:14px}
 .player-shell{overflow:visible}
@@ -483,6 +399,74 @@ kbd{
 }
 .toast-action:hover{background:#202630;color:#fff}
 
+
+.youtube-history-experiment{
+  margin:0 0 14px;
+  padding:14px;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:18px;
+  align-items:center;
+  border-color:#34404a;
+  background:
+    radial-gradient(circle at 100% 0,#98eaff0b,transparent 22rem),
+    var(--surface);
+}
+.youtube-history-copy{min-width:0;display:grid;gap:5px}
+.youtube-history-copy strong{font-size:.94rem;color:#eef2f6}
+.youtube-history-copy p{
+  max-width:78ch;
+  color:#a6b0bc;
+  font-size:.8rem;
+}
+.experiment-kicker{
+  width:max-content;
+  color:#cbbcff;
+  font-size:.62rem;
+  font-weight:900;
+  letter-spacing:.1em;
+}
+.youtube-history-note{
+  max-width:82ch;
+  color:#788592;
+  font-size:.7rem;
+}
+.youtube-history-copy code{
+  padding:.08rem .24rem;
+  border-radius:4px;
+  background:#1b2027;
+  color:#d9d0ff;
+}
+.youtube-history-actions{
+  min-width:190px;
+  display:grid;
+  gap:7px;
+}
+.history-experiment-link,
+.history-reload-btn{
+  min-height:36px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:.45rem .65rem;
+  border:1px solid #303844;
+  border-radius:9px;
+  background:#151a20;
+  color:#dbe1e8;
+  font-size:.72rem;
+  font-weight:750;
+  text-decoration:none;
+  text-align:center;
+}
+.history-experiment-link:hover,
+.history-reload-btn:hover{background:#20262f;color:#fff}
+.primary-link{
+  border-color:#74658d;
+  background:#d9d0ff;
+  color:#101217;
+}
+.primary-link:hover{background:#ebe6ff;color:#0b0d10}
+
 /* History */
 .history-card{overflow:hidden}
 .history-head{
@@ -587,9 +571,6 @@ body.cinema .now-playing{min-height:52px}
 
 @media(max-width:760px){
   .topbar{align-items:flex-start;flex-direction:column;gap:.7rem}
-  .topbar-actions{width:100%;justify-content:space-between}
-  .youtube-auth{justify-items:start}
-  .youtube-auth-note{text-align:left}
   .mix-status{align-self:flex-start}
   .launch-card{align-items:stretch;flex-direction:column;gap:16px}
   .launch-primary{width:100%}
@@ -613,6 +594,8 @@ body.cinema .now-playing{min-height:52px}
   .cinema-setting{justify-content:space-between}
   .more-settings-panel{position:fixed;left:8px;right:8px;top:auto;bottom:8px;width:auto}
   .toast{left:8px;right:8px;bottom:8px;max-width:none}
+  .youtube-history-experiment{grid-template-columns:1fr}
+  .youtube-history-actions{min-width:0}
   .history-list{max-height:280px}
   .resume-card{grid-template-columns:1fr}
   .resume-card button{width:100%}

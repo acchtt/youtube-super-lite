@@ -19,7 +19,7 @@ AGENTS.md contains the standing repository instruction for this rule.
 - Product name: Aero × IVE
 - Product role: lightweight YouTube Mix player / unofficial IVE fan edition
 - Production: https://aero-x-ive.pages.dev
-- Current app version: v0.15.3
+- Current app version: v0.15.4
 - YouTube Super Lite + Mix Bridge extension: v0.4.0
 - Deployment: Cloudflare Pages from main
 - D1 database: youtube-super-lite
@@ -75,18 +75,19 @@ Aero imports the fragment into D1-backed state and immediately removes it from t
 
 
 
-### Experimental YouTube OAuth
+### Experimental YouTube History session test
 
-v0.15.3 adds a contained **Connect YouTube** experiment without changing the existing iframe playback architecture:
-- uses Google Identity Services' browser token model;
-- requests only `https://www.googleapis.com/auth/youtube.readonly`;
-- requires a Web OAuth client ID supplied through the Cloudflare Pages variable `GOOGLE_OAUTH_CLIENT_ID`;
-- `GET /api/oauth-config` exposes only the public client ID and read-only scope to the browser; no client secret is used;
-- successful consent is verified with the official YouTube Data API `channels.list?part=snippet,contentDetails&mine=true`, and Aero shows the connected YouTube channel;
-- access tokens remain in browser memory only and are never written to D1, cookies, localStorage, or the anonymous Aero session;
-- disconnect revokes the current access token through Google Identity Services when available;
-- the OAuth token is **not** injected into the YouTube iframe. Playback remains the same lightweight iframe. The acceptance test is whether an OAuth-connected Aero session changes real YouTube History behavior when a fresh video is played;
-- do not claim OAuth solves YouTube History unless the user verifies the played video appears in normal YouTube History.
+v0.15.4 removes the v0.15.3 OAuth experiment after the user successfully authorized the intended YouTube account, played a fresh Aero video, and confirmed it still did not appear in normal YouTube History.
+
+Current experiment:
+- keep the existing lightweight `www.youtube.com` IFrame API player unchanged;
+- do not use OAuth for History; Data API authorization is considered unrelated to iframe viewer identity for this project;
+- add `storage-access` to the YouTube iframe's Permissions Policy allow list when the iframe becomes ready, while keeping normal `www.youtube.com` host/origin behavior;
+- this allow token does not itself grant cookies or session access. Browser privacy settings and the embedded YouTube document remain authoritative;
+- Aero now shows a History-session test card with links to open first-party YouTube sign-in, reload Aero after changing browser cookie/Shields settings, and open normal YouTube History;
+- Brave blocks/partitions cross-site storage by default, so the acceptance test requires allowing YouTube cross-site storage for `aero-x-ive.pages.dev` or temporarily lowering Shields for Aero only;
+- after enabling cross-site session access, reload Aero, play a fresh track for a few minutes, then verify whether the video appears in normal YouTube History;
+- do not claim History works until the user verifies it.
 
 ### History and storage
 
@@ -165,7 +166,7 @@ Do not use the logo-generator skill unless the user explicitly asks to use it ag
 
 ## Versioning
 
-Current version: v0.15.3
+Current version: v0.15.4
 
 When bumping the visible app version, keep these aligned:
 - application-version meta
@@ -196,7 +197,7 @@ When GitHub access is available and the user asks for a repo change:
 
 2026-09-30 ICT
 
-Aero v0.15.3 adds an experimental Connect YouTube OAuth layer using Google Identity Services + YouTube Data API read-only access. It verifies the authorized YouTube channel but deliberately leaves iframe playback unchanged so History behavior can be tested cleanly. The access token is memory-only and OAuth is not yet considered a History solution.
+Aero v0.15.4 retires the OAuth History experiment after successful authorization still failed to record an iframe-played video in YouTube History. The active experiment now targets browser session isolation: keep the lightweight YouTube iframe, allow storage-access in its permissions policy, and test with Brave cross-site storage/Shields relaxed only for Aero.
 
 Extension has been restored again to the exact v0.4.0 baseline. v0.4.1 periodic reload reached about 460 MB and v0.4.2 Deep Trim reached about 500 MB on the first video, so both are rejected. Do not reintroduce periodic reload or MutationObserver/DOM-removal trimming without explicit instruction. The next memory investigation must first identify which browser process owns the memory (YouTube renderer, GPU/video decoder, utility, or extension) before changing architecture.
 

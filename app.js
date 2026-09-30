@@ -61,7 +61,8 @@ const els = {
   resumeVideoBox: $('resumeVideoBox'),
   resumeVideoTitle: $('resumeVideoTitle'),
   resumeVideoMeta: $('resumeVideoMeta'),
-  resumeVideoBtn: $('resumeVideoBtn')
+  resumeVideoBtn: $('resumeVideoBtn'),
+  historyReloadBtn: $('historyReloadBtn')
 };
 
 async function loadState() {
@@ -371,7 +372,7 @@ function renderTabTitle() {
   const author = cleanTabText(currentTabTrack.author);
 
   if (!title) {
-    document.title = 'Aero × IVE · v0.15.3';
+    document.title = 'Aero × IVE · v0.15.4';
     return;
   }
 
@@ -633,6 +634,32 @@ function createPlayer() {
     events: {
       onReady: event => {
         playerReady = true;
+
+        // History session experiment: keep the normal youtube.com embed and
+        // explicitly advertise storage-access permission to the frame. This
+        // does not grant cookies by itself; Brave/browser site settings still
+        // decide whether the embedded YouTube context can use the user's
+        // existing unpartitioned YouTube session.
+        try {
+          const frame = event.target.getIframe && event.target.getIframe();
+          if (frame) {
+            const currentAllow = frame.getAttribute('allow') || '';
+            const required = [
+              'autoplay',
+              'encrypted-media',
+              'picture-in-picture',
+              'fullscreen',
+              'storage-access'
+            ];
+            const tokens = new Set(
+              currentAllow.split(';').map(value => value.trim()).filter(Boolean)
+            );
+            required.forEach(value => tokens.add(value));
+            frame.setAttribute('allow', Array.from(tokens).join('; '));
+            frame.referrerPolicy = 'strict-origin-when-cross-origin';
+          }
+        } catch (_) {}
+
         try { event.target.setPlaybackRate(state.speed); } catch (_) {}
         applyAudioPrefs(event.target);
         const jobs = pending.splice(0);
@@ -948,3 +975,8 @@ window.addEventListener('pagehide', () => {
   captureAudioPrefs();
   capturePlaybackProgress(true);
 });
+
+
+if (els.historyReloadBtn) {
+  els.historyReloadBtn.addEventListener('click', () => location.reload());
+}
