@@ -20,7 +20,7 @@ AGENTS.md contains the standing repository instruction for this rule.
 - Product role: lightweight YouTube Mix player / unofficial IVE fan edition
 - Production: https://aero-x-ive.pages.dev
 - Current app version: v0.15.5
-- YouTube Super Lite + Mix Bridge extension: v0.4.0
+- Aero Native + YouTube Super Lite extension: v0.10.0 experimental (v0.4.0 remains known-good baseline)
 - Deployment: Cloudflare Pages from main
 - D1 database: youtube-super-lite
 - D1 binding: DB
@@ -60,9 +60,21 @@ The normal page is now the landing state:
 - Browser tab title reflects the current video.
 - The YouTube embed requests `hd1080` as the preferred playback quality. YouTube still controls the final adaptive stream quality and may override the preference.
 
-### YouTube Super Lite + Mix Bridge
+### Aero Native + YouTube Super Lite
 
-Extension v0.4.0 is the canonical baseline:
+Extension v0.10.0 is the active first-party-player experiment. v0.4.0 remains the known-good comparison baseline.
+
+v0.10.0 Aero Native Mode:
+- runs directly on the real signed-in `youtube.com/watch` page; no embed, alternate player, or stream extraction;
+- keeps YouTube's native player, controls, quality selector, captions, fullscreen, account session and first-party History behavior;
+- hides normal watch-page chrome with CSS and injects one lightweight Aero header containing first-party-session status, current title, YouTube search, and Exit Aero;
+- keeps the native Mix/playlist panel by default;
+- Exit Aero toggles only Native Mode off and returns immediately to the v0.4-style Super Lite presentation;
+- still uses no background service worker, polling loop, framework, or MutationObserver;
+- uses YouTube's own SPA events to keep route/title state current;
+- first acceptance test is History + playback correctness; RAM is measured separately afterward because native YouTube runtime previously measured around 400–450 MB on the current Brave/YouTube environment.
+
+v0.4.0 baseline characteristics:
 - real desktop `youtube.com` watch page and native player;
 - normal signed-in YouTube history/account behavior;
 - native Theater/Cinema and native quality selector, including 1080p when offered;
@@ -75,9 +87,11 @@ Aero imports the fragment into D1-backed state and immediately removes it from t
 
 
 
-### Experimental YouTube History session test
+### Standalone Aero YouTube History experiments
 
-v0.15.5 removes the v0.15.3 OAuth experiment after the user successfully authorized the intended YouTube account, played a fresh Aero video, and confirmed it still did not appear in normal YouTube History.
+The standalone iframe route is currently considered exhausted for History. The user confirmed v0.15.5 still was not recognized by YouTube after OAuth had already failed and after the iframe storage-access permission was moved before first navigation.
+
+v0.15.5 history experiment details (retained for reference):
 
 Current experiment:
 - keep the existing lightweight `www.youtube.com` IFrame API player unchanged;
@@ -199,9 +213,11 @@ When GitHub access is available and the user asks for a repo change:
 
 2026-09-30 ICT
 
-Aero v0.15.5 tightens the browser-session History experiment. The first YouTube iframe is now created lazily by Aero with `storage-access` present before its first YouTube navigation, then the official IFrame API attaches to that existing iframe. This removes the previous post-load permission timing flaw. Brave cross-site storage/Shields still must be relaxed for Aero, and History remains unconfirmed until the user verifies a fresh played video appears.
+The user confirmed standalone Aero v0.15.5 still was not recognized by YouTube History. OAuth and iframe cross-site/session experiments are therefore no longer the active direction for History.
 
-Extension has been restored again to the exact v0.4.0 baseline. v0.4.1 periodic reload reached about 460 MB and v0.4.2 Deep Trim reached about 500 MB on the first video, so both are rejected. Do not reintroduce periodic reload or MutationObserver/DOM-removal trimming without explicit instruction. The next memory investigation must first identify which browser process owns the memory (YouTube renderer, GPU/video decoder, utility, or extension) before changing architecture.
+Extension v0.10.0 starts the new Aero Native experiment: keep the real first-party signed-in `youtube.com/watch` player/session, hide the normal shell, and inject a lightweight Aero header/search/Exit control. This should preserve normal YouTube History by construction because playback remains first-party. Test History and playback first, then measure RAM against v0.4.0 and stock YouTube.
+
+The exact v0.4.0 extension remains the known-good rollback/comparison baseline. v0.4.1 periodic reload reached about 460 MB and v0.4.2 Deep Trim reached about 500 MB on the first video, so both are rejected. Do not reintroduce periodic reload or MutationObserver/DOM-removal trimming without explicit instruction. The next memory investigation must first identify which browser process owns the memory (YouTube renderer, GPU/video decoder, utility, or extension) before changing architecture.
 
 Extension v0.4.0 evolves Aero Mix Bridge into YouTube Super Lite + Mix Bridge. Super Lite is default-on and CSS-first: it removes most of the normal youtube.com shell while retaining native playback/search/session behavior and the Mix panel needed for capture. The extension deliberately uses no framework, background service worker, polling loop, or MutationObserver; one small content script only applies stored switches and tracks YouTube SPA navigation. The popup can restore individual surfaces or disable Lite mode entirely. Mix capture semantics are unchanged.\n\nv0.15.2 adds `vq: 'hd1080'` to the YouTube IFrame player configuration so Aero requests 1080p as its default/preferred quality. Current YouTube IFrame API quality setter methods and `suggestedQuality` are deprecated/no-op, so Aero does not pretend to force a stream level; YouTube may still lower or raise quality adaptively based on the viewer environment. No queue, Mix Bridge, storage, or transport behavior changed.
 

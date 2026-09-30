@@ -103,3 +103,269 @@ html[data-aero-lite="on"] :focus-visible {
   outline: 2px solid currentColor !important;
   outline-offset: 2px !important;
 }
+
+
+/* Aero Native Mode v0.10.0
+   First-party youtube.com watch page. The real YouTube player/session remains
+   untouched; this layer only replaces surrounding watch-page presentation. */
+
+html[data-aero-native="on"] {
+  --aero-native-topbar: 68px;
+  --aero-native-bg: #0b0d10;
+  --aero-native-surface: #11151b;
+  --aero-native-border: #252c35;
+  --aero-native-text: #f2f4f7;
+  --aero-native-muted: #8f9aa8;
+  background: var(--aero-native-bg) !important;
+}
+
+html[data-aero-native="on"] body {
+  background:
+    radial-gradient(circle at 12% -12%, rgba(116,84,140,.18), transparent 34rem),
+    radial-gradient(circle at 88% -18%, rgba(53,112,133,.12), transparent 32rem),
+    var(--aero-native-bg) !important;
+  color: var(--aero-native-text) !important;
+}
+
+#aero-native-shell {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 2147483000;
+  min-height: var(--aero-native-topbar);
+  padding: 10px 16px;
+  display: grid;
+  grid-template-columns: auto minmax(180px,1fr) minmax(260px,420px) auto;
+  align-items: center;
+  gap: 14px;
+  border-bottom: 1px solid var(--aero-native-border);
+  background: rgba(11,13,16,.96);
+  box-shadow: 0 10px 30px rgba(0,0,0,.28);
+  color: var(--aero-native-text);
+  font: 13px/1.35 system-ui,-apple-system,"Segoe UI",sans-serif;
+  backdrop-filter: blur(12px);
+}
+
+#aero-native-shell * { box-sizing: border-box; }
+
+.aero-native-brand {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+  font-weight: 800;
+}
+
+.aero-native-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  border: 1px solid rgba(255,255,255,.14);
+  background:
+    linear-gradient(140deg,rgba(217,208,255,.95),rgba(255,155,197,.88) 58%,rgba(152,234,255,.9));
+  clip-path: polygon(8% 92%,39% 7%,57% 7%,47% 39%,72% 39%,94% 92%,70% 92%,60% 67%,31% 67%,23% 92%);
+}
+
+.aero-native-word { font-size: 18px; letter-spacing: -.04em; }
+.aero-native-x { color: #737d89; }
+.aero-native-youtube { color: #d4dae1; font-weight: 700; }
+
+.aero-native-badge {
+  margin-left: 2px;
+  padding: 3px 6px;
+  border: 1px solid rgba(217,208,255,.25);
+  border-radius: 999px;
+  color: #d9d0ff;
+  font-size: 9px;
+  letter-spacing: .1em;
+}
+
+.aero-native-current {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.aero-native-session {
+  color: #81909f;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .09em;
+}
+
+.aero-native-current strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #e8ecf1;
+  font-size: 12px;
+}
+
+.aero-native-search {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  gap: 6px;
+}
+
+.aero-native-search input,
+.aero-native-search button,
+.aero-native-exit {
+  min-height: 38px;
+  border: 1px solid #303844;
+  border-radius: 10px;
+  background: #151a20;
+  color: #edf1f5;
+  font: inherit;
+}
+
+.aero-native-search input {
+  width: 100%;
+  padding: 0 11px;
+  outline: none;
+}
+
+.aero-native-search input:focus {
+  border-color: #8878a4;
+  box-shadow: 0 0 0 2px rgba(184,165,255,.15);
+}
+
+.aero-native-search button,
+.aero-native-exit {
+  padding: 0 12px;
+  cursor: pointer;
+  font-weight: 750;
+}
+
+.aero-native-search button:hover,
+.aero-native-exit:hover { background: #20262f; }
+
+.aero-native-exit {
+  color: #aeb7c2;
+  background: transparent;
+}
+
+/* Native mode owns the whole watch-page shell. */
+html[data-aero-native="on"][data-aero-page="watch"] ytd-masthead,
+html[data-aero-native="on"][data-aero-page="watch"] #masthead-container,
+html[data-aero-native="on"][data-aero-page="watch"] ytd-watch-metadata,
+html[data-aero-native="on"][data-aero-page="watch"] #below,
+html[data-aero-native="on"][data-aero-page="watch"] #comments,
+html[data-aero-native="on"][data-aero-page="watch"] ytd-comments,
+html[data-aero-native="on"][data-aero-page="watch"] ytd-watch-next-secondary-results-renderer,
+html[data-aero-native="on"][data-aero-page="watch"] #related,
+html[data-aero-native="on"][data-aero-page="watch"] ytd-live-chat-frame,
+html[data-aero-native="on"][data-aero-page="watch"] ytd-merch-shelf-renderer,
+html[data-aero-native="on"][data-aero-page="watch"] ytd-offer-module-renderer,
+html[data-aero-native="on"][data-aero-page="watch"] ytd-donation-shelf-renderer,
+html[data-aero-native="on"][data-aero-page="watch"] ytd-ticket-shelf-renderer,
+html[data-aero-native="on"][data-aero-page="watch"] ytd-product-list-renderer {
+  display: none !important;
+}
+
+html[data-aero-native="on"][data-aero-page="watch"] ytd-app {
+  padding-top: var(--aero-native-topbar) !important;
+  background: transparent !important;
+}
+
+html[data-aero-native="on"][data-aero-page="watch"] ytd-page-manager {
+  margin-top: 0 !important;
+  background: transparent !important;
+}
+
+html[data-aero-native="on"][data-aero-page="watch"] ytd-watch-flexy {
+  --ytd-watch-flexy-panel-max-height: calc(100vh - var(--aero-native-topbar) - 24px);
+  background: transparent !important;
+}
+
+html[data-aero-native="on"][data-aero-page="watch"] ytd-watch-flexy #columns {
+  width: min(1680px, calc(100vw - 24px)) !important;
+  max-width: none !important;
+  margin: 0 auto !important;
+  padding: 12px 0 18px !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  gap: 14px !important;
+}
+
+html[data-aero-native="on"][data-aero-page="watch"] ytd-watch-flexy #primary {
+  min-width: 0 !important;
+  max-width: min(1280px, calc(100vw - 400px)) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+html[data-aero-native="on"][data-aero-page="watch"] ytd-watch-flexy #primary-inner {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+html[data-aero-native="on"][data-aero-page="watch"] ytd-player,
+html[data-aero-native="on"][data-aero-page="watch"] #player-container,
+html[data-aero-native="on"][data-aero-page="watch"] #player-container-outer,
+html[data-aero-native="on"][data-aero-page="watch"] #player-container-inner {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+html[data-aero-native="on"][data-aero-page="watch"] #secondary {
+  width: 360px !important;
+  min-width: 360px !important;
+  max-width: 360px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+html[data-aero-native="on"][data-aero-page="watch"][data-aero-mix-panel="show"]
+#secondary:not(:has(ytd-playlist-panel-renderer)) {
+  display: none !important;
+}
+
+html[data-aero-native="on"][data-aero-page="watch"][data-aero-mix-panel="hide"]
+#secondary {
+  display: none !important;
+}
+
+html[data-aero-native="on"][data-aero-page="watch"] ytd-playlist-panel-renderer {
+  max-height: calc(100vh - var(--aero-native-topbar) - 24px) !important;
+  border: 1px solid var(--aero-native-border) !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  background: var(--aero-native-surface) !important;
+}
+
+html[data-aero-native="on"][data-aero-page="watch"] .html5-video-player {
+  border-radius: 14px !important;
+  overflow: hidden !important;
+  box-shadow: 0 16px 50px rgba(0,0,0,.30) !important;
+}
+
+@media (max-width: 980px) {
+  #aero-native-shell {
+    grid-template-columns: auto minmax(0,1fr) auto;
+  }
+
+  .aero-native-current { display: none; }
+
+  html[data-aero-native="on"][data-aero-page="watch"] ytd-watch-flexy #primary {
+    max-width: calc(100vw - 24px) !important;
+  }
+
+  html[data-aero-native="on"][data-aero-page="watch"] #secondary {
+    display: none !important;
+  }
+}
+
+@media (max-width: 680px) {
+  #aero-native-shell {
+    grid-template-columns: minmax(0,1fr) auto;
+    gap: 8px;
+  }
+
+  .aero-native-search {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  html[data-aero-native="on"] {
+    --aero-native-topbar: 114px;
+  }
+}

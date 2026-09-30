@@ -14,7 +14,7 @@ Before continuing development in a new chat/session, read HANDOFF.md. It is the 
 
 Aero intentionally keeps the runtime small: one YouTube iframe, plain HTML/CSS/JavaScript, Cloudflare Pages Functions, and D1 persistence.
 
-The companion **YouTube Super Lite + Aero Mix Bridge** extension can strip most of the normal youtube.com shell while preserving the native player/search/session, and it still captures the visible personalized YouTube Mix order for Aero. Aero then plays captured IDs one at a time through the normal YouTube IFrame API.
+The companion extension is now testing **Aero Native Mode v0.10.0**: an Aero-style watch interface running directly on the real signed-in `youtube.com/watch` page. It preserves YouTube's first-party player/session/history while hiding most of the normal watch shell. The known-good v0.4.0 Super Lite build remains the baseline, and Mix Bridge capture to standalone Aero remains available for A/B testing.
 
 Current features:
 - experimental **YouTube History session test** for browsers that isolate cross-site YouTube storage;
@@ -42,9 +42,11 @@ Removed as obsolete in v0.13.0:
 - unused low-memory/refresh controls left over from playlist playback;
 - runtime YouTube/Deployments links in the header.
 
-## Mix Bridge
+## Aero Native + Mix Bridge
 
-Extension v0.4.0 adds an optional-on-by-default Super Lite youtube.com mode using one tiny content script plus CSS, with no service worker, polling loop, or MutationObserver. The Mix Bridge capture remains explicit: it reads the active visible YouTube Mix panel once, preserves visible row order, and transfers only the ordered IDs through a short URL fragment.
+Extension v0.10.0 adds experimental Aero Native Mode on top of the v0.4.0 CSS-first baseline. Native Mode stays on the real first-party `youtube.com/watch` page, keeps YouTube's native player/session/history, and replaces the surrounding watch-page presentation with a small Aero shell. It still uses no service worker, polling loop, or MutationObserver.
+
+The Mix Bridge remains explicit: it reads the active visible YouTube Mix panel once, preserves visible row order, and transfers only the ordered IDs through a short URL fragment for standalone Aero comparison.
 
 See `extension/README.md`.
 

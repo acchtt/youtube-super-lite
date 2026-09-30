@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>YouTube Super Lite</title>
+  <title>Aero Native</title>
   <style>
     :root{color-scheme:dark}
     *{box-sizing:border-box}
@@ -27,12 +27,13 @@
 <body>
   <main>
     <div>
-      <h1>YouTube Super Lite</h1>
-      <p class="intro">Keep native YouTube playback. Strip the shell around it.</p>
+      <h1>Aero Native</h1>
+      <p class="intro">First-party YouTube playback with an Aero-style watch page.</p>
     </div>
 
     <div class="panel">
       <label class="row"><strong>Super Lite</strong><input id="liteEnabled" type="checkbox"></label>
+      <label class="row"><strong>Aero Native watch mode</strong><input id="nativeMode" type="checkbox"></label>
       <label class="row"><span>Homepage feed</span><input id="showHomeFeed" type="checkbox"></label>
       <label class="row"><span>Related videos</span><input id="showRelated" type="checkbox"></label>
       <label class="row"><span>Comments</span><input id="showComments" type="checkbox"></label>
@@ -41,8 +42,8 @@
       <label class="row"><span>Description</span><input id="showDescription" type="checkbox"></label>
     </div>
 
-    <div class="section-title">Aero Mix Bridge</div>
-    <button id="capture" type="button">Capture current Mix</button>
+    <div class="section-title">Standalone Aero Mix Bridge</div>
+    <button id="capture" type="button">Capture Mix to standalone Aero</button>
     <div id="status">Settings apply immediately on youtube.com.</div>
   </main>
   <script src="popup.js"></script>

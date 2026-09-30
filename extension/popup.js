@@ -2,6 +2,7 @@
 
 const DEFAULTS = Object.freeze({
   liteEnabled: true,
+  nativeMode: true,
   showHomeFeed: false,
   showRelated: false,
   showComments: false,
@@ -162,4 +163,6 @@ button.addEventListener('click', async () => {
   }
 });
 
-loadSettings().catch(() => setStatus('Could not load extension settings.', 'err'));
+loadSettings().then(() => {
+  setStatus('Aero Native keeps playback first-party on youtube.com.', 'ok');
+}).catch(() => setStatus('Could not load extension settings.', 'err'));

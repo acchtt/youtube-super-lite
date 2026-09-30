@@ -1,18 +1,29 @@
 {
   "manifest_version": 3,
-  "name": "YouTube Super Lite + Aero",
-  "version": "0.4.0",
-  "description": "Strip YouTube down to the player and essentials, while keeping Aero Mix capture.",
-  "permissions": ["activeTab", "scripting", "storage"],
+  "name": "Aero Native + YouTube Super Lite",
+  "version": "0.10.0",
+  "description": "Aero-style first-party YouTube watch mode with native playback, history, and Mix support.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
   "action": {
-    "default_title": "YouTube Super Lite",
+    "default_title": "Aero Native",
     "default_popup": "popup.html"
   },
   "content_scripts": [
     {
-      "matches": ["https://www.youtube.com/*", "https://youtube.com/*"],
-      "js": ["lite.js"],
-      "css": ["lite.css"],
+      "matches": [
+        "https://www.youtube.com/*",
+        "https://youtube.com/*"
+      ],
+      "js": [
+        "lite.js"
+      ],
+      "css": [
+        "lite.css"
+      ],
       "run_at": "document_start"
     }
   ]
