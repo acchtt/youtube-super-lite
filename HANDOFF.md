@@ -20,7 +20,7 @@ AGENTS.md contains the standing repository instruction for this rule.
 - Product role: lightweight YouTube Mix player / unofficial IVE fan edition
 - Production: https://aero-x-ive.pages.dev
 - Current app version: v0.15.5
-- Aero Native + YouTube Super Lite extension: v0.10.2 experimental (v0.4.0 remains known-good baseline)
+- Aero Native + YouTube Super Lite extension: v0.10.1 active baseline (v0.4.0 remains known-good fallback)
 - Deployment: Cloudflare Pages from main
 - D1 database: youtube-super-lite
 - D1 binding: DB
@@ -62,25 +62,21 @@ The normal page is now the landing state:
 
 ### Aero Native + YouTube Super Lite
 
-Extension v0.10.2 is the active first-party-player experiment. v0.4.0 remains the known-good comparison baseline.
+Extension v0.10.1 is the active first-party-player baseline. v0.4.0 remains the known-good fallback/comparison baseline.
 
-v0.10.2 Aero Native Mode:
-- current measured behavior before this change: first-party History works; YouTube renderer was about 335 MB during early use, then rose to about 440 MB after 10 videos, indicating retained state across SPA transitions;
-- adds default-on `hardNavigation` setting and exposes `data-aero-hard-navigation="on|off"` for quick verification;
-- capture-phase clicks to a different same-origin `/watch?v=...` URL are converted from YouTube SPA navigation into a real top-level `location.assign()` document navigation;
-- autoplay, playlist/Mix next, media controls, or other uncaught SPA changes are handled by comparing the current video ID with the ID that loaded the document; when they differ after YouTube navigation, Aero immediately `location.replace()` reloads the final watch URL as a fresh document;
-- the goal is to let Brave discard the previous YouTube document/JS heap between videos while preserving first-party player/session/History behavior;
-- Hard Navigation is independently toggleable in the popup for A/B testing against normal SPA switching;
-- retains the v0.10.1 activation fix: Native Mode does not depend on the legacy `liteEnabled` master switch, so an old stored Super Lite=off preference cannot force `data-aero-native="off"`;
-- on upgrade, if no explicit `nativeMode` preference exists yet, v0.10.2 stores `nativeMode:true` once; after that, the user's Native toggle is respected;
-- runs directly on the real signed-in `youtube.com/watch` page; no embed, alternate player, or stream extraction;
-- keeps YouTube's native player, controls, quality selector, captions, fullscreen, account session and first-party History behavior;
-- hides normal watch-page chrome with CSS and injects one lightweight Aero header containing first-party-session status, current title, YouTube search, and Exit Aero;
-- keeps the native Mix/playlist panel by default;
-- Exit Aero toggles only Native Mode off and returns immediately to the v0.4-style Super Lite presentation;
-- still uses no background service worker, polling loop, framework, or MutationObserver;
-- uses YouTube's own SPA events to keep route/title state current;
-- first acceptance test is History + playback correctness; RAM is measured separately afterward because native YouTube runtime previously measured around 400–450 MB on the current Brave/YouTube environment.
+v0.10.1 Aero Native Mode:
+- first-party YouTube History is confirmed working;
+- real signed-in `youtube.com/watch` page, native player, quality selector, captions, fullscreen and Mix/playlist panel remain;
+- Aero Native is independent from the legacy `liteEnabled` master switch;
+- no background service worker, polling loop, framework, MutationObserver, alternate player, or stream extraction;
+- measured roughly ~335 MB during early use and ~440 MB after 10 videos in the user's Brave environment;
+- the ~105 MB growth over 10 videos remains the current memory problem to investigate.
+
+Rejected v0.10.2 Hard Navigation experiment:
+- forced full document navigations between videos and added a fallback reload after SPA-driven video changes;
+- Mix/playlist panel disappeared during the experiment;
+- RAM worsened dramatically to about ~880 MB after only a few videos;
+- do not reintroduce hard-navigation/reload-per-video behavior without a substantially different mechanism and explicit instruction.
 
 v0.4.0 baseline characteristics:
 - real desktop `youtube.com` watch page and native player;
@@ -221,14 +217,10 @@ When GitHub access is available and the user asks for a repo change:
 
 2026-09-30 ICT
 
-The user confirmed standalone Aero v0.15.5 still was not recognized by YouTube History. OAuth and iframe cross-site/session experiments are therefore no longer the active direction for History.
+v0.10.2 Hard Navigation was tested and rejected. It removed the usable Mix/playlist experience and RAM rose to about ~880 MB after only a few videos. The extension has been restored to v0.10.1, which remains the best current first-party baseline: normal YouTube History works, Mix panel works, and observed RAM was about ~335 MB initially and ~440 MB after 10 videos.
 
-Extension v0.10.2 is the active Aero Native experiment. The user verified first-party YouTube History works in Native Mode. RAM was about 335 MB initially but climbed to about 440 MB after 10 videos, so v0.10.2 adds default-on Hard Navigation to replace repeated SPA video transitions with fresh watch documents. Compare RAM after 10 videos with Hard Navigation on versus off; preserve History/native player behavior.
+Do not reintroduce per-video full-page reloads, periodic reloads, or the earlier Deep Trim/MutationObserver DOM-removal experiments. The next memory investigation should target why native YouTube retains roughly ~10 MB per video across SPA transitions without changing player/session architecture.
 
-The exact v0.4.0 extension remains the known-good rollback/comparison baseline. v0.4.1 periodic reload reached about 460 MB and v0.4.2 Deep Trim reached about 500 MB on the first video, so both are rejected. Do not reintroduce periodic reload or MutationObserver/DOM-removal trimming without explicit instruction. The next memory investigation must first identify which browser process owns the memory (YouTube renderer, GPU/video decoder, utility, or extension) before changing architecture.
+Standalone Aero v0.15.5 remains separate. Its OAuth and iframe storage-access experiments did not produce normal YouTube History, so the active History-capable path remains first-party Aero Native.
 
-Extension v0.4.0 evolves Aero Mix Bridge into YouTube Super Lite + Mix Bridge. Super Lite is default-on and CSS-first: it removes most of the normal youtube.com shell while retaining native playback/search/session behavior and the Mix panel needed for capture. The extension deliberately uses no framework, background service worker, polling loop, or MutationObserver; one small content script only applies stored switches and tracks YouTube SPA navigation. The popup can restore individual surfaces or disable Lite mode entirely. Mix capture semantics are unchanged.\n\nv0.15.2 adds `vq: 'hd1080'` to the YouTube IFrame player configuration so Aero requests 1080p as its default/preferred quality. Current YouTube IFrame API quality setter methods and `suggestedQuality` are deprecated/no-op, so Aero does not pretend to force a stream level; YouTube may still lower or raise quality adaptively based on the viewer environment. No queue, Mix Bridge, storage, or transport behavior changed.
-
-v0.15.1 fixes Cinema sizing on wide/short desktop viewports. Cinema still preserves a true 16:9 YouTube iframe, but the app width is now capped by viewport height (with `dvh` when supported and `vh` fallback), leaving a small vertical safety margin so YouTube’s bottom controls remain visible instead of extending just below the screen. No playback lifecycle, Mix Bridge, storage, or queue behavior changed.
-
-v0.15.0 applies the full Impeccable critique/polish pass requested after the v0.14.2 player fixes. The player now has a visible Mix-home return control that preserves current playback; while the player is open, the duplicate header Mix-status pill is hidden and the in-player N / total pill is canonical. Now Playing metadata no longer exposes the raw YouTube video ID or redundant “captured Mix” text. Keyboard hints moved into Settings to reduce persistent chrome, transport buttons were visually quieted, and the title/control bar was tightened without changing the 16:9 iframe or player lifecycle. Reaching the natural end of a captured Mix now returns to a “Mix complete” home state with Play again. Clear History is immediate but undoable for eight seconds using the existing D1 replace-history endpoint. Storage-load failures now use viewer-facing recovery copy plus a Reload action instead of D1/schema jargon. The no-Mix state links to Mix Bridge setup for first-time recovery, Settings closes on outside click/Escape, footer copy was simplified, and browser surfaces received lightweight selection/scrollbar theming. No Mix Bridge extension or YouTube playback lifecycle changes were made; Mix Bridge remains v0.3.3.
+The exact v0.4.0 extension remains the known-good fallback/comparison baseline.

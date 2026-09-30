@@ -3,7 +3,6 @@
 const DEFAULTS = Object.freeze({
   liteEnabled: true,
   nativeMode: true,
-  hardNavigation: true,
   showHomeFeed: false,
   showRelated: false,
   showComments: false,
@@ -14,21 +13,6 @@ const DEFAULTS = Object.freeze({
 
 let settings = { ...DEFAULTS };
 let shellMountQueued = false;
-let forcingHardNavigation = false;
-
-function watchVideoId(value = location.href) {
-  try {
-    const url = new URL(value, location.origin);
-    if (url.hostname.replace(/^www\./, '') !== 'youtube.com') return '';
-    if (url.pathname !== '/watch') return '';
-    const id = url.searchParams.get('v') || '';
-    return /^[A-Za-z0-9_-]{11}$/.test(id) ? id : '';
-  } catch (_) {
-    return '';
-  }
-}
-
-const documentVideoId = watchVideoId();
 
 function pageKind() {
   const path = location.pathname;
@@ -45,31 +29,6 @@ function nativeModeActive() {
     settings.nativeMode &&
     pageKind() === 'watch'
   );
-}
-
-function hardNavigationActive() {
-  return Boolean(settings.nativeMode && settings.hardNavigation);
-}
-
-function forceWatchDocumentNavigation(url, replace = false) {
-  if (forcingHardNavigation) return;
-  forcingHardNavigation = true;
-
-  if (replace) location.replace(url);
-  else location.assign(url);
-}
-
-function enforceFreshDocumentAfterSpa() {
-  if (!hardNavigationActive() || forcingHardNavigation) return false;
-
-  const currentVideoId = watchVideoId();
-  if (!currentVideoId || currentVideoId === documentVideoId) return false;
-
-  // YouTube changed the video inside the existing SPA document (autoplay,
-  // playlist next, keyboard/media controls, or a navigation we did not catch).
-  // Reload the final watch URL so the old document/JS heap can be discarded.
-  forceWatchDocumentNavigation(location.href, true);
-  return true;
 }
 
 function currentVideoTitle() {
@@ -110,13 +69,6 @@ function updateNativeShell() {
   if (search && document.activeElement !== search) {
     search.placeholder = 'Search YouTube';
   }
-
-  const session = shell.querySelector('[data-aero-native-session]');
-  if (session) {
-    session.textContent = settings.hardNavigation
-      ? 'FIRST-PARTY SESSION · HARD NAV'
-      : 'FIRST-PARTY YOUTUBE SESSION';
-  }
 }
 
 function mountNativeShell() {
@@ -151,7 +103,7 @@ function mountNativeShell() {
       </div>
 
       <div class="aero-native-current" title="Current YouTube video">
-        <span class="aero-native-session" data-aero-native-session>FIRST-PARTY YOUTUBE SESSION</span>
+        <span class="aero-native-session">FIRST-PARTY YOUTUBE SESSION</span>
         <strong data-aero-native-title>YouTube video</strong>
       </div>
 
@@ -195,7 +147,6 @@ function applyState() {
     settings.nativeMode &&
     kind === 'watch'
   ) ? 'on' : 'off';
-  root.dataset.aeroHardNavigation = settings.hardNavigation ? 'on' : 'off';
   root.dataset.aeroPage = kind;
   root.dataset.aeroHomeFeed = settings.showHomeFeed ? 'show' : 'hide';
   root.dataset.aeroRelated = settings.showRelated ? 'show' : 'hide';
@@ -240,43 +191,11 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
   if (changed) applyState();
 });
 
-function handleWatchLinkClick(event) {
-  if (!hardNavigationActive() || forcingHardNavigation) return;
-  if (event.defaultPrevented || event.button !== 0) return;
-  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-
-  const target = event.target;
-  const anchor = target && target.closest ? target.closest('a[href]') : null;
-  if (!anchor || anchor.hasAttribute('download')) return;
-  if (anchor.target && anchor.target !== '_self') return;
-
-  let url;
-  try {
-    url = new URL(anchor.href || anchor.getAttribute('href'), location.origin);
-  } catch (_) {
-    return;
-  }
-
-  const nextVideoId = watchVideoId(url.href);
-  const currentVideoId = watchVideoId();
-  if (!nextVideoId || nextVideoId === currentVideoId) return;
-
-  event.preventDefault();
-  event.stopPropagation();
-  if (typeof event.stopImmediatePropagation === 'function') {
-    event.stopImmediatePropagation();
-  }
-
-  forceWatchDocumentNavigation(url.href, false);
-}
-
 function refreshForYouTubeNavigation() {
-  if (enforceFreshDocumentAfterSpa()) return;
   applyState();
   updateNativeShell();
 }
 
-document.addEventListener('click', handleWatchLinkClick, true);
 document.addEventListener('yt-navigate-finish', refreshForYouTubeNavigation, true);
 document.addEventListener('yt-page-data-updated', refreshForYouTubeNavigation, true);
 window.addEventListener('popstate', refreshForYouTubeNavigation);

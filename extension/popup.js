@@ -3,7 +3,6 @@
 const DEFAULTS = Object.freeze({
   liteEnabled: true,
   nativeMode: true,
-  hardNavigation: true,
   showHomeFeed: false,
   showRelated: false,
   showComments: false,
@@ -39,16 +38,6 @@ for (const [key, input] of Object.entries(settingInputs)) {
         input.checked
           ? 'Aero Native is on. Refresh/open a YouTube watch page.'
           : 'Aero Native is off. Native YouTube/Super Lite remains available.',
-        'ok'
-      );
-      return;
-    }
-
-    if (key === 'hardNavigation') {
-      setStatus(
-        input.checked
-          ? 'Hard navigation is on. Each new video gets a fresh document.'
-          : 'Hard navigation is off. YouTube SPA switching is restored.',
         'ok'
       );
       return;
