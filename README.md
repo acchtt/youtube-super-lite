@@ -17,6 +17,7 @@ Aero intentionally keeps the runtime small: one YouTube iframe, plain HTML/CSS/J
 The companion **YouTube Super Lite + Aero Mix Bridge** extension can strip most of the normal youtube.com shell while preserving the native player/search/session, and it still captures the visible personalized YouTube Mix order for Aero. Aero then plays captured IDs one at a time through the normal YouTube IFrame API.
 
 Current features:
+- experimental **Connect YouTube** OAuth authorization using Google Identity Services and the read-only YouTube Data API;
 - exact captured Mix order;
 - direct non-modal home state with Mix-ready / empty / resume states;
 - first-class captured Mix position (for example 12 / 43);
@@ -46,6 +47,14 @@ Removed as obsolete in v0.13.0:
 Extension v0.4.0 adds an optional-on-by-default Super Lite youtube.com mode using one tiny content script plus CSS, with no service worker, polling loop, or MutationObserver. The Mix Bridge capture remains explicit: it reads the active visible YouTube Mix panel once, preserves visible row order, and transfers only the ordered IDs through a short URL fragment.
 
 See `extension/README.md`.
+
+## Experimental YouTube OAuth
+
+Aero v0.15.3 adds a contained OAuth experiment. **Connect YouTube** obtains a short-lived browser access token with the read-only YouTube scope, then calls `channels.list?mine=true` to verify which YouTube channel authorized Aero. The token is kept in memory only and is not stored in D1/localStorage.
+
+This does **not** inject OAuth credentials into the YouTube iframe. The purpose is to test whether an explicitly authorized Aero session changes practical History behavior while keeping the existing lightweight player unchanged. OAuth also gives us a supported path for future playlist/subscription/account features.
+
+Configure `GOOGLE_OAUTH_CLIENT_ID` in Cloudflare Pages before testing. See `CLOUDFLARE_SETUP.md`.
 
 ## Cloudflare storage
 

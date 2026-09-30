@@ -19,7 +19,7 @@ AGENTS.md contains the standing repository instruction for this rule.
 - Product name: Aero × IVE
 - Product role: lightweight YouTube Mix player / unofficial IVE fan edition
 - Production: https://aero-x-ive.pages.dev
-- Current app version: v0.15.2
+- Current app version: v0.15.3
 - YouTube Super Lite + Mix Bridge extension: v0.4.0
 - Deployment: Cloudflare Pages from main
 - D1 database: youtube-super-lite
@@ -72,6 +72,21 @@ Extension v0.4.0 is the canonical baseline:
 - Capture current Mix reads the visible native playlist panel once, preserves rendered row order exactly including repeated IDs, and opens Aero with a compact `#aeroMix=` fragment.
 
 Aero imports the fragment into D1-backed state and immediately removes it from the address bar.
+
+
+
+### Experimental YouTube OAuth
+
+v0.15.3 adds a contained **Connect YouTube** experiment without changing the existing iframe playback architecture:
+- uses Google Identity Services' browser token model;
+- requests only `https://www.googleapis.com/auth/youtube.readonly`;
+- requires a Web OAuth client ID supplied through the Cloudflare Pages variable `GOOGLE_OAUTH_CLIENT_ID`;
+- `GET /api/oauth-config` exposes only the public client ID and read-only scope to the browser; no client secret is used;
+- successful consent is verified with the official YouTube Data API `channels.list?part=snippet,contentDetails&mine=true`, and Aero shows the connected YouTube channel;
+- access tokens remain in browser memory only and are never written to D1, cookies, localStorage, or the anonymous Aero session;
+- disconnect revokes the current access token through Google Identity Services when available;
+- the OAuth token is **not** injected into the YouTube iframe. Playback remains the same lightweight iframe. The acceptance test is whether an OAuth-connected Aero session changes real YouTube History behavior when a fresh video is played;
+- do not claim OAuth solves YouTube History unless the user verifies the played video appears in normal YouTube History.
 
 ### History and storage
 
@@ -150,7 +165,7 @@ Do not use the logo-generator skill unless the user explicitly asks to use it ag
 
 ## Versioning
 
-Current version: v0.15.2
+Current version: v0.15.3
 
 When bumping the visible app version, keep these aligned:
 - application-version meta
@@ -179,7 +194,9 @@ When GitHub access is available and the user asks for a repo change:
 
 ## Last handoff update
 
-2026-09-28 ICT
+2026-09-30 ICT
+
+Aero v0.15.3 adds an experimental Connect YouTube OAuth layer using Google Identity Services + YouTube Data API read-only access. It verifies the authorized YouTube channel but deliberately leaves iframe playback unchanged so History behavior can be tested cleanly. The access token is memory-only and OAuth is not yet considered a History solution.
 
 Extension has been restored again to the exact v0.4.0 baseline. v0.4.1 periodic reload reached about 460 MB and v0.4.2 Deep Trim reached about 500 MB on the first video, so both are rejected. Do not reintroduce periodic reload or MutationObserver/DOM-removal trimming without explicit instruction. The next memory investigation must first identify which browser process owns the memory (YouTube renderer, GPU/video decoder, utility, or extension) before changing architecture.
 

@@ -8,3 +8,8 @@ compatibility_date = "2026-09-22"
 binding = "DB"
 database_name = "youtube-super-lite"
 database_id = "REPLACE_WITH_D1_DATABASE_ID"
+
+
+# Browser OAuth experiment. This is a Web OAuth client ID, not a client secret.
+[vars]
+GOOGLE_OAUTH_CLIENT_ID = "REPLACE_WITH_WEB_OAUTH_CLIENT_ID.apps.googleusercontent.com"
