@@ -14,7 +14,7 @@ Before continuing development in a new chat/session, read HANDOFF.md. It is the 
 
 Aero intentionally keeps the runtime small: one YouTube iframe, plain HTML/CSS/JavaScript, Cloudflare Pages Functions, and D1 persistence.
 
-The companion extension is now testing **Aero Native Mode v0.10.1**: an Aero-style watch interface running directly on the real signed-in `youtube.com/watch` page. It preserves YouTube's first-party player/session/history while hiding most of the normal watch shell. The known-good v0.4.0 Super Lite build remains the baseline, and Mix Bridge capture to standalone Aero remains available for A/B testing.
+The companion extension is now testing **Aero Native Mode v0.10.2**: an Aero-style watch interface running directly on the real signed-in `youtube.com/watch` page. It preserves YouTube's first-party player/session/history while hiding most of the normal watch shell. The known-good v0.4.0 Super Lite build remains the baseline, and Mix Bridge capture to standalone Aero remains available for A/B testing.
 
 Current features:
 - experimental **YouTube History session test** for browsers that isolate cross-site YouTube storage;
@@ -44,7 +44,7 @@ Removed as obsolete in v0.13.0:
 
 ## Aero Native + Mix Bridge
 
-Extension v0.10.1 adds experimental Aero Native Mode on top of the v0.4.0 CSS-first baseline. Native Mode stays on the real first-party `youtube.com/watch` page, keeps YouTube's native player/session/history, and replaces the surrounding watch-page presentation with a small Aero shell. In v0.10.1 it is independent from the legacy Super Lite master switch so old stored settings cannot silently disable the experiment. It still uses no service worker, polling loop, or MutationObserver.
+Extension v0.10.2 adds experimental Aero Native Mode on top of the v0.4.0 CSS-first baseline. Native Mode stays on the real first-party `youtube.com/watch` page, keeps YouTube's native player/session/history, and replaces the surrounding watch-page presentation with a small Aero shell. v0.10.2 adds default-on Hard Navigation: moving to another video uses a fresh watch document (with a post-SPA reload fallback for autoplay/playlist transitions) to test whether this prevents retained-memory growth across videos. It still uses no service worker, polling loop, or MutationObserver.
 
 The Mix Bridge remains explicit: it reads the active visible YouTube Mix panel once, preserves visible row order, and transfers only the ordered IDs through a short URL fragment for standalone Aero comparison.
 

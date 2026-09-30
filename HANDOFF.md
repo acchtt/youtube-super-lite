@@ -20,7 +20,7 @@ AGENTS.md contains the standing repository instruction for this rule.
 - Product role: lightweight YouTube Mix player / unofficial IVE fan edition
 - Production: https://aero-x-ive.pages.dev
 - Current app version: v0.15.5
-- Aero Native + YouTube Super Lite extension: v0.10.1 experimental (v0.4.0 remains known-good baseline)
+- Aero Native + YouTube Super Lite extension: v0.10.2 experimental (v0.4.0 remains known-good baseline)
 - Deployment: Cloudflare Pages from main
 - D1 database: youtube-super-lite
 - D1 binding: DB
@@ -62,11 +62,17 @@ The normal page is now the landing state:
 
 ### Aero Native + YouTube Super Lite
 
-Extension v0.10.1 is the active first-party-player experiment. v0.4.0 remains the known-good comparison baseline.
+Extension v0.10.2 is the active first-party-player experiment. v0.4.0 remains the known-good comparison baseline.
 
-v0.10.1 Aero Native Mode:
-- fixes the v0.10.0 activation bug: Native Mode no longer depends on the legacy `liteEnabled` master switch, so an old stored Super Lite=off preference cannot force `data-aero-native="off"`;
-- on upgrade, if no explicit `nativeMode` preference exists yet, v0.10.1 stores `nativeMode:true` once; after that, the user's Native toggle is respected;
+v0.10.2 Aero Native Mode:
+- current measured behavior before this change: first-party History works; YouTube renderer was about 335 MB during early use, then rose to about 440 MB after 10 videos, indicating retained state across SPA transitions;
+- adds default-on `hardNavigation` setting and exposes `data-aero-hard-navigation="on|off"` for quick verification;
+- capture-phase clicks to a different same-origin `/watch?v=...` URL are converted from YouTube SPA navigation into a real top-level `location.assign()` document navigation;
+- autoplay, playlist/Mix next, media controls, or other uncaught SPA changes are handled by comparing the current video ID with the ID that loaded the document; when they differ after YouTube navigation, Aero immediately `location.replace()` reloads the final watch URL as a fresh document;
+- the goal is to let Brave discard the previous YouTube document/JS heap between videos while preserving first-party player/session/History behavior;
+- Hard Navigation is independently toggleable in the popup for A/B testing against normal SPA switching;
+- retains the v0.10.1 activation fix: Native Mode does not depend on the legacy `liteEnabled` master switch, so an old stored Super Lite=off preference cannot force `data-aero-native="off"`;
+- on upgrade, if no explicit `nativeMode` preference exists yet, v0.10.2 stores `nativeMode:true` once; after that, the user's Native toggle is respected;
 - runs directly on the real signed-in `youtube.com/watch` page; no embed, alternate player, or stream extraction;
 - keeps YouTube's native player, controls, quality selector, captions, fullscreen, account session and first-party History behavior;
 - hides normal watch-page chrome with CSS and injects one lightweight Aero header containing first-party-session status, current title, YouTube search, and Exit Aero;
@@ -217,7 +223,7 @@ When GitHub access is available and the user asks for a repo change:
 
 The user confirmed standalone Aero v0.15.5 still was not recognized by YouTube History. OAuth and iframe cross-site/session experiments are therefore no longer the active direction for History.
 
-Extension v0.10.1 is the active Aero Native experiment. It fixes the initial v0.10.0 activation bug discovered when the user's existing synchronized Super Lite setting left both `data-aero-lite` and `data-aero-native` off. Native Mode is now independent and defaults on for installs without an explicit Native preference. Keep the real first-party signed-in `youtube.com/watch` player/session, hide the normal shell, and inject a lightweight Aero header/search/Exit control. Test History and playback first, then measure RAM against v0.4.0 and stock YouTube.
+Extension v0.10.2 is the active Aero Native experiment. The user verified first-party YouTube History works in Native Mode. RAM was about 335 MB initially but climbed to about 440 MB after 10 videos, so v0.10.2 adds default-on Hard Navigation to replace repeated SPA video transitions with fresh watch documents. Compare RAM after 10 videos with Hard Navigation on versus off; preserve History/native player behavior.
 
 The exact v0.4.0 extension remains the known-good rollback/comparison baseline. v0.4.1 periodic reload reached about 460 MB and v0.4.2 Deep Trim reached about 500 MB on the first video, so both are rejected. Do not reintroduce periodic reload or MutationObserver/DOM-removal trimming without explicit instruction. The next memory investigation must first identify which browser process owns the memory (YouTube renderer, GPU/video decoder, utility, or extension) before changing architecture.
 

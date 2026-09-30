@@ -2,12 +2,13 @@
 
 A lightweight Chrome / Edge / Brave Manifest V3 extension for `youtube.com`.
 
-## v0.10.1 experiment: Aero Native Mode
+## v0.10.2 experiment: Aero Native Mode
 
 Aero Native Mode keeps playback on the **real first-party `youtube.com/watch` page**. It does not embed YouTube somewhere else and it does not replace YouTube's media player.
 
 The extension:
 - keeps the native signed-in YouTube player, account session, quality selector, captions, fullscreen and normal watch-history behavior;
+- enables **Hard navigation between videos** by default: clicks to another watch URL use a real document navigation instead of YouTube SPA switching, and internally triggered SPA video changes are detected and reloaded as the final watch URL;
 - hides the normal watch-page shell around the player;
 - adds a lightweight Aero header with first-party session status, current title, YouTube search, and an **Exit Aero** button;
 - keeps the visible Mix / playlist panel by default;
@@ -16,7 +17,7 @@ The extension:
 
 **Exit Aero** disables only Aero Native Mode and immediately restores the v0.4-style Super Lite layout. Turning Super Lite off restores normal YouTube.
 
-The known-good **v0.4.0** CSS-first build remains the comparison baseline. v0.10.1 is the active first-party-player experiment. Native Mode is now independent from the legacy Super Lite master switch, fixing upgrades where stored v0.4.x settings left both data flags off.
+The known-good **v0.4.0** CSS-first build remains the comparison baseline. v0.10.2 is the active first-party-player experiment. Native Mode is independent from the legacy Super Lite master switch, and Hard Navigation is enabled by default to test whether fresh watch documents stop the ~335 MB → ~440 MB growth observed over 10 SPA video changes.
 
 ## Why this experiment exists
 
@@ -40,6 +41,7 @@ Aero Native Mode is enabled by default and is independent from the Super Lite to
 Enabled:
 - Super Lite;
 - Aero Native watch mode;
+- Hard navigation between videos;
 - Mix / playlist panel.
 
 Hidden by default outside the native watch shell:
@@ -62,7 +64,7 @@ Hidden by default outside the native watch shell:
 - `chrome.storage.sync` for settings;
 - YouTube's own `yt-navigate-finish` and `yt-page-data-updated` events for SPA route updates.
 
-Aero Native does not claim to reduce the memory of YouTube's player/runtime by itself. It mainly replaces the visible shell while preserving first-party playback.
+Aero Native does not claim to reduce the memory of YouTube's player/runtime by itself. v0.10.2 specifically tests whether replacing repeated YouTube SPA video transitions with fresh watch documents lets Brave discard retained per-video JS/player state.
 
 ## Standalone Aero Mix capture
 
