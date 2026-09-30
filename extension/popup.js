@@ -32,9 +32,20 @@ async function loadSettings() {
 for (const [key, input] of Object.entries(settingInputs)) {
   input.addEventListener('change', async () => {
     await chrome.storage.sync.set({ [key]: input.checked });
+
+    if (key === 'nativeMode') {
+      setStatus(
+        input.checked
+          ? 'Aero Native is on. Refresh/open a YouTube watch page.'
+          : 'Aero Native is off. Native YouTube/Super Lite remains available.',
+        'ok'
+      );
+      return;
+    }
+
     setStatus(input.checked || key !== 'liteEnabled'
       ? 'Settings updated.'
-      : 'Super Lite is off. YouTube is back to its normal layout.', 'ok');
+      : 'Super Lite is off. Aero Native can still run independently.', 'ok');
   });
 }
 

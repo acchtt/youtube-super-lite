@@ -2,7 +2,7 @@
 
 A lightweight Chrome / Edge / Brave Manifest V3 extension for `youtube.com`.
 
-## v0.10.0 experiment: Aero Native Mode
+## v0.10.1 experiment: Aero Native Mode
 
 Aero Native Mode keeps playback on the **real first-party `youtube.com/watch` page**. It does not embed YouTube somewhere else and it does not replace YouTube's media player.
 
@@ -16,7 +16,7 @@ The extension:
 
 **Exit Aero** disables only Aero Native Mode and immediately restores the v0.4-style Super Lite layout. Turning Super Lite off restores normal YouTube.
 
-The known-good **v0.4.0** CSS-first build remains the comparison baseline. v0.10.0 is the active first-party-player experiment.
+The known-good **v0.4.0** CSS-first build remains the comparison baseline. v0.10.1 is the active first-party-player experiment. Native Mode is now independent from the legacy Super Lite master switch, fixing upgrades where stored v0.4.x settings left both data flags off.
 
 ## Why this experiment exists
 
@@ -33,7 +33,7 @@ The tradeoff is memory. A native YouTube watch page has measured much higher RAM
 5. Otherwise choose **Load unpacked** and select the repository's `extension` folder.
 6. Open a normal signed-in YouTube watch page.
 
-Aero Native Mode is enabled by default. Open the extension popup to disable it.
+Aero Native Mode is enabled by default and is independent from the Super Lite toggle. Existing installs are migrated so Native Mode defaults on unless the user later turns it off.
 
 ## Super Lite / Native defaults
 

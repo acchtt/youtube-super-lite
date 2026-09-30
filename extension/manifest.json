@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Aero Native + YouTube Super Lite",
-  "version": "0.10.0",
-  "description": "Aero-style first-party YouTube watch mode with native playback, history, and Mix support.",
+  "version": "0.10.1",
+  "description": "Aero-style first-party YouTube watch mode with independent native-mode toggle, history, and Mix support.",
   "permissions": [
     "activeTab",
     "scripting",

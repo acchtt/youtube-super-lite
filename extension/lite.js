@@ -26,7 +26,6 @@ function pageKind() {
 
 function nativeModeActive() {
   return Boolean(
-    settings.liteEnabled &&
     settings.nativeMode &&
     pageKind() === 'watch'
   );
@@ -145,7 +144,6 @@ function applyState() {
   const kind = pageKind();
   root.dataset.aeroLite = settings.liteEnabled ? 'on' : 'off';
   root.dataset.aeroNative = (
-    settings.liteEnabled &&
     settings.nativeMode &&
     kind === 'watch'
   ) ? 'on' : 'off';
@@ -162,7 +160,18 @@ function applyState() {
 
 async function loadSettings() {
   try {
-    settings = { ...DEFAULTS, ...(await chrome.storage.sync.get(DEFAULTS)) };
+    const saved = await chrome.storage.sync.get(null);
+    const hasNativePreference = Object.prototype.hasOwnProperty.call(saved, 'nativeMode');
+
+    settings = { ...DEFAULTS, ...saved };
+
+    // v0.10.1 migration: Native Mode is independent from the legacy Super Lite
+    // master switch. Existing v0.4.x users should see the new experiment on
+    // first upgrade even if Super Lite had previously been stored as off.
+    if (!hasNativePreference) {
+      settings.nativeMode = true;
+      await chrome.storage.sync.set({ nativeMode:true });
+    }
   } catch (_) {
     settings = { ...DEFAULTS };
   }
