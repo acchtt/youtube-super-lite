@@ -50,11 +50,11 @@ See `extension/README.md`.
 
 ## Experimental YouTube History session test
 
-Aero v0.15.4 removes the OAuth experiment after a successful OAuth login still failed to place iframe-played videos into normal YouTube History.
+Aero v0.15.5 removes the OAuth experiment after a successful OAuth login still failed to place iframe-played videos into normal YouTube History.
 
 The current experiment keeps the existing lightweight `www.youtube.com` iframe and tests browser session access instead. On Brave, cross-site cookies/storage are blocked or partitioned by default, so the user must allow YouTube cross-site storage for `aero-x-ive.pages.dev` (or temporarily lower Shields for Aero only), reload Aero, then play a fresh track and check normal YouTube History.
 
-Aero also adds `storage-access` to the iframe's Permissions Policy allow list where supported. This does not grant storage access by itself; the browser and YouTube embedded document remain in control.
+Aero now lazily creates the first YouTube iframe only when a video is requested. It sets the complete iframe `allow` policy — including `storage-access` — before assigning the first `www.youtube.com/embed/VIDEO_ID` URL, then attaches the official IFrame Player API to that existing iframe. This removes the previous timing flaw where the permission was added only after `onReady`. It still does not grant storage access by itself; the browser and embedded YouTube document remain in control.
 
 ## Cloudflare storage
 

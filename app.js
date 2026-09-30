@@ -15,7 +15,9 @@ const state = {
 
 let player = null;
 let playerReady = false;
+let iframeApiReady = false;
 let pending = [];
+let pendingInitialVideo = null;
 let videoHistory = [];
 let lastVideo = null;
 let lastObservedVideoId = '';
@@ -372,7 +374,7 @@ function renderTabTitle() {
   const author = cleanTabText(currentTabTrack.author);
 
   if (!title) {
-    document.title = 'Aero × IVE · v0.15.4';
+    document.title = 'Aero × IVE · v0.15.5';
     return;
   }
 
@@ -461,7 +463,7 @@ function resumeLastVideo() {
   updateTransport();
 
   const startSeconds = Number(lastVideo.seconds) >= 5 ? Number(lastVideo.seconds) : 0;
-  whenReady(() => loadVideoInto(player, lastVideo.id, startSeconds));
+  playVideoRequest(lastVideo.id, startSeconds);
 
   setMessage(
     startSeconds > 0
@@ -522,7 +524,7 @@ function playHistoryItem(item) {
   renderMixStatus();
   updateTransport();
 
-  whenReady(() => loadVideoInto(player, item.id, 0));
+  playVideoRequest(item.id, 0);
   setMessage('Playing from video history.', 'ok');
   window.scrollTo({ top:0, behavior:'auto' });
 }
@@ -616,52 +618,77 @@ function captureAudioPrefs() {
   } catch (_) {}
 }
 
-function createPlayer() {
+function buildInitialEmbedUrl(videoId, startSeconds = 0) {
+  const url = new URL(
+    'https://www.youtube.com/embed/' + encodeURIComponent(videoId)
+  );
+
+  url.searchParams.set('enablejsapi', '1');
+  url.searchParams.set('origin', window.location.origin);
+  url.searchParams.set('autoplay', '1');
+  url.searchParams.set('controls', '1');
+  url.searchParams.set('rel', '1');
+  url.searchParams.set('playsinline', '1');
+  url.searchParams.set('iv_load_policy', '3');
+  url.searchParams.set('vq', PREFERRED_PLAYBACK_QUALITY);
+
+  if (Number(startSeconds) > 0) {
+    url.searchParams.set('start', String(Math.floor(Number(startSeconds))));
+  }
+
+  return url.toString();
+}
+
+function createPreparedPlayer(videoId, startSeconds = 0) {
+  if (player || !iframeApiReady) return false;
+  if (!/^[A-Za-z0-9_-]{11}$/.test(videoId || '')) return false;
+
+  const placeholder = document.getElementById('player');
+  if (!placeholder) return false;
+
   playerReady = false;
-  player = new YT.Player('player', {
-    width: '100%',
-    height: '100%',
-    host: 'https://www.youtube.com',
-    playerVars: {
-      autoplay: 0,
-      controls: 1,
-      rel: 1,
-      playsinline: 1,
-      iv_load_policy: 3,
-      vq: PREFERRED_PLAYBACK_QUALITY,
-      origin: window.location.origin
-    },
+
+  // History session experiment: create the YouTube iframe ourselves so the
+  // storage-access permission exists before the iframe's very first YouTube
+  // navigation. The browser still decides whether YouTube gets unpartitioned
+  // cookies, and only the embedded YouTube document can call
+  // document.requestStorageAccess().
+  const frame = document.createElement('iframe');
+  frame.id = 'player';
+  frame.title = 'YouTube video player';
+  frame.width = '100%';
+  frame.height = '100%';
+  frame.frameBorder = '0';
+  frame.allowFullscreen = true;
+  frame.referrerPolicy = 'strict-origin-when-cross-origin';
+  frame.setAttribute('enablejsapi', 'true');
+  frame.setAttribute(
+    'allow',
+    [
+      'accelerometer',
+      'autoplay',
+      'clipboard-write',
+      'encrypted-media',
+      'gyroscope',
+      'picture-in-picture',
+      'web-share',
+      'fullscreen',
+      'storage-access'
+    ].join('; ')
+  );
+
+  // Set permissions first; assign src last so the first request is made from
+  // an iframe that already carries the complete Permissions Policy allow list.
+  frame.src = buildInitialEmbedUrl(videoId, startSeconds);
+  placeholder.replaceWith(frame);
+
+  player = new YT.Player(frame, {
     events: {
       onReady: event => {
         playerReady = true;
-
-        // History session experiment: keep the normal youtube.com embed and
-        // explicitly advertise storage-access permission to the frame. This
-        // does not grant cookies by itself; Brave/browser site settings still
-        // decide whether the embedded YouTube context can use the user's
-        // existing unpartitioned YouTube session.
-        try {
-          const frame = event.target.getIframe && event.target.getIframe();
-          if (frame) {
-            const currentAllow = frame.getAttribute('allow') || '';
-            const required = [
-              'autoplay',
-              'encrypted-media',
-              'picture-in-picture',
-              'fullscreen',
-              'storage-access'
-            ];
-            const tokens = new Set(
-              currentAllow.split(';').map(value => value.trim()).filter(Boolean)
-            );
-            required.forEach(value => tokens.add(value));
-            frame.setAttribute('allow', Array.from(tokens).join('; '));
-            frame.referrerPolicy = 'strict-origin-when-cross-origin';
-          }
-        } catch (_) {}
-
         try { event.target.setPlaybackRate(state.speed); } catch (_) {}
         applyAudioPrefs(event.target);
+
         const jobs = pending.splice(0);
         jobs.forEach(fn => fn());
       },
@@ -669,9 +696,19 @@ function createPlayer() {
       onError: handlePlayerError
     }
   });
+
+  return true;
 }
 
-window.onYouTubeIframeAPIReady = () => createPlayer();
+window.onYouTubeIframeAPIReady = () => {
+  iframeApiReady = true;
+
+  if (pendingInitialVideo && !player) {
+    const next = pendingInitialVideo;
+    pendingInitialVideo = null;
+    createPreparedPlayer(next.videoId, next.startSeconds);
+  }
+};
 
 function whenReady(fn) {
   if (playerReady && player) fn();
@@ -689,6 +726,27 @@ function loadVideoInto(target, videoId, startSeconds = 0) {
 
   try { target.setPlaybackRate(state.speed); } catch (_) {}
   applyAudioPrefs(target);
+}
+
+function playVideoRequest(videoId, startSeconds = 0) {
+  if (!/^[A-Za-z0-9_-]{11}$/.test(videoId || '')) return false;
+
+  if (playerReady && player) {
+    loadVideoInto(player, videoId, startSeconds);
+    return true;
+  }
+
+  if (player) {
+    pending.push(() => loadVideoInto(player, videoId, startSeconds));
+    return true;
+  }
+
+  if (!iframeApiReady) {
+    pendingInitialVideo = { videoId, startSeconds };
+    return true;
+  }
+
+  return createPreparedPlayer(videoId, startSeconds);
 }
 
 function playBridgeIndex(index) {
@@ -718,7 +776,7 @@ function playBridgeIndex(index) {
   renderMixStatus();
   updateTransport();
 
-  whenReady(() => loadVideoInto(player, id, 0));
+  playVideoRequest(id, 0);
   return true;
 }
 
